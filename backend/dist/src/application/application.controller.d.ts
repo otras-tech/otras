@@ -9,10 +9,10 @@ export declare class ApplicationController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        applicationStatus: string;
+        examId: number;
         userId: number;
         status: string;
-        examId: number;
-        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
@@ -20,11 +20,11 @@ export declare class ApplicationController {
     findByOtrId(otrId: string): Promise<({
         exam: {
             id: number;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             cutoff: number | null;
             syllabus: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
@@ -36,10 +36,10 @@ export declare class ApplicationController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        applicationStatus: string;
+        examId: number;
         userId: number;
         status: string;
-        examId: number;
-        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
@@ -47,11 +47,11 @@ export declare class ApplicationController {
     findByUser(userId: string): Promise<({
         exam: {
             id: number;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             cutoff: number | null;
             syllabus: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
@@ -63,17 +63,33 @@ export declare class ApplicationController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        applicationStatus: string;
+        examId: number;
         userId: number;
         status: string;
-        examId: number;
-        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
     })[]>;
     findAll(): Promise<({
+        exam: {
+            id: number;
+            name: string;
+            cutoff: number | null;
+            syllabus: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            eligibility: string | null;
+            longDescription: string | null;
+            noOfQuestions: number | null;
+            pattern: string | null;
+            shortDescription: string | null;
+            applicationStatus: string;
+        };
         user: {
             id: number;
+            createdAt: Date;
+            updatedAt: Date;
             firstName: string;
             lastName: string;
             email: string;
@@ -85,34 +101,18 @@ export declare class ApplicationController {
             careerPreference: string | null;
             domicile: string | null;
             pincode: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             credits: number;
             referralCode: string;
             preferredLanguage: string;
-        };
-        exam: {
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            cutoff: number | null;
-            syllabus: string | null;
-            eligibility: string | null;
-            longDescription: string | null;
-            noOfQuestions: number | null;
-            pattern: string | null;
-            shortDescription: string | null;
-            applicationStatus: string;
         };
     } & {
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        applicationStatus: string;
+        examId: number;
         userId: number;
         status: string;
-        examId: number;
-        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
@@ -121,10 +121,10 @@ export declare class ApplicationController {
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        applicationStatus: string;
+        examId: number;
         userId: number;
         status: string;
-        examId: number;
-        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;

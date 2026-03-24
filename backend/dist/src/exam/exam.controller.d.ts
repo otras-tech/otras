@@ -9,11 +9,11 @@ export declare class ExamController {
         }[];
     } & {
         id: number;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         cutoff: number | null;
         syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
@@ -28,11 +28,25 @@ export declare class ExamController {
         }[];
     } & {
         id: number;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         cutoff: number | null;
         syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        eligibility: string | null;
+        longDescription: string | null;
+        noOfQuestions: number | null;
+        pattern: string | null;
+        shortDescription: string | null;
+        applicationStatus: string;
+    }>;
+    remove(id: number): Promise<{
+        id: number;
+        name: string;
+        cutoff: number | null;
+        syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
@@ -47,11 +61,11 @@ export declare class ExamController {
         }[];
     } & {
         id: number;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         cutoff: number | null;
         syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
@@ -66,11 +80,11 @@ export declare class ExamController {
         }[];
     } & {
         id: number;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         cutoff: number | null;
         syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
@@ -95,8 +109,8 @@ export declare class ExamController {
             })[];
         } & {
             id: number;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             examId: number;
         };
         exam: {
@@ -105,11 +119,11 @@ export declare class ExamController {
                 name: string;
             }[];
             id: number;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             cutoff: number | null;
             syllabus: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
@@ -125,11 +139,11 @@ export declare class ExamController {
         }[];
     } & {
         id: number;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         cutoff: number | null;
         syllabus: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;

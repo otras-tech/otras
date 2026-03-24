@@ -28,6 +28,9 @@ let TestController = class TestController {
     findAll() {
         return this.testService.findAll();
     }
+    getPreview(examId) {
+        return this.testService.getPreview(+examId);
+    }
     findOne(id) {
         return this.testService.findOne(+id);
     }
@@ -52,6 +55,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], TestController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('preview/:examId'),
+    __param(0, (0, common_1.Param)('examId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], TestController.prototype, "getPreview", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

@@ -34,28 +34,25 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const dotenv = __importStar(require("dotenv"));
-const path = __importStar(require("path"));
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+const fs = __importStar(require("fs"));
 const prisma = new client_1.PrismaClient();
 async function main() {
-    const users = await prisma.user.findMany({
-        select: {
-            id: true,
-            email: true,
-            otrId: true,
-            password: true,
+    const exam = await prisma.exam.findFirst({
+        orderBy: { id: 'desc' },
+        include: {
+            subjects: {
+                include: { _count: { select: { questions: true } } }
+            }
         }
     });
-    console.log('Users in database:');
-    console.log(JSON.stringify(users, null, 2));
+    if (exam) {
+        let output = `EXAM: ${exam.name} (ID: ${exam.id})\n`;
+        exam.subjects.forEach(s => {
+            output += `SUBJECT: ${s.name} | QUESTIONS IN BANK: ${s._count.questions}\n`;
+        });
+        fs.writeFileSync('exam_report.txt', output, 'utf8');
+        console.log("Written to exam_report.txt");
+    }
 }
-main()
-    .catch((e) => {
-    console.error(e);
-    process.exit(1);
-})
-    .finally(async () => {
-    await prisma.$disconnect();
-});
-//# sourceMappingURL=tmp-check-users.js.map
+main().finally(() => prisma.$disconnect());
+//# sourceMappingURL=final_audit_utf8.js.map

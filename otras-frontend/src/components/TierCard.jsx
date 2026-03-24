@@ -1,8 +1,8 @@
 import { Lock, Brain, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function TierCard({ 
-  tier, 
+export default function TierCard({
+  tier,
   locked = false,
   // New props for Subscription usage
   name,
@@ -23,7 +23,7 @@ export default function TierCard({
   const title = name || tier?.title || t("plan");
   const subTitle = price || tier?.sub || "";
   const description = duration || tier?.desc || "";
-  
+
   if (locked) {
     return (
       <div
@@ -68,11 +68,11 @@ export default function TierCard({
           {t("mostPopular")}
         </div>
       )}
-      
+
       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-6">
         <Brain size={24} className="text-blue-600" />
       </div>
-      
+
       <h3 className="font-bold text-slate-800 text-2xl mb-1">{title}</h3>
       <div className="flex items-baseline gap-1 mb-4">
         <p className="text-3xl font-black text-slate-900">{subTitle}</p>
@@ -91,17 +91,9 @@ export default function TierCard({
       )}
 
       {!features && tier?.desc && <p className="text-slate-500 text-sm mb-6 flex-1">{tier.desc}</p>}
-      
-      <div className="mb-6">
-        <div className="flex justify-between text-xs text-slate-500 mb-2">
-          <span className="font-bold text-slate-700">{t("tierProgress")}</span>
-          <span>0%</span>
-        </div>
-        <div className="h-2 bg-slate-100 rounded-full">
-          <div className="h-2 bg-blue-500 rounded-full" style={{ width: '0%' }} />
-        </div>
-      </div>
-      
+
+
+
       <div className="space-y-3">
         <button
           onClick={onPay}

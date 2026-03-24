@@ -28,21 +28,35 @@ let TestService = class TestService {
         if (!exam.subjects || exam.subjects.length === 0) {
             throw new Error('This exam has no associated subjects. Please add subjects to the exam before creating a test.');
         }
-        const subjectIds = exam.subjects.map(s => s.id);
-        const questions = await this.prisma.question.findMany({
-            where: { subjectId: { in: subjectIds } },
-            select: { id: true }
-        });
-        if (questions.length === 0) {
-            throw new Error('No questions found for the subjects associated with this exam. Please add questions to the subjects first.');
+        const subjects = exam.subjects;
+        const S = subjects.length;
+        const N = exam.noOfQuestions || 100;
+        if (N < S) {
+            throw new Error(`Total questions (N=${N}) cannot be less than number of subjects (S=${S}) for fair distribution.`);
         }
-        const targetCount = exam.noOfQuestions || 100;
-        const questionIds = questions
-            .sort(() => 0.5 - Math.random())
-            .slice(0, targetCount)
-            .map(q => ({ id: q.id }));
-        if (questionIds.length === 0) {
-            throw new Error('No questions found for the subjects associated with this exam. Please add questions to the subjects first.');
+        const base = Math.floor(N / S);
+        const remainder = N % S;
+        const shuffledSubjects = [...subjects].sort(() => 0.5 - Math.random());
+        const questionIds = [];
+        const testSubjectsData = [];
+        for (let i = 0; i < S; i++) {
+            const sub = shuffledSubjects[i];
+            let allocation = base;
+            if (i < remainder)
+                allocation += 1;
+            const subQuestions = await this.prisma.question.findMany({
+                where: { subjectId: sub.id },
+                select: { id: true }
+            });
+            if (subQuestions.length < allocation) {
+                throw new Error(`Insufficient questions in Bank for ${sub.name}. Required: ${allocation}, found: ${subQuestions.length}`);
+            }
+            const picked = subQuestions.sort(() => 0.5 - Math.random()).slice(0, allocation);
+            picked.forEach(q => questionIds.push({ id: q.id }));
+            testSubjectsData.push({
+                subjectId: sub.id,
+                allocatedQuestions: allocation
+            });
         }
         return this.prisma.test.create({
             data: {
@@ -50,12 +64,14 @@ let TestService = class TestService {
                 examId,
                 questions: {
                     connect: questionIds
+                },
+                testSubjects: {
+                    create: testSubjectsData
                 }
             },
             include: {
-                questions: {
-                    select: { id: true }
-                },
+                questions: { select: { id: true } },
+                testSubjects: { include: { subject: true } },
                 exam: true
             }
         });
@@ -71,6 +87,28 @@ let TestService = class TestService {
             take: 50,
             orderBy: { createdAt: 'desc' }
         });
+    }
+    async getPreview(examId) {
+        const exam = await this.prisma.exam.findUnique({
+            where: { id: examId },
+            include: {
+                subjects: {
+                    include: { _count: { select: { questions: true } } }
+                }
+            }
+        });
+        if (!exam || !exam.subjects || exam.subjects.length === 0)
+            return [];
+        const S = exam.subjects.length;
+        const N = exam.noOfQuestions || 100;
+        const base = Math.floor(N / S);
+        const remainder = N % S;
+        return exam.subjects.map((sub, i) => ({
+            id: sub.id,
+            name: sub.name,
+            count: i < remainder ? base + 1 : base,
+            available: sub._count.questions
+        }));
     }
     findOne(id) {
         return this.prisma.test.findUnique({

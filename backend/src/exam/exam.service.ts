@@ -82,38 +82,70 @@ export class ExamService {
 
     if (exam.tests.length === 0) {
       if (exam.subjects && exam.subjects.length > 0) {
-        const subjectIds = exam.subjects.map(s => s.id);
-        const questions = await this.prisma.question.findMany({
-          where: { subjectId: { in: subjectIds } },
-        });
+          const subjects = exam.subjects;
+          const S = subjects.length;
+          const N = exam.noOfQuestions || 100;
+          
+          if (N < S) throw new Error('Total questions cannot be less than number of subjects');
 
-        if (questions.length > 0) {
-          const selectedQuestions = questions
-            .sort(() => 0.5 - Math.random())
-            .slice(0, exam.noOfQuestions || 100)
-            .map(q => ({ id: q.id }));
+          const base = Math.floor(N / S);
+          const remainder = N % S;
 
-          const newTest = await this.prisma.test.create({
-            data: {
-              name: `${exam.name} Auto-Generated Test`,
-              examId: exam.id,
-              questions: {
-                connect: selectedQuestions,
+          // Shuffle for fair remainder distribution
+          const shuffledSubjects = [...subjects].sort(() => 0.5 - Math.random());
+
+          const selectedQuestions: { id: number }[] = [];
+          const testSubjectsData: any[] = [];
+
+          for (let i = 0; i < S; i++) {
+            const sub = shuffledSubjects[i];
+            let allocation = base;
+            if (i < remainder) allocation += 1;
+
+            const subQuestions = await this.prisma.question.findMany({
+              where: { subjectId: sub.id },
+              select: { id: true }
+            });
+            
+            if (subQuestions.length < allocation) {
+               throw new Error(`Insufficient questions in Bank for subject: ${sub.name}. Required: ${allocation}`);
+            }
+
+            const picked = subQuestions.sort(() => 0.5 - Math.random()).slice(0, allocation);
+            picked.forEach(q => selectedQuestions.push({ id: q.id }));
+
+            testSubjectsData.push({
+              subjectId: sub.id,
+              allocatedQuestions: allocation
+            });
+          }
+
+          if (selectedQuestions.length > 0) {
+            const newTest = await this.prisma.test.create({
+              data: {
+                name: `${exam.name} Auto-Generated Test`,
+                examId: exam.id,
+                questions: {
+                  connect: selectedQuestions,
+                },
+                testSubjects: {
+                  create: testSubjectsData
+                }
               },
-            },
-            include: {
-              questions: {
-                include: { subject: true },
+              include: {
+                questions: {
+                  include: { subject: true },
+                },
+                testSubjects: { include: { subject: true } }
               },
-            },
-          });
+            });
 
-          const { tests, ...examInfo } = exam;
-          return {
-            test: newTest,
-            exam: examInfo,
-          };
-        }
+            const { tests, ...examInfo } = exam;
+            return {
+              test: newTest,
+              exam: examInfo,
+            };
+          }
       }
       throw new NotFoundException('No tests found for this exam and no questions available to generate one.');
     }
@@ -138,6 +170,12 @@ export class ExamService {
         },
       },
       include: { subjects: true },
+    });
+  }
+
+  async remove(id: number) {
+    return this.prisma.exam.delete({
+      where: { id },
     });
   }
 }

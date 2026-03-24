@@ -12,11 +12,11 @@ export declare class PypService {
     findAll(): Promise<({
         exam: {
             id: number;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             cutoff: number | null;
             syllabus: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;

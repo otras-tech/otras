@@ -1,0 +1,3 @@
+EXAM: bindu (ID: 10)
+SUBJECT: quant | QUESTIONS IN BANK: 60
+SUBJECT: logical | QUESTIONS IN BANK: 50

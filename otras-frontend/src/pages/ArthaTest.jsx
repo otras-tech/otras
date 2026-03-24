@@ -463,26 +463,28 @@ export default function ArthaTest({ user }) {
           </div>
         </div>
 
-        {/* AI CAREER READINESS FEEDBACK */}
-        {arthaStatus?.feedback ? (
-          <IntelligenceFeedback feedback={arthaStatus.feedback} />
-        ) : (
-          <div className="bg-slate-50 rounded-2xl p-8 border border-dashed border-slate-300 text-center space-y-4">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
-              <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        {/* AI CAREER READINESS FEEDBACK (Artha Engine Tests Only) */}
+        {!testData?.isMockTest && (
+          arthaStatus?.feedback ? (
+            <IntelligenceFeedback feedback={arthaStatus.feedback} />
+          ) : (
+            <div className="bg-slate-50 rounded-2xl p-8 border border-dashed border-slate-300 text-center space-y-4">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              </div>
+              <h3 className="font-bold text-slate-700">{t("Generating Analysis")}</h3>
+              <p className="text-slate-500 text-sm max-w-sm mx-auto">{t("AI Processing")}</p>
+              <button
+                onClick={async () => {
+                  const resp = await axios.get(`http://localhost:4000/artha/status/${user.id}`);
+                  setArthaStatus(resp.data);
+                }}
+                className="text-indigo-600 font-bold text-sm hover:underline"
+              >
+                {t("Refresh Insights")}
+              </button>
             </div>
-            <h3 className="font-bold text-slate-700">{t("Generating Analysis")}</h3>
-            <p className="text-slate-500 text-sm max-w-sm mx-auto">{t("AI Processing")}</p>
-            <button
-              onClick={async () => {
-                const resp = await axios.get(`http://localhost:4000/artha/status/${user.id}`);
-                setArthaStatus(resp.data);
-              }}
-              className="text-indigo-600 font-bold text-sm hover:underline"
-            >
-              {t("Refresh Insights")}
-            </button>
-          </div>
+          )
         )}
 
 
@@ -505,6 +507,14 @@ export default function ArthaTest({ user }) {
     const filteredQuestions = questions.filter(
       (q) => q.subject?.name === currentSection
     );
+
+    // Group questions by subject for the full palette
+    const groupedQuestions = questions.reduce((acc, q) => {
+      const subjectName = q.subject?.name || "General";
+      if (!acc[subjectName]) acc[subjectName] = [];
+      acc[subjectName].push(q);
+      return acc;
+    }, {});
 
     return (
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -588,28 +598,47 @@ export default function ArthaTest({ user }) {
             </div>
 
             {/* Question Palette */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-2">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[600px]">
+              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-2 flex-shrink-0">
                 <Layout size={18} className="text-indigo-500" /> {t("questionPalette")}
               </h3>
-              <div className="grid grid-cols-5 gap-2">
-                {(activeTest.questions || []).map((q, i) => {
-                  const isAnswered = answers.some((a) => a.questionId === q.id);
-                  const isCurrentSection = q.subject.name === currentSection;
-                  return (
-                    <div
-                      key={q.id}
-                      className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold border transition-all ${isAnswered
-                          ? "bg-green-500 border-green-600 text-white"
-                          : isCurrentSection
-                            ? "bg-indigo-50 border-indigo-200 text-indigo-600"
-                            : "bg-slate-50 border-slate-100 text-slate-400"
-                        }`}
-                    >
-                      {i + 1}
+              <div className="overflow-y-auto pr-2 space-y-6 custom-scrollbar">
+                {Object.entries(groupedQuestions).map(([sectionName, qs]) => (
+                  <div key={sectionName} className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-2">
+                      {sectionName}
+                    </p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {qs.map((q, i) => {
+                        const isAnswered = answers.some((a) => a.questionId === q.id);
+                        const isCurrentSection = q.subject?.name === currentSection;
+                        return (
+                          <button
+                            key={q.id}
+                            onClick={() => {
+                              setCurrentSection(sectionName);
+                              // Small timeout to allow the section to switch before scrolling
+                              setTimeout(() => {
+                                const el = document.getElementById(`question-${q.id}`);
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              }, 100);
+                            }}
+                            className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold border transition-all hover:scale-110 active:scale-95 ${isAnswered
+                                ? "bg-green-500 border-green-600 text-white shadow-sm shadow-green-100"
+                                : isCurrentSection
+                                  ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm shadow-indigo-50"
+                                  : "bg-slate-50 border-slate-100 text-slate-400"
+                              }`}
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -637,16 +666,17 @@ export default function ArthaTest({ user }) {
 
           {/* Questions */}
           <div className="lg:col-span-3 space-y-6">
-            {filteredQuestions.map((q) => (
+            {filteredQuestions.map((q, i) => (
               <div
                 key={q.id}
-                className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors"
+                id={`question-${q.id}`}
+                className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors scroll-mt-24"
               >
                 <p className="text-xs font-bold text-indigo-600 mb-3 uppercase tracking-widest bg-indigo-50 w-fit px-3 py-1 rounded-full border border-indigo-100">
                   {q.subject.name}
                 </p>
                 <h3 className="text-xl font-bold text-slate-800 mb-8 leading-relaxed">
-                  <FormattedText text={q.text} />
+                  {i + 1}. <FormattedText text={q.text} />
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {q.options.map((opt) => (
@@ -693,8 +723,7 @@ export default function ArthaTest({ user }) {
             </p>
             <h1 className="text-3xl font-black">{test.name}</h1>
             <p className="text-indigo-100 text-sm mt-3">
-              {test.questions?.length || 0} questions • +1 correct • −0.25
-              negative marking
+              {test.questions?.length || 0} questions • +1 for correct • −0.25 for wrong answers
             </p>
           </div>
 

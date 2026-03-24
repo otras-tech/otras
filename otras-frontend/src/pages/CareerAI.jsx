@@ -18,7 +18,7 @@ const CareerAI = ({ user }) => {
     selectedExam: "",
     interests: "",
     learningPattern: "",
-    confidenceIndex: 50,
+    readinessIndex: 50,
     aspirations: "",
   });
 
@@ -33,70 +33,70 @@ const CareerAI = ({ user }) => {
   const [loading, setLoading] = useState(false);
 
   const EXAM_OPTIONS = [
-  "UPSC Civil Services",
-  "SSC CGL",
-  "IBPS PO",
-  "RRB NTPC",
-  "State PSC",
-  "NDA",
-  "CDS",
-  "CAPF (Assistant Commandant)",
-  "EPFO",
-  "LIC AAO"
-];
+    "UPSC Civil Services",
+    "SSC CGL",
+    "IBPS PO",
+    "RRB NTPC",
+    "State PSC",
+    "NDA",
+    "CDS",
+    "CAPF (Assistant Commandant)",
+    "EPFO",
+    "LIC AAO"
+  ];
 
   const LEARNING_PATTERNS = {
-  "UPSC Civil Services": [
-    "Conceptual + Current Affairs",
-    "Answer Writing Practice",
-    "Revision Cycles"
-  ],
-  "SSC CGL": [
-    "Speed + Accuracy",
-    "Mock Test Practice",
-    "Shortcut Techniques"
-  ],
-  "IBPS PO": [
-    "Quant Drills",
-    "Reasoning Puzzles",
-    "Daily Mock Tests"
-  ],
-  "RRB NTPC": [
-    "General Awareness Focus",
-    "Speed Tests",
-    "Previous Papers"
-  ],
-  "State PSC": [
-    "Static GK + State GK",
-    "Writing Practice",
-    "Revision"
-  ],
-  "NDA": [
-    "Math + General Ability",
-    "Physical Routine",
-    "Mock Tests"
-  ],
-  "CDS": [
-    "English + GK Focus",
-    "Mock Tests",
-    "Speed Practice"
-  ],
-  "CAPF (Assistant Commandant)": [
-    "Paper 1 Objective Practice",
-    "Essay & Report Writing",
-    "Physical Fitness Routine"
-  ],
-  "EPFO": [
-    "Static + Current Affairs",
-    "Labour Laws Basics",
-    "Mock Tests"
-  ],
-  "LIC AAO": [
-    "Quant + Reasoning Practice",
-    "Insurance Awareness",
-    "Sectional Mock Tests"
-  ]
-};
+    "UPSC Civil Services": [
+      "Conceptual + Current Affairs",
+      "Answer Writing Practice",
+      "Revision Cycles"
+    ],
+    "SSC CGL": [
+      "Speed + Accuracy",
+      "Mock Test Practice",
+      "Shortcut Techniques"
+    ],
+    "IBPS PO": [
+      "Quant Drills",
+      "Reasoning Puzzles",
+      "Daily Mock Tests"
+    ],
+    "RRB NTPC": [
+      "General Awareness Focus",
+      "Speed Tests",
+      "Previous Papers"
+    ],
+    "State PSC": [
+      "Static GK + State GK",
+      "Writing Practice",
+      "Revision"
+    ],
+    "NDA": [
+      "Math + General Ability",
+      "Physical Routine",
+      "Mock Tests"
+    ],
+    "CDS": [
+      "English + GK Focus",
+      "Mock Tests",
+      "Speed Practice"
+    ],
+    "CAPF (Assistant Commandant)": [
+      "Paper 1 Objective Practice",
+      "Essay & Report Writing",
+      "Physical Fitness Routine"
+    ],
+    "EPFO": [
+      "Static + Current Affairs",
+      "Labour Laws Basics",
+      "Mock Tests"
+    ],
+    "LIC AAO": [
+      "Quant + Reasoning Practice",
+      "Insurance Awareness",
+      "Sectional Mock Tests"
+    ]
+  };
 
   // Robust data normalization to prevent render crashes
   const sixMonth = Array.isArray(careerData?.sixMonth) ? careerData.sixMonth : [];
@@ -114,7 +114,7 @@ const CareerAI = ({ user }) => {
         verbalScore: formData.verbalScore,
         interests: (formData.interests || "").split(",").map(i => i.trim()).filter(Boolean),
         learningPattern: formData.learningPattern,
-        confidenceIndex: formData.confidenceIndex,
+        readinessIndex: formData.readinessIndex,
         aspirations: formData.aspirations,
         selectedExam: formData.selectedExam,
         language,
@@ -174,7 +174,8 @@ const CareerAI = ({ user }) => {
             logicalScore: status.logicalScore || 0,
             quantScore: status.quantScore || 0,
             verbalScore: status.verbalScore || 0,
-            selectedExam: status.selectedExam || ""
+            selectedExam: status.selectedExam || "",
+            readinessIndex: status.readinessIndex !== undefined ? status.readinessIndex : prev.readinessIndex
           }));
           console.log("CareerAI: Values synced successfully");
         }
@@ -230,7 +231,7 @@ const CareerAI = ({ user }) => {
 
   const handleSliderChange = (e) => {
     const val = parseInt(e.target.value);
-    setFormData(prev => ({ ...prev, confidenceIndex: val }));
+    setFormData(prev => ({ ...prev, readinessIndex: val }));
   };
 
   const safeRender = (val) => {
@@ -367,10 +368,10 @@ const CareerAI = ({ user }) => {
 
               <div>
                 <div className="flex justify-between mb-1 label">
-                  <span className="font-bold">{t("confidenceIndex")}</span>
-                  <span className="text-blue-600 font-black">{formData.confidenceIndex || 0}%</span>
+                  <span className="font-bold">{t("readinessIndex")}</span>
+                  <span className="text-blue-600 font-black">{formData.readinessIndex || 0}%</span>
                 </div>
-                <input type="range" min="0" max="100" value={formData.confidenceIndex || 0} onChange={handleSliderChange} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                <input type="range" min="0" max="100" value={formData.readinessIndex || 0} onChange={handleSliderChange} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
               </div>
 
               <div>

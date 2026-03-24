@@ -11,6 +11,7 @@ export declare class ResultService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         testId: number;
     }>;
     calculateAndSave(userId: number, testId: number, answers: any[], tier?: number, resultId?: number): Promise<any>;
@@ -21,8 +22,8 @@ export declare class ResultService {
             };
         } & {
             id: number;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             examId: number;
         };
     } & {
@@ -34,6 +35,7 @@ export declare class ResultService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         testId: number;
     })[]>;
 }

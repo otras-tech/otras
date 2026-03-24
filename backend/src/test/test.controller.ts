@@ -17,6 +17,11 @@ export class TestController {
     return this.testService.findAll();
   }
 
+  @Get('preview/:examId')
+  getPreview(@Param('examId') examId: string) {
+    return this.testService.getPreview(+examId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.testService.findOne(+id);

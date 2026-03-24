@@ -45,6 +45,7 @@ export declare class MockTestService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         correctAnswers: number | null;
         attemptedAt: Date;
         mockTestId: number;
@@ -62,6 +63,7 @@ export declare class MockTestService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         correctAnswers: number | null;
         attemptedAt: Date;
         mockTestId: number;
@@ -92,6 +94,7 @@ export declare class MockTestService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         correctAnswers: number | null;
         attemptedAt: Date;
         mockTestId: number;
@@ -125,6 +128,7 @@ export declare class MockTestService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         correctAnswers: number | null;
         attemptedAt: Date;
         mockTestId: number;
@@ -150,6 +154,7 @@ export declare class MockTestService {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         correctAnswers: number | null;
         attemptedAt: Date;
         mockTestId: number;

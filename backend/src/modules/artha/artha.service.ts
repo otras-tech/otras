@@ -47,24 +47,33 @@ export class ArthaService {
             };
         }
 
-        const tier1Completed = profile.tier1Progress === 100;
-        const tier2Completed = profile.tier2Progress === 100;
+        const recentReports = await this.repository.findRecentReportsByUserId(userId);
+        const hasT1Report = recentReports.some(r => r.tier === 1);
+        const hasT2Report = recentReports.some(r => r.tier === 2);
+        const hasT3Report = recentReports.some(r => r.tier === 3);
+
+        const tier1Completed = hasT1Report || profile.tier1Progress === 100;
+        const tier2Completed = hasT2Report || profile.tier2Progress === 100;
+        const tier3Completed = hasT3Report || profile.tier3Progress === 100;
+
+        // Permanent unlock override: If they've finished all 3 tiers once, keep everything open
+        const allCompleted = hasT1Report && hasT2Report && hasT3Report;
 
         const selectedExam = await this.repository.findSelectedExam(userId);
 
         return {
             tier1: { unlocked: true, completed: tier1Completed, progress: profile.tier1Progress },
             tier2: { 
-                unlocked: tier1Completed,
+                unlocked: allCompleted || tier1Completed,
                 completed: tier2Completed, 
                 progress: profile.tier2Progress,
-                subscriptionRequired: tier1Completed && !tier2Completed && !hasSubscription
+                subscriptionRequired: (allCompleted || tier1Completed) && !tier2Completed && !hasSubscription
             },
             tier3: { 
-                unlocked: tier2Completed,
-                completed: profile.tier3Progress === 100, 
+                unlocked: allCompleted || tier2Completed,
+                completed: tier3Completed, 
                 progress: profile.tier3Progress,
-                subscriptionRequired: tier2Completed && profile.tier3Progress < 100 && !hasSubscription
+                subscriptionRequired: (allCompleted || tier2Completed) && !tier3Completed && !hasSubscription
             },
             percentile: profile.percentile,
             readinessIndex: (profile as any).readinessIndex || 0,
@@ -73,7 +82,7 @@ export class ArthaService {
             verbalScore: profile.verbalScore,
             feedback: profile.feedback,
             selectedExam: selectedExam?.name || null,
-            recentReports: await this.repository.findRecentReportsByUserId(userId)
+            recentReports: recentReports
         };
     }
 
@@ -577,11 +586,27 @@ export class ArthaService {
                 console.error(`ARTHA Readiness Engine ERROR: Model prediction failed status ${response.status}`);
                 const errorText = await response.text();
                 console.error(`ARTHA Readiness Engine ERROR Response: ${errorText}`);
-                return profile?.readinessIndex || 0;
+                throw new Error("ML Service returned non-200");
             }
         } catch (error) {
-            console.error(`ARTHA Readiness Engine ERROR [URL: ${this.ML_SERVICE_URL}]: ${error.message}`);
-            return profile?.readinessIndex || 0;
+            console.error(`ARTHA Readiness Engine ERROR [Fallback Activated]: ${error.message}`);
+            
+            // Fallback deterministic calculation if ML is down/crashed due to memory
+            let fallbackScore = 0;
+            if (tier === 1) {
+                fallbackScore = aptitude_score * 0.5; // Up to 50% readiness for Tier 1
+            } else if (tier === 2) {
+                fallbackScore = (aptitude_score * 0.4) + (subject_score * 0.4); // Up to 80% readiness
+            } else {
+                fallbackScore = (aptitude_score * 0.3) + (subject_score * 0.3) + (time_management_score * 0.15) + (mock_average_score * 0.15) + (consistency_score * 0.1); 
+            }
+            
+            const calculatedFallback = Math.round(fallbackScore);
+            const finalReadiness = Math.max(profile?.readinessIndex || 0, calculatedFallback);
+            
+            console.log(`ARTHA Readiness Engine: Using fallback readiness index: ${finalReadiness}`);
+            await this.repository.updateProfileReadiness(userId, finalReadiness);
+            return finalReadiness;
         }
     }
 

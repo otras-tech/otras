@@ -34,6 +34,9 @@ model User {
   referralRewards       ReferralReward[]
   results               Result[]
   studyPlans            StudyPlan[]
+
+  @@index([createdAt])
+  @@index([otrId])
 }
 
 model Job {
@@ -44,6 +47,10 @@ model Job {
   status      String   @default("Open")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([deadline])
+  @@index([createdAt])
 }
 
 model Exam {
@@ -65,13 +72,16 @@ model Exam {
   studyPlans        StudyPlan[]
   tests             Test[]
   subjects          Subject[]     @relation("ExamToSubject")
+
+  @@index([createdAt])
 }
 
 model Subject {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  questions Question[]
-  exams     Exam[]     @relation("ExamToSubject")
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  questions    Question[]
+  exams        Exam[]        @relation("ExamToSubject")
+  testSubjects TestSubject[]
 }
 
 model Question {
@@ -81,8 +91,10 @@ model Question {
   answer    String
   subjectId Int
   createdAt DateTime @default(now())
-  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   tests     Test[]   @relation("QuestionToTest")
+
+  @@index([subjectId])
 }
 
 model Test {
@@ -92,8 +104,24 @@ model Test {
   createdAt             DateTime                   @default(now())
   careerReadinessScores CareerReadinessTestScore[]
   results               Result[]
-  exam                  Exam                       @relation(fields: [examId], references: [id])
+  testSubjects          TestSubject[]
+  exam                  Exam                       @relation(fields: [examId], references: [id], onDelete: Cascade)
   questions             Question[]                 @relation("QuestionToTest")
+
+  @@index([examId])
+  @@index([createdAt])
+}
+
+model TestSubject {
+  id                 Int     @id @default(autoincrement())
+  testId             Int
+  subjectId          Int
+  allocatedQuestions Int
+  test               Test    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  subject            Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@index([subjectId])
 }
 
 model PYP {
@@ -102,7 +130,9 @@ model PYP {
   fileUrl   String
   examId    Int
   createdAt DateTime @default(now())
-  exam      Exam     @relation(fields: [examId], references: [id])
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
 }
 
 model Subscription {
@@ -128,13 +158,19 @@ model Result {
   userId           Int
   testId           Int
   score            Float
-  subjectBreakdown Json
+  subjectBreakdown Json      @db.JsonB
   createdAt        DateTime  @default(now())
   tier             Int?
   startTime        DateTime?
   submitTime       DateTime?
-  test             Test      @relation(fields: [testId], references: [id])
+  test             Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
   user             User      @relation(fields: [userId], references: [id])
+  idempotencyKey   String?   @unique
+
+  @@index([userId])
+  @@index([testId])
+  @@index([createdAt])
+  @@index([userId, testId])
 }
 
 model Application {
@@ -148,10 +184,13 @@ model Application {
   resultStatus      String   @default("Pending")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  exam              Exam     @relation(fields: [examId], references: [id])
+  exam              Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, examId])
+  @@index([userId])
+  @@index([examId])
+  @@index([status])
 }
 
 model MockTestCategory {
@@ -172,9 +211,13 @@ model MockTest {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   category        MockTestCategory  @relation(fields: [categoryId], references: [id])
-  exam            Exam?             @relation(fields: [examId], references: [id])
+  exam            Exam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
   attempts        MockTestAttempt[]
   referralRewards ReferralReward[]
+
+  @@index([categoryId])
+  @@index([examId])
+  @@index([createdAt])
 }
 
 model MockTestAttempt {
@@ -184,12 +227,18 @@ model MockTestAttempt {
   score            Float
   totalMarks       Float
   correctAnswers   Int?
-  subjectBreakdown Json?
+  subjectBreakdown Json?     @db.JsonB
   attemptedAt      DateTime  @default(now())
   startTime        DateTime?
   submitTime       DateTime?
-  mockTest         MockTest  @relation(fields: [mockTestId], references: [id])
+  mockTest         MockTest  @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
   user             User      @relation(fields: [otrId], references: [otrId])
+  idempotencyKey   String?   @unique
+
+  @@index([otrId])
+  @@index([mockTestId])
+  @@index([attemptedAt])
+  @@index([otrId, mockTestId])
 }
 
 model CareerReadinessTestScore {
@@ -201,12 +250,15 @@ model CareerReadinessTestScore {
   correctAnswers   Int
   wrongAnswers     Int
   negativeMarks    Float
-  subjectBreakdown Json
+  subjectBreakdown Json      @db.JsonB
   createdAt        DateTime @default(now())
   user             User     @relation(fields: [otrId], references: [otrId])
-  test             Test     @relation(fields: [testId], references: [id])
+  test             Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   @@unique([otrId, testId], name: "otrId_testId")
+  @@index([otrId])
+  @@index([testId])
+  @@index([createdAt])
 }
 
 model Payment {
@@ -224,6 +276,11 @@ model Payment {
   paymentMethod     String       @default("razorpay")
   subscription      Subscription @relation(fields: [subscriptionId], references: [id])
   user              User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Referral {
@@ -237,6 +294,9 @@ model Referral {
   referrer      User     @relation("ReferrerRelation", fields: [referrerId], references: [id])
 
   @@unique([referrerId, refereeOtrId])
+  @@index([referrerId])
+  @@index([refereeOtrId])
+  @@index([status])
 }
 
 model ReferralReward {
@@ -245,8 +305,11 @@ model ReferralReward {
   mockTestId Int
   isRedeemed Boolean  @default(false)
   createdAt  DateTime @default(now())
-  mockTest   MockTest @relation(fields: [mockTestId], references: [id])
+  mockTest   MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([mockTestId])
 }
 
 model StudyPlan {
@@ -264,9 +327,12 @@ model StudyPlan {
   revisionStrategy    String
   preferredStudyTimes String
   createdAt           DateTime       @default(now())
-  exam                Exam?          @relation(fields: [examId], references: [id])
+  exam                Exam?          @relation(fields: [examId], references: [id], onDelete: Cascade)
   user                User           @relation(fields: [userId], references: [id])
   days                StudyPlanDay[]
+
+  @@index([userId])
+  @@index([examId])
 }
 
 model StudyPlanDay {
@@ -276,6 +342,9 @@ model StudyPlanDay {
   date       DateTime?
   activities StudyActivity[]
   plan       StudyPlan       @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([date])
 }
 
 model StudyActivity {
@@ -287,6 +356,8 @@ model StudyActivity {
   missed      Boolean      @default(false)
   dayId       String
   day         StudyPlanDay @relation(fields: [dayId], references: [id])
+
+  @@index([dayId])
 }
 
 model ArthaProfile {
@@ -304,6 +375,9 @@ model ArthaProfile {
   readinessIndex Float                 @default(0)
   assessments    ArthaAssessment[]
   feedback       IntelligenceFeedback?
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model ArthaAssessment {
@@ -314,7 +388,7 @@ model ArthaAssessment {
   logicalScore   Float?
   quantScore     Float?
   verbalScore    Float?
-  subjectScores  Json?
+  subjectScores  Json?                 @db.JsonB
   accuracy       Float?
   speed          Float?
   consistency    Float?
@@ -327,6 +401,10 @@ model ArthaAssessment {
   totalMarks     Int?
   profile        ArthaProfile           @relation(fields: [profileId], references: [id])
   attempts       ArthaQuestionAttempt[]
+  idempotencyKey String?                @unique
+
+  @@index([profileId])
+  @@index([createdAt])
 }
 
 model ArthaQuestionAttempt {
@@ -338,6 +416,10 @@ model ArthaQuestionAttempt {
   timeTaken      Int
   attemptedAt    DateTime        @default(now())
   assessment     ArthaAssessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([assessmentId])
+  @@index([questionId])
+  @@index([attemptedAt])
 }
 
 model IntelligenceFeedback {
@@ -370,10 +452,12 @@ model ArthaRecentReport {
   readinessIndex   Float?
   percentile       Float?
   createdAt        DateTime @default(now())
-  subjectBreakdown Json?
+  subjectBreakdown Json?     @db.JsonB
   user             User     @relation(fields: [otrId], references: [otrId])
 
   @@unique([otrId, tier])
+  @@index([otrId])
+  @@index([createdAt])
 }
 
 model IntelligenceProfile {
@@ -388,6 +472,9 @@ model IntelligenceProfile {
   aspirations     String
   createdAt       DateTime @default(now())
   roadmap         Roadmap?
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Roadmap {

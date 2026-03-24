@@ -70,6 +70,8 @@ export declare class PaymentController {
     getAllPayments(): Promise<({
         user: {
             id: number;
+            createdAt: Date;
+            updatedAt: Date;
             firstName: string;
             lastName: string;
             email: string;
@@ -81,8 +83,6 @@ export declare class PaymentController {
             careerPreference: string | null;
             domicile: string | null;
             pincode: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             credits: number;
             referralCode: string;
             preferredLanguage: string;

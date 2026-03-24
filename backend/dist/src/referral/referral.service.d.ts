@@ -3,13 +3,13 @@ export declare class ReferralService {
     private prisma;
     constructor(prisma: PrismaService);
     createReferral(referrerId: number, refereeOtrId: string): Promise<{
-        refereeOtrId: string;
-        status: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        creditsEarned: number;
-        id: number;
         referrerId: number;
+        refereeOtrId: string;
+        status: string;
+        creditsEarned: number;
     }>;
     getReferralStats(referrerId: number): Promise<{
         totalReferrals: number;
@@ -19,13 +19,13 @@ export declare class ReferralService {
         availableCredits: number;
         referralCode: string;
         referrals: {
-            refereeOtrId: string;
-            status: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            creditsEarned: number;
-            id: number;
             referrerId: number;
+            refereeOtrId: string;
+            status: string;
+            creditsEarned: number;
         }[];
     }>;
     getReferralHistory(referrerId: number): Promise<{
@@ -37,37 +37,37 @@ export declare class ReferralService {
     }[]>;
     getRewards(userId: number): Promise<({
         mockTest: {
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
+            examId: number | null;
             title: string;
             duration: number;
             sectionType: string;
             isProctored: boolean;
             isAdaptive: boolean;
             categoryId: number;
-            examId: number | null;
         };
     } & {
-        createdAt: Date;
         id: number;
+        createdAt: Date;
         userId: number;
         mockTestId: number;
         isRedeemed: boolean;
     })[]>;
     getAllReferrals(): Promise<({
         referrer: {
-            otrId: string;
             firstName: string;
             lastName: string;
+            otrId: string;
         };
     } & {
-        refereeOtrId: string;
-        status: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        creditsEarned: number;
-        id: number;
         referrerId: number;
+        refereeOtrId: string;
+        status: string;
+        creditsEarned: number;
     })[]>;
 }

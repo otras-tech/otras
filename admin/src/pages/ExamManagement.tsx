@@ -83,6 +83,17 @@ export default function ExamManagement() {
         }
     };
 
+    const handleDelete = async (id: number) => {
+        if (!window.confirm('Are you sure you want to delete this exam and all its associated data (Tests, Applications, etc.)?')) return;
+        try {
+            await axios.delete(`http://localhost:4000/exams/${id}`);
+            fetchExams();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete exam. Check backend logs.');
+        }
+    };
+
     return (
         <div className="space-y-6">
 
@@ -382,6 +393,7 @@ export default function ExamManagement() {
 
 
                                 <button
+                                    onClick={() => handleDelete(exam.id)}
                                     className="p-2 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--bg-light)] rounded-[var(--radius-lg)] transition-all"
                                 >
                                     <Trash2 size={16} />

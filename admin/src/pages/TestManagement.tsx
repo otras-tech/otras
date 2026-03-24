@@ -10,6 +10,21 @@ export default function TestManagement() {
     const [formData, setFormData] = useState({ name: '', examId: '', questions: [] });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [preview, setPreview] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (formData.examId) {
+            axios.get(`http://localhost:4000/test/preview/${formData.examId}`)
+                .then(res => setPreview(res.data))
+                .catch(err => {
+                    console.error(err);
+                    setPreview([]);
+                });
+        } else {
+            setPreview([]);
+        }
+    }, [formData.examId]);
 
     useEffect(() => {
         fetchData();
@@ -36,18 +51,48 @@ export default function TestManagement() {
         setError(null);
         setSubmitting(true);
         try {
-            await axios.post('http://localhost:4000/test', {
-                name: formData.name,
-                examId: Number(formData.examId),
-            });
+            if (editingId) {
+                await axios.patch(`http://localhost:4000/test/${editingId}`, {
+                    name: formData.name,
+                    examId: Number(formData.examId),
+                });
+            } else {
+                await axios.post('http://localhost:4000/test', {
+                    name: formData.name,
+                    examId: Number(formData.examId),
+                });
+            }
             setShowForm(false);
+            setEditingId(null);
             setFormData({ name: '', examId: '', questions: [] });
             fetchData();
         } catch (err: any) {
             console.error(err);
-            setError(err.response?.data?.message || 'Failed to create test. Please ensure the exam has subjects and subjects have questions.');
+            setError(err.response?.data?.message || `Failed to ${editingId ? 'update' : 'create'} test. Please check requirements.`);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleEdit = (test: any) => {
+        setFormData({
+            name: test.name,
+            examId: test.examId,
+            questions: []
+        });
+        setEditingId(test.id);
+        setShowForm(true);
+        window.scrollTo(0, 0);
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!window.confirm('Are you sure you want to delete this test? All questions and results tied to it will be removed.')) return;
+        try {
+            await axios.delete(`http://localhost:4000/test/${id}`);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete test.');
         }
     };
 
@@ -65,7 +110,13 @@ export default function TestManagement() {
                 </div>
 
                 <button
-                    onClick={() => setShowForm(!showForm)}
+                    onClick={() => {
+                        setShowForm(!showForm);
+                        if (showForm) {
+                            setEditingId(null);
+                            setFormData({ name: '', examId: '', questions: [] });
+                        }
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-[var(--radius-lg)] font-semibold text-sm hover:bg-[var(--color-primary-dark)] transition-colors"
                 >
                     <Plus size={18} />
@@ -133,6 +184,48 @@ export default function TestManagement() {
                     </div>
 
 
+                    {preview.length > 0 && (
+                        <div className="p-4 bg-[var(--bg-light)] rounded-[var(--radius-xl)] border border-[var(--border-light)] space-y-3 animate-in fade-in zoom-in duration-300">
+                            <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
+                                <Layers size={14} className="text-[var(--color-primary)]" /> Deterministic Distribution Preview
+                            </h3>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {preview.map((p: any) => (
+                                    <div key={p.id} className="p-3 bg-white rounded-[var(--radius-lg)] border border-[var(--border-light)] shadow-sm relative overflow-hidden group hover:border-[var(--border-muted)] transition-all">
+                                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide truncate mb-1">
+                                            {p.name}
+                                        </p>
+                                        <div className="flex items-end justify-between">
+                                            <p className="text-xl font-black text-[var(--text-main)] leading-none">
+                                                {p.count} <span className="text-[10px] text-[var(--text-muted)] font-bold">QS</span>
+                                            </p>
+                                            <div className="text-right">
+                                                <p className={`text-[9px] font-black uppercase ${p.available < p.count ? 'text-red-500' : 'text-green-600'}`}>
+                                                    {p.available < p.count ? 'Shortage' : 'Ready'}
+                                                </p>
+                                                <p className="text-[10px] text-[var(--text-muted)] font-bold leading-none">
+                                                    Bank: {p.available}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {p.available < p.count && <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {preview.some((p: any) => p.available < p.count) && (
+                                <div className="p-3 bg-red-50 border border-red-100 rounded-[var(--radius-lg)] flex items-start gap-2">
+                                    <div className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">!</div>
+                                    <p className="text-xs text-red-600 font-bold leading-relaxed">
+                                        Critical Stop: The question bank contains insufficient items for the required subject quotas. Please upload more questions for the highlighted subjects before proceeding.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+
                     {error && (
                         <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold rounded-[var(--radius-lg)] animate-in fade-in zoom-in duration-200">
                             {error}
@@ -145,7 +238,11 @@ export default function TestManagement() {
                         <button
                             type="button"
                             disabled={submitting}
-                            onClick={() => setShowForm(false)}
+                            onClick={() => {
+                                setShowForm(false);
+                                setEditingId(null);
+                                setFormData({ name: '', examId: '', questions: [] });
+                            }}
                             className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-light)] rounded-[var(--radius-lg)] disabled:opacity-50"
                         >
                             Cancel
@@ -157,7 +254,7 @@ export default function TestManagement() {
                             className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-[var(--radius-lg)] font-semibold text-sm hover:bg-[var(--color-primary-dark)] disabled:bg-slate-400 flex items-center gap-2"
                         >
                             {submitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                            {submitting ? 'Generating...' : 'Generate Test'}
+                            {submitting ? (editingId ? 'Saving...' : 'Generating...') : (editingId ? 'Update Test' : 'Generate Test')}
                         </button>
 
                     </div>
@@ -215,9 +312,20 @@ export default function TestManagement() {
                         </div>
 
 
-                        <button className="px-4 py-2 border border-[var(--border-light)] text-[var(--text-secondary)] rounded-[var(--radius-lg)] text-sm font-semibold hover:bg-[var(--bg-light)] transition-colors">
-                            Manage Questions
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleEdit(test)}
+                                className="px-3 py-2 border border-[var(--border-light)] text-[var(--color-primary)] rounded-[var(--radius-lg)] text-sm font-semibold hover:bg-[var(--color-primary-light)] transition-colors"
+                            >
+                                Edit Test
+                            </button>
+                            <button
+                                onClick={() => handleDelete(test.id)}
+                                className="px-3 py-2 border border-red-100 text-red-600 bg-red-50 rounded-[var(--radius-lg)] text-sm font-semibold hover:bg-red-100 hover:border-red-200 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
 
                     </div>
 

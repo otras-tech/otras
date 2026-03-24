@@ -27,9 +27,9 @@ export declare class StudyPlanService {
     } & {
         id: string;
         createdAt: Date;
+        examId: number | null;
         userId: number;
         weakAreas: string[];
-        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
@@ -61,9 +61,9 @@ export declare class StudyPlanService {
     } & {
         id: string;
         createdAt: Date;
+        examId: number | null;
         userId: number;
         weakAreas: string[];
-        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
@@ -94,9 +94,9 @@ export declare class StudyPlanService {
     } & {
         id: string;
         createdAt: Date;
+        examId: number | null;
         userId: number;
         weakAreas: string[];
-        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
@@ -128,9 +128,9 @@ export declare class StudyPlanService {
     delete(id: string): Promise<{
         id: string;
         createdAt: Date;
+        examId: number | null;
         userId: number;
         weakAreas: string[];
-        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;

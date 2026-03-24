@@ -76,10 +76,10 @@ export declare class ArthaService {
         selectedExam: string | null;
         recentReports: {
             id: string;
-            otrId: string;
             createdAt: Date;
             percentile: number | null;
             readinessIndex: number | null;
+            otrId: string;
             tier: number;
             score: number;
             totalMarks: number;
@@ -90,6 +90,7 @@ export declare class ArthaService {
         }[];
     }>;
     startTierAssessment(userId: string, tier: number): Promise<{
+        exam: string | null;
         id: string;
         createdAt: Date;
         logicalScore: number | null;
@@ -104,10 +105,10 @@ export declare class ArthaService {
         speed: number | null;
         consistency: number | null;
         profileId: string;
-        exam: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         startTime: Date | null;
         submitTime: Date | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
+        idempotencyKey: string | null;
     }>;
     recordQuestionAttempt(data: {
         assessmentId: string;
@@ -207,10 +208,10 @@ export declare class ArthaService {
         selectedExam: string | null;
         recentReports: {
             id: string;
-            otrId: string;
             createdAt: Date;
             percentile: number | null;
             readinessIndex: number | null;
+            otrId: string;
             tier: number;
             score: number;
             totalMarks: number;
@@ -288,10 +289,10 @@ export declare class ArthaService {
         selectedExam: string | null;
         recentReports: {
             id: string;
-            otrId: string;
             createdAt: Date;
             percentile: number | null;
             readinessIndex: number | null;
+            otrId: string;
             tier: number;
             score: number;
             totalMarks: number;
@@ -369,10 +370,10 @@ export declare class ArthaService {
         selectedExam: string | null;
         recentReports: {
             id: string;
-            otrId: string;
             createdAt: Date;
             percentile: number | null;
             readinessIndex: number | null;
+            otrId: string;
             tier: number;
             score: number;
             totalMarks: number;

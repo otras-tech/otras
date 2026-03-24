@@ -9,6 +9,7 @@ export default function ExamInstructions() {
   const { state } = useLocation();
   const [agreed, setAgreed] = useState(false);
   const [exam, setExam] = useState(null);
+  const [testData, setTestData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const { t } = useTranslation();
@@ -25,6 +26,9 @@ export default function ExamInstructions() {
     try {
       const detailResp = await axios.get(`http://localhost:4000/exams/${id}`);
       setExam(detailResp.data);
+
+      const testResp = await axios.get(`http://localhost:4000/exams/${id}/random-test`);
+      setTestData(testResp.data);
     } catch (err) {
       console.error("Failed to fetch specific exam", err);
     } finally {
@@ -44,6 +48,9 @@ export default function ExamInstructions() {
       if (tier1) {
         const detailResp = await axios.get(`http://localhost:4000/exams/${tier1.id}`);
         setExam(detailResp.data);
+
+        const testResp = await axios.get(`http://localhost:4000/exams/${tier1.id}/random-test`);
+        setTestData(testResp.data);
       }
     } catch (err) {
       console.error("Failed to fetch Tier 1 exam", err);
@@ -53,17 +60,12 @@ export default function ExamInstructions() {
   };
 
   const handleStartTest = async () => {
-    if (!exam) return;
-    setStarting(true);
-    try {
-      const resp = await axios.get(`http://localhost:4000/exams/${exam.id}/random-test`);
-      navigate('/artha-test', { state: { testData: resp.data, tier: state?.tier } });
-    } catch (err) {
-      console.error("Failed to fetch random test", err);
-      alert("Failed to load test. Please try again.");
-    } finally {
-      setStarting(false);
+    if (!testData) {
+      alert("Test data failed to load. Please refresh the page.");
+      return;
     }
+    setStarting(true);
+    navigate('/artha-test', { state: { testData, tier: state?.tier } });
   };
 
   if (loading) {
@@ -127,10 +129,13 @@ export default function ExamInstructions() {
                   </thead>
                   <tbody>
                     {exam.subjects?.map((subject, i) => {
-                      const questionCount = exam.tests?.reduce((acc, test) => {
-                        const subjectQuestions = test.questions?.filter(q => q.subjectId === subject.id) || [];
-                        return acc + subjectQuestions.length;
-                      }, 0) || exam.noOfQuestions || "—";
+                      let questionCount = 0;
+                      if (testData?.test?.questions) {
+                        // Accurately derive the number of questions for this specific test
+                        questionCount = testData.test.questions.filter(q => q.subjectId === subject.id).length;
+                      } else {
+                        questionCount = exam.noOfQuestions || "—";
+                      }
 
                       return (
                         <tr key={subject.id} className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
@@ -140,6 +145,15 @@ export default function ExamInstructions() {
                         </tr>
                       );
                     })}
+                    <tr className="bg-slate-100 border-t-2 border-slate-300">
+                      <td className="p-4 font-black text-slate-800 text-right uppercase tracking-wide text-xs">{t("Total")}</td>
+                      <td className="p-4 text-center font-black text-blue-700 text-lg">
+                        {testData?.test?.questions?.length || exam.noOfQuestions || "—"}
+                      </td>
+                      <td className="p-4 text-center font-black text-slate-800 text-lg">
+                        {testData?.test?.questions?.length || exam.noOfQuestions || "—"}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -160,7 +174,7 @@ export default function ExamInstructions() {
                   </div>
                   <div>
                     <p className="font-bold text-red-800 text-sm">{t("negativeMarking")}</p>
-                    <p className="text-red-600 text-2xl font-black">−0.25 Mark</p>
+                    <p className="text-red-600 text-2xl font-black">−0.25 for wrong answers</p>
                   </div>
                 </div>
               </div>

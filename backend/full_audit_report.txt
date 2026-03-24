@@ -1,0 +1,35 @@
+=== FULL EXAM AUDIT ===
+
+EXAM: SSC CGL 2026 (ID: 5) - Subjects Expected: 4
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50
+ - Subject: verbal (ID: 8) | Questions in DB: 50
+ - Subject: General Awareness (ID: 9) | Questions in DB: 20
+
+EXAM: JEE Mains 2026 (ID: 6) - Subjects Expected: 2
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: Technical Aptitude (ID: 10) | Questions in DB: 20
+
+EXAM: Tier-1 (ID: 7) - Subjects Expected: 3
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50
+ - Subject: verbal (ID: 8) | Questions in DB: 50
+
+EXAM: UPSC CSE 2026 (ID: 4) - Subjects Expected: 4
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50
+ - Subject: verbal (ID: 8) | Questions in DB: 50
+ - Subject: General Awareness (ID: 9) | Questions in DB: 20
+
+EXAM: abc (ID: 8) - Subjects Expected: 2
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50
+
+EXAM: def (ID: 9) - Subjects Expected: 3
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50
+ - Subject: verbal (ID: 8) | Questions in DB: 50
+
+EXAM: bindu (ID: 10) - Subjects Expected: 2
+ - Subject: quant (ID: 6) | Questions in DB: 60
+ - Subject: logical (ID: 7) | Questions in DB: 50

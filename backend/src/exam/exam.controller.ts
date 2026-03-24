@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { ExamService } from './exam.service';
 
@@ -16,6 +16,12 @@ export class ExamController {
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateData: any) {
     return this.examService.update(id, updateData);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.examService.remove(id);
   }
 
   @Get()

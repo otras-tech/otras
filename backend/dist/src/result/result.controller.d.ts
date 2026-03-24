@@ -15,6 +15,7 @@ export declare class ResultController {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         testId: number;
     }>;
     submit(body: {
@@ -31,8 +32,8 @@ export declare class ResultController {
             };
         } & {
             id: number;
-            createdAt: Date;
             name: string;
+            createdAt: Date;
             examId: number;
         };
     } & {
@@ -44,6 +45,7 @@ export declare class ResultController {
         subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date | null;
         submitTime: Date | null;
+        idempotencyKey: string | null;
         testId: number;
     })[]>;
 }
