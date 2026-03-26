@@ -1,0 +1,22 @@
+{
+  "exams": [
+    {
+      "id": 10,
+      "name": "UPSC CSE 2026"
+    },
+    {
+      "id": 11,
+      "name": "JEE Mains 2026"
+    },
+    {
+      "id": 12,
+      "name": "SSC CGL 2026"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "email": "testuser@example.com"
+    }
+  ]
+}

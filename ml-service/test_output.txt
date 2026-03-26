@@ -1,0 +1,133 @@
+﻿============================================================
+TEST 1: Health Check
+============================================================
+Status Code : 200
+Response    : {
+  "service": "OTRAS ML Readiness Service",
+  "version": "1.0.0",
+  "status": "healthy"
+}
+
+============================================================
+TEST 2: Valid Readiness Calculation (typical student)
+============================================================
+Status Code : 200
+Input       : {
+  "aptitude_score": 75.0,
+  "subject_score": 68.0,
+  "time_management_score": 60.0,
+  "mock_average_score": 72.0,
+  "consistency_score": 80.0
+}
+Response    : {
+  "readinessIndex": 69.91,
+  "status": "Moderate Readiness"
+}
+
+============================================================
+TEST 3: High Performer
+============================================================
+Status Code : 200
+Response    : {
+  "readinessIndex": 86.42,
+  "status": "High Readiness"
+}
+
+============================================================
+TEST 4: Low Performer
+============================================================
+Status Code : 200
+Response    : {
+  "readinessIndex": 34.5,
+  "status": "Low Readiness"
+}
+
+============================================================
+TEST 5: Invalid Payload (missing fields - expect 422)
+============================================================
+Status Code : 422 (expected 422)
+Response    : {
+  "detail": [
+    {
+      "type": "missing",
+      "loc": [
+        "body",
+        "subject_score"
+      ],
+      "msg": "Field required",
+      "input": {
+        "aptitude_score": 70.0
+      }
+    },
+    {
+      "type": "missing",
+      "loc": [
+        "body",
+        "time_management_score"
+      ],
+      "msg": "Field required",
+      "input": {
+        "aptitude_score": 70.0
+      }
+    },
+    {
+      "type": "missing",
+      "loc": [
+        "body",
+        "mock_average_score"
+      ],
+      "msg": "Field required",
+      "input": {
+        "aptitude_score": 70.0
+      }
+    },
+    {
+      "type": "missing",
+      "loc": [
+        "body",
+        "consistency_score"
+      ],
+      "msg": "Field required",
+      "input": {
+        "aptitude_score": 70.0
+      }
+    }
+  ]
+}
+
+============================================================
+TEST 6: Out-of-Range Values (expect 422)
+============================================================
+Status Code : 422 (expected 422)
+Response    : {
+  "detail": [
+    {
+      "type": "less_than_equal",
+      "loc": [
+        "body",
+        "aptitude_score"
+      ],
+      "msg": "Input should be less than or equal to 100",
+      "input": 150.0,
+      "ctx": {
+        "le": 100.0
+      }
+    },
+    {
+      "type": "greater_than_equal",
+      "loc": [
+        "body",
+        "subject_score"
+      ],
+      "msg": "Input should be greater than or equal to 0",
+      "input": -10.0,
+      "ctx": {
+        "ge": 0.0
+      }
+    }
+  ]
+}
+
+============================================================
+ALL TESTS COMPLETE
+============================================================

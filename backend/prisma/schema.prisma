@@ -1,0 +1,525 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                        @id @default(autoincrement())
+  firstName             String
+  lastName              String
+  email                 String                     @unique
+  password              String
+  age                   Int?
+  category              String?
+  otrId                 String                     @unique
+  highestDegree         String?
+  careerPreference      String?
+  domicile              String?
+  pincode               String?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @default(now()) @updatedAt
+  credits               Int                        @default(0)
+  referralCode          String                     @unique
+  preferredLanguage     String                     @default("en")
+  isDeleted             Boolean                    @default(false) // ✅ Added for scalability
+  applications          Application[]
+  arthaRecentReports    ArthaRecentReport[]
+  careerReadinessScores CareerReadinessTestScore[]
+  mockTestAttempts      MockTestAttempt[]
+  payments              Payment[]
+  referralsMade         Referral[]                 @relation("ReferrerRelation")
+  referralRewards       ReferralReward[]
+  results               Result[]
+  studyPlans            StudyPlan[]
+
+  @@index([email]) // ✅ Added for scalability
+  @@index([otrId]) // ✅ Added for scalability
+  @@index([referralCode]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Job {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  deadline    DateTime
+  status      String   @default("Open")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  isDeleted   Boolean  @default(false) // ✅ Added for scalability
+
+  @@index([status]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Exam {
+  id                Int           @id @default(autoincrement())
+  name              String
+  cutoff            Float?
+  syllabus          String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+  eligibility       String?
+  longDescription   String?
+  noOfQuestions     Int?
+  pattern           String?
+  shortDescription  String?
+  applicationStatus String        @default("Application Success")
+  isDeleted         Boolean       @default(false) // ✅ Added for scalability
+  applications      Application[]
+  mockTests         MockTest[]
+  pyps              PYP[]
+  studyPlans        StudyPlan[]
+  tests             Test[]
+  subjects          Subject[]     @relation("ExamToSubject")
+
+  @@index([name]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Subject {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now()) // ✅ Added for scalability
+  updatedAt DateTime   @default(now()) @updatedAt // ✅ Added for scalability
+  questions Question[]
+  exams     Exam[]     @relation("ExamToSubject")
+
+  @@index([name]) // ✅ Added for scalability
+}
+
+model Question {
+  id        Int      @id @default(autoincrement())
+  text      String
+  options   String[]
+  answer    String
+  explanation String?
+  subjectId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // ✅ Added for scalability
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  tests     Test[]   @relation("QuestionToTest")
+
+  @@index([subjectId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Test {
+  id                    Int                        @id @default(autoincrement())
+  name                  String
+  examId                Int
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @default(now()) @updatedAt // ✅ Added for scalability
+  isDeleted             Boolean                    @default(false) // ✅ Added for scalability
+  careerReadinessScores CareerReadinessTestScore[]
+  results               Result[]
+  exam                  Exam                       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questions             Question[]                 @relation("QuestionToTest")
+
+  @@index([examId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model PYP {
+  id        Int      @id @default(autoincrement())
+  year      Int
+  fileUrl   String
+  examId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // ✅ Added for scalability
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId]) // ✅ Added for scalability
+  @@index([year]) // ✅ Added for scalability
+}
+
+model Subscription {
+  id            Int       @id @default(autoincrement())
+  title         String
+  price         Float
+  features      String[]
+  isRecommended Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt // ✅ Added for scalability
+  isDeleted     Boolean   @default(false) // ✅ Added for scalability
+  payments      Payment[]
+
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt // ✅ Added for scalability
+
+  @@index([username]) // ✅ Added for scalability
+  @@index([email]) // ✅ Added for scalability
+}
+
+model Result {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  testId           Int
+  score            Float
+  subjectBreakdown Json // ⚠️ Consider normalization if frequent filtering is required
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt // ✅ Added for scalability
+  isDeleted        Boolean   @default(false) // ✅ Added for scalability
+  tier             Int?
+  startTime        DateTime?
+  submitTime       DateTime?
+  test             Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@index([userId]) // ✅ Added for scalability
+  @@index([testId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+  @@index([userId, createdAt]) // ✅ Added for scalability
+  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+}
+
+model Application {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  examId            Int
+  status            String   @default("Applied")
+  applicationStatus String   @default("Success")
+  admitCardStatus   String   @default("Pending")
+  examKeyStatus     String   @default("Pending")
+  resultStatus      String   @default("Pending")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+  isDeleted         Boolean  @default(false) // ✅ Added for scalability
+  exam              Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, examId])
+  @@index([userId]) // ✅ Added for scalability
+  @@index([examId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+  @@index([userId, examId]) // ✅ Added for scalability
+}
+
+model MockTestCategory {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  mockTests MockTest[]
+}
+
+model MockTest {
+  id              Int               @id @default(autoincrement())
+  title           String
+  duration        Int
+  sectionType     String
+  isProctored     Boolean           @default(false)
+  isAdaptive      Boolean           @default(false)
+  categoryId      Int
+  examId          Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+  isDeleted       Boolean           @default(false) // ✅ Added for scalability
+  category        MockTestCategory  @relation(fields: [categoryId], references: [id])
+  exam            Exam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  attempts        MockTestAttempt[]
+  referralRewards ReferralReward[]
+
+  @@index([examId]) // ✅ Added for scalability
+  @@index([categoryId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model MockTestAttempt {
+  id               Int       @id @default(autoincrement())
+  otrId            String
+  mockTestId       Int
+  score            Float
+  totalMarks       Float
+  correctAnswers   Int?
+  subjectBreakdown Json? // ⚠️ Consider normalization if frequent filtering is required
+  attemptedAt      DateTime  @default(now())
+  startTime        DateTime?
+  submitTime       DateTime?
+  updatedAt        DateTime  @updatedAt // ✅ Added for scalability
+  isDeleted        Boolean   @default(false) // ✅ Added for scalability
+  mockTest         MockTest  @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [otrId], references: [otrId])
+
+  @@index([otrId]) // ✅ Added for scalability
+  @@index([mockTestId]) // ✅ Added for scalability
+  @@index([attemptedAt]) // ✅ Added for scalability
+  @@index([otrId, attemptedAt]) // ✅ Added for scalability
+  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+}
+
+model CareerReadinessTestScore {
+  id               Int      @id @default(autoincrement())
+  otrId            String
+  testId           Int
+  totalScore       Float
+  totalMarks       Float
+  correctAnswers   Int
+  wrongAnswers     Int
+  negativeMarks    Float
+  subjectBreakdown Json // ⚠️ Consider normalization if frequent filtering is required
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt // ✅ Added for scalability
+  user             User     @relation(fields: [otrId], references: [otrId])
+  test             Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([otrId, testId], name: "otrId_testId")
+  @@index([otrId]) // ✅ Added for scalability
+  @@index([testId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+  @@index([otrId, testId]) // ✅ Added for scalability (Composite for query patterns)
+}
+
+model Payment {
+  id                Int          @id @default(autoincrement())
+  userId            Int
+  subscriptionId    Int
+  razorpayOrderId   String       @unique
+  razorpayPaymentId String?      @unique
+  razorpaySignature String?
+  amount            Float
+  currency          String       @default("INR")
+  status            String       @default("created")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @default(now()) @updatedAt
+  isDeleted         Boolean      @default(false) // ✅ Added for scalability
+  paymentMethod     String       @default("razorpay")
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id])
+  user              User         @relation(fields: [userId], references: [id])
+
+  @@index([userId]) // ✅ Added for scalability
+  @@index([subscriptionId]) // ✅ Added for scalability
+  @@index([razorpayOrderId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model Referral {
+  id            Int      @id @default(autoincrement())
+  referrerId    Int
+  refereeOtrId  String
+  status        String   @default("Joined")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  creditsEarned Int      @default(0)
+  referrer      User     @relation("ReferrerRelation", fields: [referrerId], references: [id])
+
+  @@unique([referrerId, refereeOtrId])
+  @@index([referrerId]) // ✅ Added for scalability
+  @@index([refereeOtrId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model ReferralReward {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  mockTestId Int
+  isRedeemed Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt // ✅ Added for scalability
+  mockTest   MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId]) // ✅ Added for scalability
+  @@index([mockTestId]) // ✅ Added for scalability
+}
+
+model StudyPlan {
+  id                  String         @id @default(uuid())
+  userId              Int
+  examId              Int?
+  targetExam          String
+  examDate            DateTime
+  tier1Score          Int?
+  tier2Score          Int?
+  currentLevel        String
+  weakAreas           String[]
+  dailyStudyHours     Int
+  mockFrequency       String
+  revisionStrategy    String
+  preferredStudyTimes String
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @default(now()) @updatedAt // ✅ Added for scalability
+  exam                Exam?          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user                User           @relation(fields: [userId], references: [id])
+  days                StudyPlanDay[]
+
+  @@index([userId]) // ✅ Added for scalability
+  @@index([examId]) // ✅ Added for scalability
+}
+
+model StudyPlanDay {
+  id         String          @id @default(uuid())
+  day        String
+  planId     String
+  date       DateTime?
+  createdAt  DateTime        @default(now()) // ✅ Added for scalability
+  updatedAt  DateTime        @default(now()) @updatedAt // ✅ Added for scalability
+  activities StudyActivity[]
+  plan       StudyPlan       @relation(fields: [planId], references: [id])
+
+  @@index([planId]) // ✅ Added for scalability
+}
+
+model StudyActivity {
+  id          String       @id @default(uuid())
+  timeSlot    String
+  description String
+  focusArea   String?
+  completed   Boolean      @default(false)
+  missed      Boolean      @default(false)
+  dayId       String
+  createdAt   DateTime     @default(now()) // ✅ Added for scalability
+  updatedAt   DateTime     @default(now()) @updatedAt // ✅ Added for scalability
+  day         StudyPlanDay @relation(fields: [dayId], references: [id])
+
+  @@index([dayId]) // ✅ Added for scalability
+}
+
+model ArthaProfile {
+  id             String                @id @default(uuid())
+  userId         String
+  otrCompleted   Boolean               @default(false)
+  logicalScore   Float
+  quantScore     Float
+  verbalScore    Float
+  percentile     Float
+  tier1Progress  Float
+  tier2Progress  Float
+  tier3Progress  Float
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @default(now()) @updatedAt // ✅ Added for scalability
+  readinessIndex Float                 @default(0)
+  assessments    ArthaAssessment[]
+  feedback       IntelligenceFeedback?
+
+  @@index([userId]) // ✅ Added for scalability
+}
+
+model ArthaAssessment {
+  id             String                 @id @default(uuid())
+  profileId      String
+  tier           Int
+  exam           String?
+  logicalScore   Float?
+  quantScore     Float?
+  verbalScore    Float?
+  subjectScores  Json? // ⚠️ Consider normalization if frequent filtering is required
+  accuracy       Float?
+  speed          Float?
+  consistency    Float?
+  percentile     Float?
+  startTime      DateTime?
+  submitTime     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @default(now()) @updatedAt // ✅ Added for scalability
+  readinessIndex Float?
+  score          Float?
+  totalMarks     Int?
+  profile        ArthaProfile           @relation(fields: [profileId], references: [id])
+  attempts       ArthaQuestionAttempt[]
+
+  @@index([profileId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+}
+
+model ArthaQuestionAttempt {
+  id             String          @id @default(uuid())
+  assessmentId   String
+  questionId     Int
+  selectedOption String
+  isCorrect      Boolean
+  timeTaken      Int
+  attemptedAt    DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt // ✅ Added for scalability
+  assessment     ArthaAssessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([assessmentId]) // ✅ Added for scalability
+  @@index([questionId]) // ✅ Added for scalability
+}
+
+model IntelligenceFeedback {
+  id                 String       @id @default(uuid())
+  profileId          String       @unique
+  logicalFoundation  String?
+  subjectDepth       String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @default(now()) @updatedAt // ✅ Added for scalability
+  readinessInsight   String?
+  accuracyInsight    String?
+  consistencyInsight String?
+  preparationAdvice  String?
+  speedInsight       String?
+  subjectStrength    String?
+  tier               Int          @default(1)
+  weakAreas          String?
+  examSuggestions    String?
+  ArthaProfile       ArthaProfile @relation(fields: [profileId], references: [id])
+}
+
+model ArthaRecentReport {
+  id               String   @id @default(uuid())
+  otrId            String
+  tier             Int
+  score            Float
+  totalMarks       Int
+  accuracy         Float?
+  speed            Float?
+  consistency      Float?
+  readinessIndex   Float?
+  percentile       Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt // ✅ Added for scalability
+  subjectBreakdown Json? // ⚠️ Consider normalization if frequent filtering is required
+  user             User     @relation(fields: [otrId], references: [otrId])
+
+  @@unique([otrId, tier])
+  @@index([otrId]) // ✅ Added for scalability
+  @@index([createdAt]) // ✅ Added for scalability
+}
+
+model IntelligenceProfile {
+  id              String   @id @default(uuid())
+  userId          String
+  logicalScore    Int
+  quantScore      Int
+  verbalScore     Int
+  interests       String[]
+  learningPattern String
+  confidenceIndex Int
+  aspirations     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt // ✅ Added for scalability
+  roadmap         Roadmap?
+
+  @@index([userId]) // ✅ Added for scalability
+}
+
+model Roadmap {
+  id                  String              @id @default(uuid())
+  profileId           String              @unique
+  summary             String
+  recommendations     String[]
+  phase1              String
+  phase2              String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @default(now()) @updatedAt // ✅ Added for scalability
+  IntelligenceProfile IntelligenceProfile @relation(fields: [profileId], references: [id])
+}
+
+// 🚀 SCALABILITY RECOMMENDATIONS (500K-1M USERS)
+// 1. PAGINATION: Use cursor-based pagination (using ID or createdAt) for large lists to avoid performance degradation.
+// 2. CACHING: Use Redis to cache frequently accessed data like Exams, MockTests, and User Sessions.
+// 3. ASYNC PROCESSING: Use BullMQ or RabbitMQ for heavy database writes: Result creation, Analytics, and Payment processing.
+// 4. DATABASE: Use Read Replicas (Prisma supports this via multi-datasource or middleware) to offload read queries.
+// 5. PARTITIONING: Implement table partitioning in PostgreSQL for high-growth tables (Result, MockTestAttempt, ArthaAssessment).

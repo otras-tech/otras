@@ -1,0 +1,16 @@
+﻿src/admin/admin.module.ts(4,10): error TS2305: Module '"@nestjs/jwt"' has no exported member 'JwtModule'.
+src/admin/admin.service.ts(3,10): error TS2305: Module '"@nestjs/jwt"' has no exported member 'JwtService'.
+src/app.controller.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/auth/auth.controller.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/auth/auth.module.ts(5,10): error TS2305: Module '"@nestjs/jwt"' has no exported member 'JwtModule'.
+src/auth/auth.service.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/auth/auth.service.ts(3,10): error TS2305: Module '"@nestjs/jwt"' has no exported member 'JwtService'.
+src/auth/strategies/jwt.strategy.ts(2,10): error TS2305: Module '"@nestjs/passport"' has no exported member 'PassportStrategy'.
+src/prisma/prisma.service.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/pyp/pyp.controller.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/pyp/pyp.service.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/subscription/subscription.controller.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/subscription/subscription.service.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/user/user.controller.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+src/user/user.service.spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.
+test/app.e2e-spec.ts(1,16): error TS2305: Module '"@nestjs/testing"' has no exported member 'TestingModule'.

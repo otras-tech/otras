@@ -1,0 +1,5 @@
+UPDATE public."User"
+SET "credits"=100
+WHERE id=2
+
+uvicorn src.main:app --host 0.0.0.0 --port 5000 --reload

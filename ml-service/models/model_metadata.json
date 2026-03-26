@@ -1,0 +1,1 @@
+{"model": "RandomForestRegressor", "version": "1.0", "metrics": {"MAE": 1.2967, "MSE": 2.7429, "RMSE": 1.6562, "R2": 0.9699}}

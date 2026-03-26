@@ -1,0 +1,44 @@
+﻿Profiles: [
+  {
+    "id": "01b74361-f8d7-44ce-84b1-1d10f50b86a8",
+    "userId": "2",
+    "otrCompleted": true,
+    "logicalScore": -1.25,
+    "quantScore": -1.25,
+    "verbalScore": -1.25,
+    "percentile": 0,
+    "tier1Progress": 100,
+    "tier2Progress": 100,
+    "tier3Progress": 100,
+    "createdAt": "2026-03-16T04:52:20.417Z",
+    "readinessIndex": 51
+  },
+  {
+    "id": "3668c1be-20d8-4e3f-99c0-3b90445faaf7",
+    "userId": "3",
+    "otrCompleted": true,
+    "logicalScore": 3.75,
+    "quantScore": -1.25,
+    "verbalScore": -1.25,
+    "percentile": 8.33,
+    "tier1Progress": 100,
+    "tier2Progress": 100,
+    "tier3Progress": 100,
+    "createdAt": "2026-03-16T06:33:17.130Z",
+    "readinessIndex": 0
+  },
+  {
+    "id": "518f9bec-d780-40f0-9cfa-40e4d6ab4d78",
+    "userId": "1",
+    "otrCompleted": false,
+    "logicalScore": 0.5,
+    "quantScore": 0,
+    "verbalScore": 0,
+    "percentile": 3.33,
+    "tier1Progress": 7,
+    "tier2Progress": 0,
+    "tier3Progress": 0,
+    "createdAt": "2026-03-16T05:00:29.711Z",
+    "readinessIndex": 34
+  }
+]

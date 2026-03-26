@@ -1,0 +1,339 @@
+﻿
+> backend@0.0.1 start
+> nest start
+
+Starting backend on port 4000...
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:37 am [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +30ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAiModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSubscriptionModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPypModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSubjectModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCategoryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMockTestModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCareerReadinessModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTestModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mQuestionModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mApplicationModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mReferralModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mArthaModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJobModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mExamModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mResultModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUserModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPaymentModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mStudyPlanModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAppController {/}:[39m[38;5;3m +5ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/auth}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/register, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/login, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUserController {/users}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/dashboard, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/tier-status, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mResultController {/results}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/results/start, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/results, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/results/user/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mJobController {/jobs}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/jobs, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/jobs, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/jobs/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mExamController {/exams}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams/:id/random-test, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/exams/tier/:tier, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTestController {/test}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/test, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/test, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/test/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/test/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/test/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mQuestionController {/question}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/question, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/question, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/question/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/question/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/question/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/admin/auth}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/auth/register, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/auth/login, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSubscriptionController {/subscriptions}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPypController {/pyps}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/pyps, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/pyps, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/pyps/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/pyps/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSubjectController {/subjects}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subjects, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subjects, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subjects/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subjects/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subjects/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mApplicationController {/applications}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/applications, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/applications/user/otr/:otrId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/applications/user/:userId, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/applications, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/applications/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCategoryController {/category}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/category, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/category, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/category/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/category/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/category/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mMockTestController {/mock-test}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/start-attempt, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/attempts, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/exam-attempts, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/attempts/recent/:otrId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/rank/:mockTestId/:otrId, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/mock-test/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCareerReadinessController {/career-readiness}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/career-readiness, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/career-readiness/:otrId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPaymentController {/payments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/create-order, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/verify, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/pay-with-credits, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/user/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mReferralController {/referrals}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/referrals, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/referrals/stats/:referrerId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/referrals/history/:referrerId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/referrals/rewards/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/referrals/admin/all, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mStudyPlanController {/study-plan}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/study-plan/generate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/study-plan/user/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/study-plan/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/study-plan/activity/:activityId, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAiController {/ai}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ai/roadmap, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mArthaController {/artha}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/status/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/start-tier/:tier, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/tier1, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/tier2, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/tier3, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/artha/attempt-question, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 22964  - [39m16/03/2026, 10:50:38 am [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +45ms[39m
+Backend is running on: http://localhost:4000
+
+---- ARTHA: Process Tier 1 Result Start ----
+ARTHA: User ID: 1
+ARTHA: Logical Score: 0.5
+ARTHA: Quant Score: 0
+ARTHA: Verbal Score: 0
+
+ARTHA Progress Engine: Finalizing Tier-1 Progress
+ARTHA Progress Engine: Total Questions Retrieved
+Total Questions In Tier: 15
+ARTHA Progress Engine: Attempt Count Updated
+Attempted Questions: 1
+ARTHA Progress Engine: Calculating Progress
+Formula: attempted / total * 100
+ARTHA Progress Engine: Calculation Result
+Progress = (1 / 15) * 100 = 7%
+ARTHA Progress Engine: Progress Stored In State (DB)
+Stored Progress: 7%
+ARTHA: Total Score Calculated: 0.5
+ARTHA: Calling calculate_percentile() for Tier 1...
+ARTHA: Final Calculated Percentile: 3.3333333333333335
+---- ARTHA: Process Tier 1 Result End ----
+
+
+ARTHA Readiness Engine: Starting readiness calculation
+Module ΓåÆ readiness_module
+Function ΓåÆ calculateReadiness
+Tier ΓåÆ Tier 1
+Payload ΓåÆ {"rawScore":0.5,"totalPossible":15}
+
+ARTHA Readiness Engine: Extracting Tier-1 raw score
+raw_score ΓåÆ 0.50
+total_possible_score ΓåÆ 15
+
+ARTHA Readiness Engine: Normalizing score
+formula ΓåÆ (0.50 / 15) * 100
+
+ARTHA Readiness Engine: normalized aptitude_score ΓåÆ 3.33
+
+ARTHA Readiness Engine: Feature vector ΓåÆ [3.33,0,0,0,0]
+
+ARTHA Readiness Engine: Calling readiness_model
+ARTHA: Updating Profile Tier 1 Progress: 7%
+ARTHA: Sending Tier 1 data to AI service with language: undefined
+ARTHA: Sending payload to AI Service: { tier: 1, language: undefined }
+ARTHA: Fetching profile for user 1
+ARTHA: Checking subscription for user 1
+ARTHA: Subscription required for tier
+
+---- ARTHA: Process Tier 1 Result Start ----
+ARTHA: User ID: 1
+ARTHA: Logical Score: 0.5
+ARTHA: Quant Score: 0
+ARTHA: Verbal Score: 0
+
+ARTHA Progress Engine: Finalizing Tier-1 Progress
+ARTHA Progress Engine: Total Questions Retrieved
+Total Questions In Tier: 15
+ARTHA Progress Engine: Attempt Count Updated
+Attempted Questions: 1
+ARTHA Progress Engine: Calculating Progress
+Formula: attempted / total * 100
+ARTHA Progress Engine: Calculation Result
+Progress = (1 / 15) * 100 = 7%
+ARTHA Progress Engine: Progress Stored In State (DB)
+Stored Progress: 7%
+ARTHA: Total Score Calculated: 0.5
+ARTHA: Calling calculate_percentile() for Tier 1...
+ARTHA: Percentile Returned from ML Service: 3.33
+ARTHA: Final Calculated Percentile: 3.33
+---- ARTHA: Process Tier 1 Result End ----
+
+
+ARTHA Readiness Engine: Starting readiness calculation
+Module ΓåÆ readiness_module
+Function ΓåÆ calculateReadiness
+Tier ΓåÆ Tier 1
+Payload ΓåÆ {"rawScore":0.5,"totalPossible":15}
+
+ARTHA Readiness Engine: Extracting Tier-1 raw score
+raw_score ΓåÆ 0.50
+total_possible_score ΓåÆ 15
+
+ARTHA Readiness Engine: Normalizing score
+formula ΓåÆ (0.50 / 15) * 100
+
+ARTHA Readiness Engine: normalized aptitude_score ΓåÆ 3.33
+
+ARTHA Readiness Engine: Feature vector ΓåÆ [3.33,0,0,0,0]
+
+ARTHA Readiness Engine: Calling readiness_model
+ARTHA: Updating Profile Tier 1 Progress: 7%
+ARTHA: Sending Tier 1 data to AI service with language: undefined
+ARTHA: Sending payload to AI Service: { tier: 1, language: undefined }
+ARTHA: Fetching profile for user 1
+ARTHA: Checking subscription for user 1
+ARTHA: Subscription required for tier
+
+---- ARTHA: Process Tier 1 Result Start ----
+ARTHA: User ID: 1
+ARTHA: Logical Score: 0.5
+ARTHA: Quant Score: 0
+ARTHA: Verbal Score: 0
+
+ARTHA Progress Engine: Finalizing Tier-1 Progress
+ARTHA Progress Engine: Total Questions Retrieved
+Total Questions In Tier: 15
+ARTHA Progress Engine: Attempt Count Updated
+Attempted Questions: 1
+ARTHA Progress Engine: Calculating Progress
+Formula: attempted / total * 100
+ARTHA Progress Engine: Calculation Result
+Progress = (1 / 15) * 100 = 7%
+ARTHA Progress Engine: Progress Stored In State (DB)
+Stored Progress: 7%
+ARTHA: Total Score Calculated: 0.5
+ARTHA: Calling calculate_percentile() for Tier 1...
+ARTHA: Percentile Returned from ML Service: 3.33
+ARTHA: Final Calculated Percentile: 3.33
+---- ARTHA: Process Tier 1 Result End ----
+
+
+ARTHA Readiness Engine: Starting readiness calculation
+Module ΓåÆ readiness_module
+Function ΓåÆ calculateReadiness
+Tier ΓåÆ Tier 1
+Payload ΓåÆ {"rawScore":0.5,"totalPossible":15}
+
+ARTHA Readiness Engine: Extracting Tier-1 raw score
+raw_score ΓåÆ 0.50
+total_possible_score ΓåÆ 15
+
+ARTHA Readiness Engine: Normalizing score
+formula ΓåÆ (0.50 / 15) * 100
+
+ARTHA Readiness Engine: normalized aptitude_score ΓåÆ 3.33
+
+ARTHA Readiness Engine: Feature vector ΓåÆ [3.33,0,0,0,0]
+
+ARTHA Readiness Engine: Calling readiness_model
+ARTHA: Updating Profile Tier 1 Progress: 7%
+ARTHA: Sending Tier 1 data to AI service with language: undefined
+ARTHA: Sending payload to AI Service: { tier: 1, language: undefined }
+ARTHA: Fetching profile for user 1
+ARTHA: Checking subscription for user 1
+ARTHA: Subscription required for tier
+
+---- ARTHA: Process Tier 1 Result Start ----
+ARTHA: User ID: 1
+ARTHA: Logical Score: 0.5
+ARTHA: Quant Score: 0
+ARTHA: Verbal Score: 0
+
+ARTHA Progress Engine: Finalizing Tier-1 Progress
+ARTHA Progress Engine: Total Questions Retrieved
+Total Questions In Tier: 15
+ARTHA Progress Engine: Attempt Count Updated
+Attempted Questions: 1
+ARTHA Progress Engine: Calculating Progress
+Formula: attempted / total * 100
+ARTHA Progress Engine: Calculation Result
+Progress = (1 / 15) * 100 = 7%
+ARTHA Progress Engine: Progress Stored In State (DB)
+Stored Progress: 7%
+ARTHA: Total Score Calculated: 0.5
+ARTHA: Calling calculate_percentile() for Tier 1...
+ARTHA: Percentile Returned from ML Service: 3.33
+ARTHA: Final Calculated Percentile: 3.33
+---- ARTHA: Process Tier 1 Result End ----
+
+
+ARTHA Readiness Engine: Starting readiness calculation
+Module ΓåÆ readiness_module
+Function ΓåÆ calculateReadiness
+Tier ΓåÆ Tier 1
+Payload ΓåÆ {"rawScore":0.5,"totalPossible":15}
+
+ARTHA Readiness Engine: Extracting Tier-1 raw score
+raw_score ΓåÆ 0.50
+total_possible_score ΓåÆ 15
+
+ARTHA Readiness Engine: Normalizing score
+formula ΓåÆ (0.50 / 15) * 100
+
+ARTHA Readiness Engine: normalized aptitude_score ΓåÆ 3.33
+
+ARTHA Readiness Engine: Feature vector ΓåÆ [3.33,0,0,0,0]
+
+ARTHA Readiness Engine: Calling readiness_model
+
+ARTHA Readiness Engine: Model response received
+readiness_index ΓåÆ 34.04
+
+ARTHA Readiness Engine: Returning readiness result to frontend
+ARTHA: Updating Profile Tier 1 Progress: 7%
+ARTHA: Sending Tier 1 data to AI service with language: undefined
+ARTHA: Sending payload to AI Service: { tier: 1, language: undefined }
+ARTHA: Fetching profile for user 1
+ARTHA: Checking subscription for user 1
+ARTHA: Subscription required for tier

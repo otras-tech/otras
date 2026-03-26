@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* ============================= */
+/* GLOBAL DESIGN VARIABLES */
+/* ============================= */
+
+:root {
+
+  /* Brand Colors */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1e3a8a;
+  --color-primary-light: #eff6ff;
+
+  --color-cyan: #06b6d4;
+
+  /* Text Colors */
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  /* Backgrounds */
+  --bg-main: #ffffff;
+  --bg-dark: #0f172a;
+  --bg-card: #ffffff;
+  --bg-light: #f8fafc;
+
+  /* Borders */
+  --border-light: #e2e8f0;
+  --border-muted: #cbd5f5;
+
+  /* Status Colors */
+  --success: #22c55e;
+  --success-bg: #dcfce7;
+
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: rgba(255,255,255,0.08);
+  --sidebar-active: #2563eb;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 28px rgba(0,0,0,0.12);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* Typography */
+  --font-main: "Inter", system-ui, sans-serif;
+
+}
+
+
+/* ============================= */
+/* GLOBAL RESET */
+/* ============================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-light);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+}
+
+
+/* ============================= */
+/* REUSABLE COMPONENT CLASSES */
+/* ============================= */
+
+/* Card */
+.app-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  transition: var(--transition-normal);
+}
+
+.app-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+
+/* Buttons */
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 12px 18px;
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+}
+
+.btn-secondary {
+  background: var(--bg-light);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  border-radius: var(--radius-lg);
+}
+
+
+/* Inputs */
+
+.input {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 14px;
+  transition: var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+
+/* Sidebar */
+
+.sidebar {
+  background: var(--sidebar-bg);
+  color: white;
+}
+
+.sidebar-item {
+  transition: var(--transition-fast);
+}
+
+.sidebar-item:hover {
+  background: var(--sidebar-hover);
+}
+
+.sidebar-item.active {
+  background: var(--sidebar-active);
+}
+
+
+/* Progress bar */
+
+.progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+
+.progress-fill {
+  background: var(--color-primary);
+  height: 100%;
+  border-radius: 999px;
+}
+
+
+/* Badge */
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* Utility */
+
+.transition-default {
+  transition: var(--transition-normal);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-sm);
+}
+
+.rounded-xl {
+  border-radius: var(--radius-xl);
+}
+
+.rounded-2xl {
+  border-radius: var(--radius-2xl);
+}
