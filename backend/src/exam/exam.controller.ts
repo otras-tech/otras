@@ -1,46 +1,44 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ExamService } from './exam.service';
+import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 
 @Controller('exams')
+@UseInterceptors(CacheInterceptor)
 export class ExamController {
-  constructor(private readonly examService: ExamService) { }
-
-  @UseGuards(AdminAuthGuard)
-  @Post()
-  create(@Body() createExamDto: any) {
-    return this.examService.create(createExamDto);
-  }
-
-  @UseGuards(AdminAuthGuard)
-  @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateData: any) {
-    return this.examService.update(id, updateData);
-  }
-
-  @UseGuards(AdminAuthGuard)
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.examService.remove(id);
-  }
+  constructor(private readonly examService: ExamService) {}
 
   @Get()
+  @CacheTTL(300000)
   findAll() {
     return this.examService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.examService.findOne(id);
+  findOne(@Param('id') id: string) {
+    return this.examService.findOne(+id);
   }
 
   @Get(':id/random-test')
-  getRandomTest(@Param('id', ParseIntPipe) id: number) {
-    return this.examService.getRandomTest(id);
+  getRandomTest(@Param('id') id: string) {
+    return this.examService.getRandomTest(+id);
   }
 
-  @Get('tier/:tier')
-  findByTier(@Param('tier') tier: string) {
-    return this.examService.findByTier(tier);
+  @Post()
+  @UseGuards(AdminAuthGuard)
+  create(@Body() createExamDto: any) {
+    return this.examService.create(createExamDto);
+  }
+
+  @Patch(':id')
+  @UseGuards(AdminAuthGuard)
+  update(@Param('id') id: string, @Body() updateExamDto: any) {
+    return this.examService.update(+id, updateExamDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(AdminAuthGuard)
+  remove(@Param('id') id: string) {
+    return this.examService.remove(+id);
   }
 }

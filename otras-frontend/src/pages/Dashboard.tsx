@@ -24,12 +24,23 @@ import ScheduleItem from "../components/ScheduleItem";
 import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
 import { getSavedPlans } from "../services/studyPlanApi";
+import { User, DashboardStats } from "../types";
 
-export default function Dashboard({ user: propUser }) {
+interface DashboardData {
+  stats: DashboardStats;
+  mockTests: any[];
+  studyPlans: any[];
+}
+
+interface DashboardProps {
+  user: User | null;
+}
+
+export default function Dashboard({ user: propUser }: DashboardProps) {
 
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function Dashboard({ user: propUser }) {
     }
   }, [propUser?.id]);
 
-  const fetchDashboardData = async (userId) => {
+  const fetchDashboardData = async (userId: string) => {
     try {
       setLoading(true);
       console.log("DASHBOARD: Fetching data for userId", userId);
@@ -63,9 +74,9 @@ export default function Dashboard({ user: propUser }) {
 
   const user = propUser || JSON.parse(localStorage.getItem("user") || "{}");
 
-  const stats =
+  const stats: DashboardStats =
     data?.stats ||
-    { readinessIndex: 0, testsCompleted: 0, recentTend: [], percentile: 0, logicalScore: 0, quantScore: 0, verbalScore: 0 };
+    { readinessIndex: 0, testsCompleted: 0, recentTrend: [], percentile: 0, logicalScore: 0, quantScore: 0, verbalScore: 0 };
 
   console.log("ARTHA: Rendering AI feedback in report", stats);
 
@@ -83,14 +94,14 @@ export default function Dashboard({ user: propUser }) {
 
   const weeklyData = WEEK_DAYS.map((day, index) => {
     // getDay() returns 0 for Sunday, 1 for Monday, etc.
-    const dayTests = mockTests.filter(test => {
+    const dayTests = mockTests.filter((test: any) => {
       const testDate = new Date(test.createdAt);
       // Must be within the last 7 days and match the day index
       return testDate >= sevenDaysAgo && testDate.getDay() === index;
     });
 
     const avgScore = dayTests.length
-      ? Math.round(dayTests.reduce((sum, t) => sum + Number(t.score || 0), 0) / dayTests.length)
+      ? Math.round(dayTests.reduce((sum: number, t: any) => sum + Number(t.score || 0), 0) / dayTests.length)
       : 0;
 
     return { label: day, score: avgScore };
@@ -105,8 +116,8 @@ export default function Dashboard({ user: propUser }) {
   const hasData = mockTests.length > 0;
 
   // Daily Study Data: Fetch from the latest saved study plan
-  let dailyTasks = [];
-  let planInfo = null;
+  let dailyTasks: any[] = [];
+  let planInfo: any = null;
 
   if (data?.studyPlans && data.studyPlans.length > 0) {
     const latestPlan = data.studyPlans[0]; // Plans are sorted desc by createdAt in backend
@@ -115,7 +126,7 @@ export default function Dashboard({ user: propUser }) {
       today.setHours(0, 0, 0, 0);
 
       // Try to find tasks for TODAY first
-      let activeDay = latestPlan.days.find(d => {
+      let activeDay = latestPlan.days.find((d: any) => {
         if (!d.date) return false;
         const dayDate = new Date(d.date);
         dayDate.setHours(0, 0, 0, 0);
@@ -124,7 +135,7 @@ export default function Dashboard({ user: propUser }) {
 
       // Fallback: Find the first day with uncompleted tasks
       if (!activeDay) {
-        activeDay = latestPlan.days.find(d => d.activities?.some(a => !a.completed)) || latestPlan.days[0];
+        activeDay = latestPlan.days.find((d: any) => d.activities?.some((a: any) => !a.completed)) || latestPlan.days[0];
       }
 
       console.log("DASHBOARD: Selected activeDay", activeDay.day, activeDay.date);
@@ -306,7 +317,7 @@ export default function Dashboard({ user: propUser }) {
 
           <p className="text-slate-500 text-sm mb-4">
             {stats.testsCompleted > 0
-              ? t("testsCompletedMsg").replace("{{count}}", stats.testsCompleted)
+              ? t("testsCompletedMsg", { count: stats.testsCompleted })
               : t("startMockTests")}
           </p>
 

@@ -32,12 +32,19 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const child_process_1 = require("child_process");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const helmet_1 = __importDefault(require("helmet"));
+const compression_1 = __importDefault(require("compression"));
+const http_exception_filter_1 = require("./common/filters/http-exception.filter");
+const roles_guard_1 = require("./common/guards/roles.guard");
 async function bootstrap() {
     const envPath = path.resolve(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
@@ -74,7 +81,12 @@ async function bootstrap() {
     }
     catch (e) { }
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use((0, helmet_1.default)());
+    app.use((0, compression_1.default)());
     app.enableCors();
+    app.useGlobalFilters(new http_exception_filter_1.AllExceptionsFilter());
+    const reflector = app.get(core_1.Reflector);
+    app.useGlobalGuards(new roles_guard_1.RolesGuard(reflector));
     const express = require('express');
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ limit: '10mb', extended: true }));

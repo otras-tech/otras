@@ -14,90 +14,83 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExamController = void 0;
 const common_1 = require("@nestjs/common");
-const admin_auth_guard_1 = require("../auth/guards/admin-auth.guard");
+const cache_manager_1 = require("@nestjs/cache-manager");
 const exam_service_1 = require("./exam.service");
+const admin_auth_guard_1 = require("../auth/guards/admin-auth.guard");
 let ExamController = class ExamController {
     examService;
     constructor(examService) {
         this.examService = examService;
     }
-    create(createExamDto) {
-        return this.examService.create(createExamDto);
-    }
-    update(id, updateData) {
-        return this.examService.update(id, updateData);
-    }
-    remove(id) {
-        return this.examService.remove(id);
-    }
     findAll() {
         return this.examService.findAll();
     }
     findOne(id) {
-        return this.examService.findOne(id);
+        return this.examService.findOne(+id);
     }
     getRandomTest(id) {
-        return this.examService.getRandomTest(id);
+        return this.examService.getRandomTest(+id);
     }
-    findByTier(tier) {
-        return this.examService.findByTier(tier);
+    create(createExamDto) {
+        return this.examService.create(createExamDto);
+    }
+    update(id, updateExamDto) {
+        return this.examService.update(+id, updateExamDto);
+    }
+    remove(id) {
+        return this.examService.remove(+id);
     }
 };
 exports.ExamController = ExamController;
 __decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], ExamController.prototype, "create", null);
-__decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
-    __metadata("design:returntype", void 0)
-], ExamController.prototype, "update", null);
-__decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
-    __metadata("design:returntype", void 0)
-], ExamController.prototype, "remove", null);
-__decorate([
     (0, common_1.Get)(),
+    (0, cache_manager_1.CacheTTL)(300000),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ExamController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ExamController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/random-test'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
-    __metadata("design:returntype", void 0)
-], ExamController.prototype, "getRandomTest", null);
-__decorate([
-    (0, common_1.Get)('tier/:tier'),
-    __param(0, (0, common_1.Param)('tier')),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], ExamController.prototype, "findByTier", null);
+], ExamController.prototype, "getRandomTest", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ExamController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ExamController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ExamController.prototype, "remove", null);
 exports.ExamController = ExamController = __decorate([
     (0, common_1.Controller)('exams'),
+    (0, common_1.UseInterceptors)(cache_manager_1.CacheInterceptor),
     __metadata("design:paramtypes", [exam_service_1.ExamService])
 ], ExamController);
 //# sourceMappingURL=exam.controller.js.map

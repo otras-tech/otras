@@ -25,6 +25,13 @@ let PrismaService = class PrismaService extends client_1.PrismaClient {
     }
     async onModuleInit() {
         console.log('PrismaService connecting...');
+        this.$use(async (params, next) => {
+            const before = Date.now();
+            const result = await next(params);
+            const after = Date.now();
+            console.log(`[PRISMA] Query: ${params.model}.${params.action} took ${after - before}ms`);
+            return result;
+        });
         try {
             await this.$connect();
             console.log('PrismaService connected!');

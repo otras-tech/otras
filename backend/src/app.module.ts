@@ -24,10 +24,30 @@ import { AiModule } from './ai/ai.module';
 import { LanguageMiddleware } from './middleware/language.middleware';
 import { ArthaModule } from './modules/artha/artha.module'
 import { CareerAIModule } from './modules/career-ai/career-ai.module'
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-yet';
+import { BullModule } from '@nestjs/bullmq';
 
+
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UserModule, JobModule, ExamModule, TestModule, QuestionModule, ResultModule, AdminModule, SubscriptionModule, PypModule, SubjectModule, ApplicationModule, CategoryModule, MockTestModule, CareerReadinessModule, PaymentModule, ReferralModule, StudyPlanModule, AiModule, ArthaModule, CareerAIModule],
+  imports: [
+    PrometheusModule.register(),
+    CacheModule.register({
+      isGlobal: true,
+      store: redisStore.redisStore as any,
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      ttl: 600, // 10 minutes cache
+    }),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      },
+    }),
+    PrismaModule, AuthModule, UserModule, JobModule, ExamModule, TestModule, QuestionModule, ResultModule, AdminModule, SubscriptionModule, PypModule, SubjectModule, ApplicationModule, CategoryModule, MockTestModule, CareerReadinessModule, PaymentModule, ReferralModule, StudyPlanModule, AiModule, ArthaModule, CareerAIModule],
 
   controllers: [AppController],
   providers: [AppService],

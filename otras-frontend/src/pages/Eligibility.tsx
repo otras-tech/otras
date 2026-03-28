@@ -4,7 +4,7 @@ import { CheckCircle, AlertCircle, XCircle, Zap } from 'lucide-react';
 import FormField, { TextInput, SelectInput } from '../components/FormField';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function Eligibility() {
+export default function Eligibility({ user }: { user?: any } = {}) {
   const { t } = useTranslation();
 
   const [age, setAge] = useState('24');

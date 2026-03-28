@@ -1,11 +1,16 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import helmet from 'helmet';
+import compression from 'compression';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { RolesGuard } from './common/guards/roles.guard';
 
 async function bootstrap() {
   // Robust .env loader
+  // ... (keep logic)
   const envPath = path.resolve(process.cwd(), '.env');
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
@@ -42,8 +47,20 @@ async function bootstrap() {
   } catch (e) {}
 
   const app = await NestFactory.create(AppModule);
+  
+  // Hardened Security Headers
+  app.use(helmet());
+  
+  // API Performance (Gzip)
+  app.use(compression());
+  
   app.enableCors();
   
+  // Apply Global Filters and Guards
+  app.useGlobalFilters(new AllExceptionsFilter());
+  const reflector = app.get(Reflector);
+  app.useGlobalGuards(new RolesGuard(reflector));
+
   // Use express middleware for large payloads
   const express = require('express');
   app.use(express.json({ limit: '10mb' }));

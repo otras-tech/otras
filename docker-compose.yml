@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Base Infrastructure
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: otras
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Core Services
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/otras
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AI_SERVICE_URL: http://ai-service:3001/api/v1
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "3001:3001"
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./otras-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:9.5.2
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:

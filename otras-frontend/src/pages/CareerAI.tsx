@@ -4,12 +4,25 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../hooks/useTranslation";
 import FormattedText from "../components/FormattedText";
+import { useWebSockets } from "../hooks/useWebSockets";
 
-const CareerAI = ({ user }) => {
+interface CareerAIProps {
+  user: any;
+}
+
+interface RoadmapData {
+  summary: string;
+  recommendations: string[];
+  sixMonth: Array<{ month: string; tasks: string[] }>;
+  oneYear: Array<{ phase: string; tasks: string[] }>;
+}
+
+const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const isInitialMount = useRef(true);
   const [hasSubscription, setHasSubscription] = useState(false);
+  const { lastNotification } = useWebSockets(user);
 
   const [formData, setFormData] = useState({
     logicalScore: 0,
@@ -22,7 +35,7 @@ const CareerAI = ({ user }) => {
     aspirations: "",
   });
 
-  const [careerData, setCareerData] = useState({
+  const [careerData, setCareerData] = useState<RoadmapData>({
     summary: "",
     recommendations: [],
     sixMonth: [],
@@ -45,7 +58,7 @@ const CareerAI = ({ user }) => {
     "LIC AAO"
   ];
 
-  const LEARNING_PATTERNS = {
+  const LEARNING_PATTERNS: Record<string, string[]> = {
     "UPSC Civil Services": [
       "Conceptual + Current Affairs",
       "Answer Writing Practice",
@@ -118,47 +131,26 @@ const CareerAI = ({ user }) => {
         aspirations: formData.aspirations,
         selectedExam: formData.selectedExam,
         language,
+        userId: user?.id,
       };
 
       const resp = await axios.post("http://localhost:4000/career-ai/generate-roadmap", payload);
 
       console.log("CareerAI: Response received");
-      const result = resp.data?.roadmap;
-
-      if (result && typeof result === 'object') {
-        // Ensure exactly 6 months for the UI boxes
-        let finalSixMonth = Array.isArray(result.sixMonth) ? [...result.sixMonth] : [];
-        while (finalSixMonth.length < 6) {
-          finalSixMonth.push({ month: `Month ${finalSixMonth.length + 1}`, tasks: [] });
-        }
-
-        setCareerData({
-          summary: result.summary || "Ready to begin.",
-          recommendations: Array.isArray(result.recommendations) ? result.recommendations : [],
-          sixMonth: finalSixMonth,
-          oneYear: Array.isArray(result.oneYear) ? result.oneYear : []
-        });
-
-        console.log("CareerAI: Parsed successfully");
-
-        sessionStorage.setItem("careerAI_data", JSON.stringify({
-          data: result,
-          language: language,
-          formData: formData
-        }));
-      }
+      const result = resp.data;
+      console.log("CareerAI: Job enqueued successfully", result);
+      // Do NOT setCareerData yet, wait for WebSocket notification
     } catch (err) {
       console.error("CareerAI Error:", err);
+      setLoading(false); // Only stop loading on error if we're not waiting for WS
       setCareerData({
         summary: "Our AI system is temporarily unavailable. Please try again in a few moments.",
         recommendations: ["Self-review fundamentals", "Practice consistently"],
         sixMonth: [{ month: "Phase 1", tasks: ["Reconnect and retry"] }],
         oneYear: [{ phase: "Growth Phase", tasks: ["Final preparation"] }]
       });
-    } finally {
-      setLoading(false);
     }
-  }, [formData, language]);
+  }, [formData, language, user?.id]);
 
   useEffect(() => {
     const fetchArthaProfile = async () => {
@@ -175,6 +167,7 @@ const CareerAI = ({ user }) => {
             quantScore: status.quantScore || 0,
             verbalScore: status.verbalScore || 0,
             selectedExam: status.selectedExam || "",
+            interests: status.selectedExam || "", // Also sync interests for the UI input
             readinessIndex: status.readinessIndex !== undefined ? status.readinessIndex : prev.readinessIndex
           }));
           console.log("CareerAI: Values synced successfully");
@@ -204,6 +197,41 @@ const CareerAI = ({ user }) => {
     isInitialMount.current = false;
   }, [language, user?.id]);
 
+  // Handle WebSocket Notifications for Roadmap
+  useEffect(() => {
+    if (lastNotification?.type === 'ROADMAP_READY') {
+      const result = lastNotification.data.roadmap;
+      console.log("CareerAI: WebSocket Roadmap Data Received", result);
+      
+      if (result && typeof result === 'object') {
+        // Ensure exactly 6 months for the UI boxes
+        let finalSixMonth = Array.isArray(result.sixMonth) ? [...result.sixMonth] : [];
+        while (finalSixMonth.length < 6) {
+          finalSixMonth.push({ month: `Month ${finalSixMonth.length + 1}`, tasks: [] });
+        }
+
+        const newCareerData = {
+          summary: result.summary || "Ready to begin.",
+          recommendations: Array.isArray(result.recommendations) ? result.recommendations : [],
+          sixMonth: finalSixMonth,
+          oneYear: Array.isArray(result.oneYear) ? result.oneYear : []
+        };
+
+        setCareerData(newCareerData);
+        setLoading(false);
+
+        sessionStorage.setItem("careerAI_data", JSON.stringify({
+          data: newCareerData,
+          language: language,
+          formData: formData
+        }));
+      }
+    } else if (lastNotification?.type === 'ROADMAP_FAILED') {
+      setLoading(false);
+      // Optional: show toast or error message
+    }
+  }, [lastNotification, language, formData]);
+
   useEffect(() => {
     const checkSub = async () => {
       if (!user?.id) return;
@@ -224,9 +252,14 @@ const CareerAI = ({ user }) => {
     navigate("/subscriptions");
   };
 
-  const handleInputChange = (e) => {
+const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value, ...(name === "interests" && { learningPattern: "" }) }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      // Sync selectedExam with interests if exam selection dropdown is used
+      ...(name === "interests" && { selectedExam: value, learningPattern: "" })
+    }));
   };
 
   const handleSliderChange = (e) => {
@@ -378,7 +411,7 @@ const CareerAI = ({ user }) => {
                 <label className="label">{t("longTermAspirations")}</label>
                 <textarea
                   name="aspirations"
-                  placeholder="e.g., Crack UPSC and build a stable career"
+                  placeholder="e.g., Become a Senior Software Architect or Crack the SSC CGL in my first attempt"
                   value={formData.aspirations || ""}
                   onChange={handleInputChange}
                   rows={3}

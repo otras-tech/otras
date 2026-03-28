@@ -16,12 +16,15 @@ exports.CareerAIController = void 0;
 const common_1 = require("@nestjs/common");
 const career_ai_service_1 = require("../service/career-ai.service");
 let CareerAIController = class CareerAIController {
-    careerService;
-    constructor(careerService) {
-        this.careerService = careerService;
+    careerAIService;
+    constructor(careerAIService) {
+        this.careerAIService = careerAIService;
     }
-    async generate(dto) {
-        return this.careerService.generateRoadmap(dto);
+    async generateRoadmap(dto) {
+        return this.careerAIService.generateRoadmap(dto);
+    }
+    async getStatus(jobId) {
+        return this.careerAIService.getJobStatus(jobId);
     }
 };
 exports.CareerAIController = CareerAIController;
@@ -31,7 +34,14 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], CareerAIController.prototype, "generate", null);
+], CareerAIController.prototype, "generateRoadmap", null);
+__decorate([
+    (0, common_1.Get)('status/:jobId'),
+    __param(0, (0, common_1.Param)('jobId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CareerAIController.prototype, "getStatus", null);
 exports.CareerAIController = CareerAIController = __decorate([
     (0, common_1.Controller)('career-ai'),
     __metadata("design:paramtypes", [career_ai_service_1.CareerAIService])

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { User } from './types';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from './components/Sidebar';
@@ -39,7 +40,7 @@ axios.interceptors.request.use(config => {
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState(() => {
+  const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
@@ -70,7 +71,7 @@ export default function App() {
     }
   }, [user?.id]);
 
-  const handleAuthSuccess = (userData) => {
+  const handleAuthSuccess = (userData: User) => {
     setUser(userData);
   };
 

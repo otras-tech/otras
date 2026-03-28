@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubjectController = void 0;
 const common_1 = require("@nestjs/common");
+const cache_manager_1 = require("@nestjs/cache-manager");
 const admin_auth_guard_1 = require("../auth/guards/admin-auth.guard");
 const subject_service_1 = require("./subject.service");
 let SubjectController = class SubjectController {
@@ -48,6 +49,7 @@ __decorate([
 ], SubjectController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, cache_manager_1.CacheTTL)(600000),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -78,6 +80,7 @@ __decorate([
 ], SubjectController.prototype, "remove", null);
 exports.SubjectController = SubjectController = __decorate([
     (0, common_1.Controller)('subjects'),
+    (0, common_1.UseInterceptors)(cache_manager_1.CacheInterceptor),
     __metadata("design:paramtypes", [subject_service_1.SubjectService])
 ], SubjectController);
 //# sourceMappingURL=subject.controller.js.map

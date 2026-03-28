@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { SubjectService } from './subject.service';
 
 @Controller('subjects')
+@UseInterceptors(CacheInterceptor)
 export class SubjectController {
     constructor(private readonly subjectService: SubjectService) { }
 
@@ -13,6 +15,7 @@ export class SubjectController {
     }
 
     @Get()
+    @CacheTTL(600000) // 10 minutes cache
     findAll() {
         return this.subjectService.findAll();
     }

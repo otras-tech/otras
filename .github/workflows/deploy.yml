@@ -1,0 +1,53 @@
+name: OTRAS CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+    - name: Install dependencies
+      run: |
+        cd backend && npm install
+        cd ../otras-frontend && npm install
+    - name: Run Backend Tests
+      run: cd backend && npm test
+    - name: Run Frontend Build
+      run: cd otras-frontend && npm run build
+
+  build-and-push:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Docker Login
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+      run: echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+    - name: Build & Push Backend
+      run: |
+        docker build -t otras/backend:latest ./backend
+        docker push otras/backend:latest
+
+  deploy-blue-green:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to K8s
+      run: |
+        # Simulate Blue-Green logic
+        # 1. Spin up NEW version (Green)
+        # 2. Run sanity tests
+        # 3. Switch Traffic (Ingress) to Green
+        # 4. Terminate Old version (Blue)
+        kubectl apply -f k8s/backend-deployment-green.yaml
+        kubectl patch service backend-service -p '{"spec":{"selector":{"app":"backend-green"}}}'

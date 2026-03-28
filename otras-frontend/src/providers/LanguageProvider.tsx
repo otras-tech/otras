@@ -1,7 +1,14 @@
-import { createContext, useState, useEffect } from "react"
+import { createContext, useState, useEffect, ReactNode } from "react"
 import axios from "axios"
-export const LanguageContext = createContext(null)
-export function LanguageProvider({ children }) {
+
+interface LanguageContextType {
+    language: string;
+    setLanguage: (lang: string) => void;
+}
+
+export const LanguageContext = createContext<LanguageContextType | null>(null)
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
     const [language, setLanguage] = useState("en")
 
     useEffect(() => {
@@ -13,5 +20,4 @@ export function LanguageProvider({ children }) {
             {children}
         </LanguageContext.Provider>
     )
-
 }
