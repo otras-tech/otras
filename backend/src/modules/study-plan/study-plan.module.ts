@@ -3,7 +3,7 @@ import { StudyPlanController } from './controller/study-plan.controller';
 import { StudyPlanService } from './service/study-plan.service';
 import { StudyPlanRepository } from './repository/study-plan.repository';
 import { ReschedulerService } from './service/rescheduler.service';
-import { PrismaModule } from '../../prisma/prisma.module';
+import { PrismaModule } from '../../database/prisma.module';
 
 @Module({
   imports: [PrismaModule],

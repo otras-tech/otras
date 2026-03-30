@@ -6,6 +6,7 @@ declare class UpdateActivityStatusDto {
 }
 export declare class StudyPlanController {
     private readonly studyPlanService;
+    private readonly logger;
     constructor(studyPlanService: StudyPlanService);
     generate(dto: CreateStudyPlanDto): Promise<any>;
     save(body: {
@@ -34,9 +35,9 @@ export declare class StudyPlanController {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -72,9 +73,9 @@ export declare class StudyPlanController {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -110,9 +111,9 @@ export declare class StudyPlanController {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -136,9 +137,9 @@ export declare class StudyPlanController {
     }>;
     delete(id: string): Promise<{
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;

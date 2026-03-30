@@ -12,7 +12,7 @@ const study_plan_controller_1 = require("./controller/study-plan.controller");
 const study_plan_service_1 = require("./service/study-plan.service");
 const study_plan_repository_1 = require("./repository/study-plan.repository");
 const rescheduler_service_1 = require("./service/rescheduler.service");
-const prisma_module_1 = require("../../prisma/prisma.module");
+const prisma_module_1 = require("../../database/prisma.module");
 let StudyPlanModule = class StudyPlanModule {
 };
 exports.StudyPlanModule = StudyPlanModule;

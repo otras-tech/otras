@@ -32,69 +32,65 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
-const child_process_1 = require("child_process");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-require("dotenv/config");
+const nestjs_pino_1 = require("nestjs-pino");
+const common_1 = require("@nestjs/common");
+const global_exception_filter_1 = require("./common/filters/global-exception.filter");
 const swagger_1 = require("@nestjs/swagger");
+const helmet_1 = __importDefault(require("helmet"));
+const config_1 = require("@nestjs/config");
+const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
+const express = __importStar(require("express"));
 async function bootstrap() {
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf8');
-        envContent.split(/\r?\n/).forEach(line => {
-            const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-            if (match) {
-                let key = match[1];
-                let value = match[2] || '';
-                if (value.length > 0 && value.startsWith('"') && value.endsWith('"')) {
-                    value = value.substring(1, value.length - 1);
-                }
-                else if (value.length > 0 && value.startsWith("'") && value.endsWith("'")) {
-                    value = value.substring(1, value.length - 1);
-                }
-                process.env[key] = value;
-            }
-        });
-    }
-    const port = process.env.PORT || 4000;
-    try {
-        if (process.platform === 'win32') {
-            try {
-                const stdout = (0, child_process_1.execSync)(`netstat -ano | findstr :${port} | findstr LISTENING`).toString();
-                const pid = stdout.trim().split(/\s+/).pop();
-                if (pid && pid !== '0' && pid !== 'LISTENING') {
-                    console.log(`Killing process ${pid} on port ${port}`);
-                    (0, child_process_1.execSync)(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
-                }
-            }
-            catch (e) { }
-        }
-    }
-    catch (e) { }
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    app.enableCors();
-    const express = require('express');
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, { bufferLogs: true });
+    const configService = app.get(config_1.ConfigService);
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+    app.use((0, helmet_1.default)());
+    const pinoLogger = app.get(nestjs_pino_1.Logger);
+    app.useLogger(pinoLogger);
+    app.setGlobalPrefix('api/v1');
+    const allowedOrigins = configService.get('ALLOWED_ORIGINS');
+    app.enableCors({
+        origin: allowedOrigins ? allowedOrigins.split(',') : false,
+        credentials: true,
+    });
+    app.useGlobalPipes(new common_1.ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
+    }));
+    app.useGlobalFilters(new global_exception_filter_1.GlobalExceptionFilter());
+    app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor());
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ limit: '10mb', extended: true }));
-    const config = new swagger_1.DocumentBuilder()
-        .setTitle('Otras API')
-        .setDescription('Production-grade scalable backend APIs for 1M+ users')
-        .setVersion('1.0')
-        .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
-        .build();
-    const document = swagger_1.SwaggerModule.createDocument(app, config);
-    swagger_1.SwaggerModule.setup('api/docs', app, document, {
-        swaggerOptions: { persistAuthorization: true },
-    });
+    if (configService.get('NODE_ENV') !== 'production') {
+        const config = new swagger_1.DocumentBuilder()
+            .setTitle('Otras API')
+            .setDescription('Production-grade scalable backend APIs')
+            .setVersion('1.0')
+            .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
+            .build();
+        const document = swagger_1.SwaggerModule.createDocument(app, config);
+        swagger_1.SwaggerModule.setup('api/docs', app, document, {
+            swaggerOptions: { persistAuthorization: true },
+        });
+    }
+    const port = configService.get('PORT') || 4000;
+    const logger = new common_1.Logger('Bootstrap');
     try {
         await app.listen(port);
-        console.log(`Backend is running on: http://localhost:${port}/api/docs`);
+        logger.log(`Backend is running on: http://localhost:${port}/api/docs`);
     }
     catch (error) {
-        console.error("Backend failed to start:", error);
+        logger.error("Backend failed to start", error instanceof Error ? error.stack : error);
     }
 }
 bootstrap();

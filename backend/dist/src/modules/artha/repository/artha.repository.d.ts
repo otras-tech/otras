@@ -1,13 +1,13 @@
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '../../../database/prisma.service';
 export declare class ArthaRepository {
     private readonly prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
     findProfileByUserId(userId: string): Promise<({
         feedback: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            tier: number;
             profileId: string;
             logicalFoundation: string | null;
             subjectDepth: string | null;
@@ -17,11 +17,14 @@ export declare class ArthaRepository {
             preparationAdvice: string | null;
             speedInsight: string | null;
             subjectStrength: string | null;
+            tier: number;
             weakAreas: string | null;
             examSuggestions: string | null;
         } | null;
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -31,28 +34,28 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     }) | null>;
     findSelectedExam(userId: string): Promise<{
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         isDeleted: boolean;
+        name: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
-        pattern: string | null;
         shortDescription: string | null;
         applicationStatus: string;
     } | undefined>;
     findAssessmentById(id: string): Promise<({
         profile: {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             userId: string;
             otrCompleted: boolean;
             logicalScore: number;
@@ -62,54 +65,58 @@ export declare class ArthaRepository {
             tier1Progress: number;
             tier2Progress: number;
             tier3Progress: number;
-            createdAt: Date;
-            updatedAt: Date;
             readinessIndex: number;
         };
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        exam: string | null;
+        status: string;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         percentile: number | null;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number | null;
+        profileId: string;
         tier: number;
         score: number | null;
+        startTime: Date | null;
+        submitTime: Date | null;
         totalMarks: number | null;
+        jobId: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        profileId: string;
-        exam: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
-        startTime: Date | null;
-        submitTime: Date | null;
     }) | null>;
     findLatestAssessmentByTier(profileId: string, tier: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        exam: string | null;
+        status: string;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         percentile: number | null;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number | null;
+        profileId: string;
         tier: number;
         score: number | null;
+        startTime: Date | null;
+        submitTime: Date | null;
         totalMarks: number | null;
+        jobId: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        profileId: string;
-        exam: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
-        startTime: Date | null;
-        submitTime: Date | null;
     } | null>;
     updateProfileProgressByTier(profileId: string, tier: number, progress: number, readinessIndex?: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -119,8 +126,6 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     }>;
     findTier2Results(userId: string): Promise<{
@@ -146,28 +151,32 @@ export declare class ArthaRepository {
         score?: number;
         totalMarks?: number;
         readinessIndex?: number;
+        status?: string;
+        jobId?: string;
         startTime?: Date;
         submitTime?: Date;
     }): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        exam: string | null;
+        status: string;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         percentile: number | null;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number | null;
+        profileId: string;
         tier: number;
         score: number | null;
+        startTime: Date | null;
+        submitTime: Date | null;
         totalMarks: number | null;
+        jobId: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        profileId: string;
-        exam: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
-        startTime: Date | null;
-        submitTime: Date | null;
     }>;
     getPercentileData(tier: number, accuracy: number): Promise<{
         percentile: number;
@@ -176,48 +185,54 @@ export declare class ArthaRepository {
     getProfilesCount(): Promise<number>;
     startAssessment(userId: string, tier: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        exam: string | null;
+        status: string;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         percentile: number | null;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number | null;
+        profileId: string;
         tier: number;
         score: number | null;
+        startTime: Date | null;
+        submitTime: Date | null;
         totalMarks: number | null;
+        jobId: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        profileId: string;
-        exam: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
-        startTime: Date | null;
-        submitTime: Date | null;
     }>;
     completeAssessment(assessmentId: string, data: any): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        exam: string | null;
+        status: string;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         percentile: number | null;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number | null;
+        profileId: string;
         tier: number;
         score: number | null;
+        startTime: Date | null;
+        submitTime: Date | null;
         totalMarks: number | null;
+        jobId: string | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        profileId: string;
-        exam: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
-        startTime: Date | null;
-        submitTime: Date | null;
     }>;
     updateProfileReadiness(userId: string, readinessIndex: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -227,12 +242,12 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     } | null>;
     updateProfilePercentile(userId: string, percentile: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -242,8 +257,6 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     } | null>;
     saveQuestionAttempt(data: {
@@ -278,7 +291,6 @@ export declare class ArthaRepository {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            tier: number;
             profileId: string;
             logicalFoundation: string | null;
             subjectDepth: string | null;
@@ -288,11 +300,14 @@ export declare class ArthaRepository {
             preparationAdvice: string | null;
             speedInsight: string | null;
             subjectStrength: string | null;
+            tier: number;
             weakAreas: string | null;
             examSuggestions: string | null;
         } | null;
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -302,12 +317,12 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     }>;
     updateTier2Progress(userId: string, progress: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -317,12 +332,12 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     }>;
     updateTier3Progress(userId: string, progress: number): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         userId: string;
         otrCompleted: boolean;
         logicalScore: number;
@@ -332,15 +347,12 @@ export declare class ArthaRepository {
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        createdAt: Date;
-        updatedAt: Date;
         readinessIndex: number;
     }>;
     saveFeedback(profileId: string, tier: number, feedback: any): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        tier: number;
         profileId: string;
         logicalFoundation: string | null;
         subjectDepth: string | null;
@@ -350,38 +362,39 @@ export declare class ArthaRepository {
         preparationAdvice: string | null;
         speedInsight: string | null;
         subjectStrength: string | null;
+        tier: number;
         weakAreas: string | null;
         examSuggestions: string | null;
     }>;
     clearFeedback(profileId: string): Promise<import(".prisma/client").Prisma.BatchPayload>;
     upsertRecentReport(userId: string, data: any): Promise<{
         id: string;
-        percentile: number | null;
+        otrId: string;
         createdAt: Date;
         updatedAt: Date;
+        percentile: number | null;
         readinessIndex: number | null;
-        otrId: string;
         tier: number;
         score: number;
+        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         totalMarks: number;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
     } | null>;
     findRecentReportsByUserId(userId: string): Promise<{
         id: string;
-        percentile: number | null;
+        otrId: string;
         createdAt: Date;
         updatedAt: Date;
+        percentile: number | null;
         readinessIndex: number | null;
-        otrId: string;
         tier: number;
         score: number;
+        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
         totalMarks: number;
         accuracy: number | null;
         speed: number | null;
         consistency: number | null;
-        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue | null;
     }[]>;
 }

@@ -1,101 +1,168 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
-import { JobModule } from './job/job.module';
-import { ExamModule } from './exam/exam.module';
-import { TestModule } from './test/test.module';
-import { QuestionModule } from './question/question.module';
-import { ResultModule } from './result/result.module';
-import { AdminModule } from './admin/admin.module';
-import { SubscriptionModule } from './subscription/subscription.module';
-import { PypModule } from './pyp/pyp.module';
-import { SubjectModule } from './subject/subject.module';
-import { ApplicationModule } from './application/application.module';
-import { CategoryModule } from './category/category.module';
-import { MockTestModule } from './mock-test/mock-test.module';
-import { CareerReadinessModule } from './career-readiness/career-readiness.module';
-import { PaymentModule } from './payment/payment.module';
-import { ReferralModule } from './referral/referral.module';
-import { StudyPlanModule } from './modules/study-plan/study-plan.module';
-import { AiModule } from './ai/ai.module';
-import { LanguageMiddleware } from './middleware/language.middleware';
-import { ArthaModule } from './modules/artha/artha.module'
-import { CareerAIModule } from './modules/career-ai/career-ai.module'
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { redisStore } from 'cache-manager-redis-yet';
-import { BullModule } from '@nestjs/bullmq';
 
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { PrismaModule } from './database/prisma.module';
+import { LoggerModule } from './logger/logger.module';
+import { HealthModule } from './health/health.module';
+import { RedisModule } from './common/redis/redis.module';
+import { CustomCacheModule } from './common/cache/cache.module';
+
+import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/user/user.module';
+import { JobModule } from './modules/job/job.module';
+import { ExamModule } from './modules/exam/exam.module';
+import { TestModule } from './modules/test/test.module';
+import { QuestionModule } from './modules/question/question.module';
+import { ResultModule } from './modules/result/result.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { PypModule } from './modules/pyp/pyp.module';
+import { SubjectModule } from './modules/subject/subject.module';
+import { ApplicationModule } from './modules/application/application.module';
+import { CategoryModule } from './modules/category/category.module';
+import { MockTestModule } from './modules/mock-test/mock-test.module';
+import { CareerReadinessModule } from './modules/career-readiness/career-readiness.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { ReferralModule } from './modules/referral/referral.module';
+import { StudyPlanModule } from './modules/study-plan/study-plan.module';
+import { AiModule } from './modules/ai/ai.module';
+import { ArthaModule } from './modules/artha/artha.module';
+import { CareerAIModule } from './modules/career-ai/career-ai.module';
+
+import { LanguageMiddleware } from './middleware/language.middleware';
+import { validationSchema } from './config/validation';
+import configuration from './config/configuration';
 
 @Module({
   imports: [
-    PrismaModule, 
-    AuthModule, 
-    UserModule, 
-    JobModule, 
-    ExamModule, 
-    TestModule, 
-    QuestionModule, 
-    ResultModule, 
-    AdminModule, 
-    SubscriptionModule, 
-    PypModule, 
-    SubjectModule, 
-    ApplicationModule, 
-    CategoryModule, 
-    MockTestModule, 
-    CareerReadinessModule, 
-    PaymentModule, 
-    ReferralModule, 
-    StudyPlanModule, 
-    AiModule, 
-    ArthaModule, 
-    CareerAIModule,
-    // ✅ Production: Rate Limiting
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 20,
-    }]),
-    // ✅ Production: Redis Caching with Resilience
-    CacheModule.registerAsync({
+    // ✅ Production: Configuration Management
+    ConfigModule.forRoot({
       isGlobal: true,
-      useFactory: async () => {
+      cache: true,
+      load: [configuration],
+      validationSchema,
+    }),
+    // ✅ Production: Logger Module (Extracted)
+    LoggerModule,
+    ScheduleModule.forRoot(),
+    PrismaModule,
+    AuthModule,
+    UserModule,
+    JobModule,
+    ExamModule,
+    TestModule,
+    QuestionModule,
+    ResultModule,
+    AdminModule,
+    SubscriptionModule,
+    PypModule,
+    SubjectModule,
+    ApplicationModule,
+    CategoryModule,
+    MockTestModule,
+    CareerReadinessModule,
+    PaymentModule,
+    ReferralModule,
+    StudyPlanModule,
+    AiModule,
+    ArthaModule,
+    CareerAIModule,
+    HealthModule,
+    RedisModule,
+    CustomCacheModule,
+    // ✅ Production: Rate Limiting (Redis-backed for multi-instance consistency)
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const isRedisDisabled = config.get('DISABLE_REDIS') === 'true' || config.get('DISABLE_REDIS') === true;
+        const baseConfig = { throttlers: [{ ttl: 60000, limit: 100 }] };
+
+        if (isRedisDisabled) {
+          return baseConfig; // Default in-memory storage
+        }
+
         try {
-          // ⚠️ Resilience: Check if we should disable Redis for local dev
-          if (process.env.DISABLE_REDIS === 'true') {
-            return { ttl: 600 };
-          }
+          const redisUrl = config.get('REDIS_URL') || 'redis://127.0.0.1:6379';
           return {
-            store: await redisStore({
-              url: process.env.REDIS_URL || 'redis://localhost:6379',
-              ttl: 600,
-            }),
+            ...baseConfig,
+            storage: new ThrottlerStorageRedisService(redisUrl),
           };
         } catch (err) {
-          console.error('Redis Cache Initialization Failed, falling back to in-memory:', err.message);
-          return { ttl: 600 }; // Fallback to memory store
+          console.warn('ThrottlerModule: Redis storage failed, falling back to in-memory', err);
+          return baseConfig;
         }
       },
     }),
-    // ✅ Production: Background Queues (BullMQ)
-    // ⚠️ Note: BullMQ requires a running Redis instance to function.
-    // ⚠️ Resilience: Skip BullMQ for local development if DISABLE_REDIS is true
-    ...(process.env.DISABLE_REDIS === 'true' ? [] : [
-      BullModule.forRoot({
-        connection: {
-          host: (process.env.REDIS_HOST as string) || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-        },
-      }),
-    ]),
+    // ✅ Production: Redis Caching with Resilience
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const disableRedisVal = config.get('DISABLE_REDIS');
+        const isRedisDisabled = disableRedisVal === 'true' || disableRedisVal === true;
+        if (isRedisDisabled) {
+          return { ttl: 600 }; // In-memory fallback
+        }
+        try {
+          const options: any = {
+            url: config.get('REDIS_URL') || 'redis://127.0.0.1:6379',
+            ttl: 600,
+            retryStrategy: (times: number) => Math.min(times * 100, 3000)
+          };
+          const store = await redisStore(options);
+          return {
+            store,
+          };
+        } catch (err) {
+          console.warn('CacheModule: Redis Cache failed to initialize, falling back to memory store', err);
+          return { ttl: 600 };
+        }
+      },
+    }),
+    // ✅ Production: Background Queues (BullMQ) with Resilience
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const isRedisDisabled = config.get('DISABLE_REDIS') === 'true';
+        return {
+          connection: {
+            host: config.get('REDIS_HOST') || '127.0.0.1',
+            port: parseInt(config.get('REDIS_PORT') || '6379'),
+            enableOfflineQueue: false,
+            lazyConnect: true,
+            maxRetriesPerRequest: null, // Required for BullMQ
+            retryStrategy: (times: number) => {
+              if (isRedisDisabled) return null;
+              if (times > 20) return null;
+              return Math.min(times * 500, 5000);
+            },
+          },
+          defaultJobOptions: {
+            removeOnComplete: { count: 100 },
+            removeOnFail: { count: 50 },
+            attempts: isRedisDisabled ? 0 : 5,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
+          },
+        };
+      },
+    }),
   ],
-
   controllers: [AppController],
   providers: [AppService],
-
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

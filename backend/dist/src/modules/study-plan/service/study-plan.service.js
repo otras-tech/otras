@@ -12,26 +12,29 @@ var StudyPlanService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudyPlanService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const study_plan_repository_1 = require("../repository/study-plan.repository");
 const rescheduler_service_1 = require("./rescheduler.service");
 let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
     repository;
     rescheduler;
+    configService;
     logger = new common_1.Logger(StudyPlanService_1.name);
-    constructor(repository, rescheduler) {
+    constructor(repository, rescheduler, configService) {
         this.repository = repository;
         this.rescheduler = rescheduler;
+        this.configService = configService;
     }
     async generate(dto) {
         try {
             this.logger.log(`Study Plan: Generating plan for ${dto.targetExam}`);
-            console.log(`Checking existence for User ID: ${dto.userId}`);
+            this.logger.log(`Checking existence for User ID: ${dto.userId}`);
             const userExists = await this.repository.userExists(dto.userId);
-            console.log(`User exists: ${userExists}`);
+            this.logger.log(`User exists: ${userExists}`);
             if (!userExists) {
                 throw new common_1.NotFoundException(`User with ID ${dto.userId} not found.`);
             }
-            const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000/api/v1';
+            const aiServiceUrl = this.configService.get('AI_SERVICE_URL') || 'http://localhost:8000/api/v1';
             const fullUrl = `${aiServiceUrl}/study-plan`;
             this.logger.log(`Calling AI Service at: ${fullUrl}`);
             try {
@@ -47,7 +50,7 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
                     throw new common_1.InternalServerErrorException(`AI Service responded with ${response.status}: ${errorText}`);
                 }
                 const aiData = await response.json();
-                console.log(`Backend: AI plan generated. Summary: ${aiData?.summary?.substring(0, 50)}...`);
+                this.logger.log(`AI plan generated. Summary: ${aiData?.summary?.substring(0, 50)}...`);
                 return this.assignSequentialDates(aiData);
             }
             catch (e) {
@@ -206,6 +209,7 @@ exports.StudyPlanService = StudyPlanService;
 exports.StudyPlanService = StudyPlanService = StudyPlanService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [study_plan_repository_1.StudyPlanRepository,
-        rescheduler_service_1.ReschedulerService])
+        rescheduler_service_1.ReschedulerService,
+        config_1.ConfigService])
 ], StudyPlanService);
 //# sourceMappingURL=study-plan.service.js.map

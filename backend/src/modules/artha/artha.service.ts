@@ -1,26 +1,34 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ArthaRepository } from './repository/artha.repository';
 import { ArthaProgressDto } from './dto/artha-progress.dto';
 import { Tier3MetricsService } from './tier3-metrics.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class ArthaService {
     private readonly logger = new Logger(ArthaService.name);
-    private readonly ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5000';
-    private readonly AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000/api/v1';
+    private ML_SERVICE_URL: string;
+    private AI_SERVICE_URL: string;
 
     constructor(
         private repository: ArthaRepository,
-        private metricsService: Tier3MetricsService
-    ) { }
+        private metricsService: Tier3MetricsService,
+        private configService: ConfigService,
+        @InjectQueue('artha') private arthaQueue: Queue
+    ) { 
+        this.ML_SERVICE_URL = this.configService.get('ML_SERVICE_URL') || 'http://127.0.0.1:5000';
+        this.AI_SERVICE_URL = this.configService.get('AI_SERVICE_URL') || 'http://localhost:8000/api/v1';
+    }
 
     async getStatus(userId: string) {
-        console.log("ARTHA: Fetching profile for user", userId);
+        this.logger.log(`Fetching profile for user ${userId}`);
         const profile = await this.repository.findProfileByUserId(userId);
         const hasSubscription = await this.repository.hasActiveSubscription(userId);
 
         if (hasSubscription) {
-            console.log("ARTHA: Tier access granted for user", userId);
+            this.logger.log(`Tier access granted for user ${userId}`);
         }
 
         if (!profile) {
@@ -98,39 +106,34 @@ export class ArthaService {
         timeTaken: number,
         totalQuestions?: number
     }) {
-        console.log(`\nARTHA Progress Engine: Question Attempted`);
+        this.logger.log(`Question Attempted`);
 
         await this.repository.saveQuestionAttempt(data);
         const allAttempts = await this.repository.findQuestionAttempts(data.assessmentId);
         
         const assessment = await this.repository.findAssessmentById(data.assessmentId);
         if (assessment) {
-            console.log(`Tier: Tier-${assessment.tier}`);
+            this.logger.log(`Tier: Tier-${assessment.tier}`);
             
             const attemptedCount = allAttempts.length;
-            console.log(`ARTHA Progress Engine: Attempt Count Updated`);
-            console.log(`Attempted Questions: ${attemptedCount}`);
+            this.logger.log(`Attempt Count Updated: ${attemptedCount}`);
 
             const totalQuestionsInTier = data.totalQuestions || 15;
-            console.log(`ARTHA Progress Engine: Total Questions Loaded`);
-            console.log(`Total Questions In Tier: ${totalQuestionsInTier}`);
+            this.logger.log(`Total Questions In Tier: ${totalQuestionsInTier}`);
 
             if (totalQuestionsInTier <= 0) {
-              console.warn("ARTHA Progress Engine: Warning - totalQuestionsInTier is 0 or invalid.");
+              this.logger.warn("ARTHA Progress Engine: Warning - totalQuestionsInTier is 0 or invalid.");
             }
 
-            console.log(`ARTHA Progress Engine: Calculating Progress`);
-            console.log(`Formula: attempted / total * 100`);
+            this.logger.log(`Calculating Progress: attempted ${attemptedCount} / total ${totalQuestionsInTier}`);
 
             const progress = totalQuestionsInTier > 0 
                 ? Math.min(100, Math.round((attemptedCount / totalQuestionsInTier) * 100)) 
                 : 0;
             
-            console.log(`ARTHA Progress Engine: Calculation Result`);
-            console.log(`Progress = (${attemptedCount} / ${totalQuestionsInTier}) * 100 = ${progress}%`);
+            this.logger.log(`Progress calculated: ${progress}%`);
 
-            console.log(`ARTHA Progress Engine: Progress Stored In State (DB)`);
-            console.log(`Stored Progress: ${progress}%`);
+            this.logger.log(`Stored Progress: ${progress}%`);
 
             await this.repository.updateProfileProgressByTier(assessment.profileId, assessment.tier, progress);
         }
@@ -154,17 +157,15 @@ export class ArthaService {
     }
 
     async processTier1(data: ArthaProgressDto, assessmentId?: string) {
-        console.log("\n---- ARTHA: Process Tier 1 Result Start ----");
+        this.logger.log(`Process Tier 1 Result Start for user ${data.userId}`);
         
         // CRITICAL: Clear old feedback first to prevent stale fallbacks
         const existingProfile = await this.repository.findProfileByUserId(data.userId);
         if (existingProfile) {
-            console.log(`ARTHA: Clearing old feedback for user ${data.userId} to ensure fresh analysis`);
+            this.logger.log(`Clearing old feedback for user ${data.userId} to ensure fresh analysis`);
             await this.repository.clearFeedback(existingProfile.id);
         }
-        console.log("ARTHA: Logical Score:", data.logicalScore);
-        console.log("ARTHA: Quant Score:", data.quantScore);
-        console.log("ARTHA: Verbal Score:", data.verbalScore);
+        this.logger.log(`Scores - Logical: ${data.logicalScore}, Quant: ${data.quantScore}, Verbal: ${data.verbalScore}`);
         
         const score = data.logicalScore + data.quantScore + data.verbalScore;
         const total_questions = data.totalQuestions || 15;
@@ -176,38 +177,27 @@ export class ArthaService {
         const quantPercent = Math.round((data.quantScore / totalPerSubject) * 100);
         const verbalPercent = Math.round((data.verbalScore / totalPerSubject) * 100);
 
-        console.log(`\nARTHA Progress Engine: Finalizing Tier-1 Progress`);
-        console.log(`ARTHA Progress Engine: Total Questions Retrieved`);
-        console.log(`Total Questions In Tier: ${total_questions}`);
+        this.logger.log(`Finalizing Tier-1 Progress: totalQuestions ${total_questions}, attempted ${attemptedCount}`);
 
-        console.log(`ARTHA Progress Engine: Attempt Count Updated`);
-        console.log(`Attempted Questions: ${attemptedCount}`);
+        this.logger.log(`Attempted Questions: ${attemptedCount}`);
 
-        console.log(`ARTHA Progress Engine: Calculating Progress`);
-        console.log(`Formula: attempted / total * 100`);
+        this.logger.log(`ARTHA Progress Engine: Calculating Progress`);
+        this.logger.log(`Formula: attempted / total * 100`);
 
         const progress = total_questions > 0 ? Math.min(100, Math.round((attemptedCount / total_questions) * 100)) : 0;
 
-        console.log(`ARTHA Progress Engine: Calculation Result`);
-        console.log(`Progress = (${attemptedCount} / ${total_questions}) * 100 = ${progress}%`);
-
-        console.log(`ARTHA Progress Engine: Progress Stored In State (DB)`);
-        console.log(`Stored Progress: ${progress}%`);
+        this.logger.log(`Stored Progress: ${progress}%`);
 
         // Simplified Percentile Calculation (Score %)
         const totalScore = score;
         const totalQuestions = total_questions;
         const percentile = Math.max(0, Math.min(100, Number(((totalScore / totalQuestions) * 100).toFixed(2))));
 
-        console.log(`\nARTHA Percentile Engine: Calculating percentile`);
-        console.log(`totalScore → ${totalScore}`);
-        console.log(`totalQuestions → ${totalQuestions}`);
-        console.log(`percentile → ${percentile}`);
+        this.logger.log(`Percentile calculated: ${percentile}%`);
         
         // Skipped ML validation as per new simplified formula requirements
 
-        console.log("ARTHA: Final Calculated Percentile:", percentile);
-        console.log("---- ARTHA: Process Tier 1 Result End ----\n");
+        this.logger.log("Final Calculated Percentile: " + percentile);
 
         // Calculate and Save Readiness Index
         const readinessIndex = await this.calculateReadiness(data.userId.toString(), 1, { aptitude_score: percentile });
@@ -249,13 +239,15 @@ export class ArthaService {
         };
 
         if (assessmentId) {
-            await this.repository.completeAssessment(assessmentId, assessmentData);
+            await this.repository.completeAssessment(assessmentId, { ...assessmentData, status: 'PENDING' });
         } else {
-            await this.repository.saveAssessment(profile.id, {
+            const newAssessment = await this.repository.saveAssessment(profile.id, {
                 ...assessmentData,
+                status: 'PENDING',
                 startTime: new Date(),
                 submitTime: new Date()
             });
+            assessmentId = newAssessment.id;
         }
 
         // Save to Recent Reports
@@ -269,18 +261,44 @@ export class ArthaService {
             subjectBreakdown: assessmentData.subjectScores
         });
 
-        console.log("ARTHA: Sending Tier 1 data to AI service with language:", inputData.language);
-        console.log("ARTHA: AI Payload Details:", JSON.stringify(inputData, null, 2));
-        const feedback = await this.generateAndSaveAiFeedback(profile, tier, inputData);
+        // Background Job
+        const analysisData = {
+            aptitude_score: percentile,
+            logicalScore: logicalPercent,
+            quantScore: quantPercent,
+            verbalScore: verbalPercent,
+            percentile: percentile,
+            language: data.language
+        };
+
+        if (this.configService.get('DISABLE_REDIS') === 'true') {
+            this.logger.log(`Redis disabled: Running Tier 1 analysis synchronously`);
+            await this.generateAndSaveAiFeedback(profile, tier, analysisData);
+            await this.repository.completeAssessment(assessmentId, { status: 'COMPLETED' });
+        } else {
+            const job = await this.arthaQueue.add('tier-analysis', {
+                type: 'tier-analysis',
+                userId: data.userId,
+                assessmentId,
+                tier: 1,
+                data: analysisData
+            }, {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 5000 }
+            });
+            await this.repository.completeAssessment(assessmentId, { jobId: job.id });
+        }
 
         const status = await this.getStatus(data.userId);
-        // Only return new feedback; don't fallback to old ones from status.feedback
-        return { ...status, feedback: feedback || null };
+        return { 
+            ...status, 
+            status: 'processing',
+            jobId: assessmentId // We use assessmentId as a stable handle for status polling in this simplified case, or the actual jobId
+        };
     }
 
     async processTier2(userId: string, assessmentId?: string, language?: string, attemptedCountOverride?: number, totalQuestionsOverride?: number) {
-        console.log("\n---- ARTHA: Process Tier 2 Result Start ----");
-        console.log("ARTHA: User ID:", userId);
+        this.logger.log(`Process Tier 2 Result Start for user ${userId}`);
 
         const selectedExam = await this.repository.findSelectedExam(userId);
         const { scores: subjectScores, totalMarks: tier2TotalMarks } = await this.repository.findTier2Results(userId);
@@ -296,34 +314,22 @@ export class ArthaService {
         const finalTotalQuestions = totalQuestionsOverride || totalQuestions;
         const finalAttemptedCount = attemptedCountOverride || attemptedCount;
 
-        console.log(`\nARTHA Progress Engine: Finalizing Tier-2 Progress`);
-        console.log(`ARTHA Progress Engine: Total Questions Retrieved`);
-        console.log(`Total Questions In Tier: ${finalTotalQuestions}`);
-
-        console.log(`ARTHA Progress Engine: Attempt Count Updated`);
-        console.log(`Attempted Questions: ${finalAttemptedCount}`);
-
-        console.log(`ARTHA Progress Engine: Calculating Progress`);
-        console.log(`Formula: attempted / total * 100`);
+        this.logger.log(`Finalizing Tier-2 Progress: totalQuestions ${finalTotalQuestions}, attempted ${finalAttemptedCount}`);
 
         const progress = finalTotalQuestions > 0 ? Math.min(100, Math.round((finalAttemptedCount / finalTotalQuestions) * 100)) : 0;
         
-        console.log(`ARTHA: Updating Profile Tier 2 Progress: ${progress}%`);
+        this.logger.log(`Updating Profile Tier 2 Progress: ${progress}%`);
         await this.repository.updateTier2Progress(userId, progress);
 
         const totalScore = (Object.values(subjectScores) as number[]).reduce((acc: number, s: number) => acc + s, 0);
         const percentile = Math.max(0, Math.min(100, Number(((totalScore / finalTotalQuestions) * 100).toFixed(2))));
 
-        console.log(`\nARTHA Percentile Engine: Calculating percentile`);
-        console.log(`totalScore → ${totalScore}`);
-        console.log(`totalQuestions → ${finalTotalQuestions}`);
-        console.log(`percentile → ${percentile}`);
+        this.logger.log(`Percentile calculated: ${percentile}%`);
         
-        console.log("ARTHA: Updating Profile Percentile in DB...");
+        this.logger.log("Updating Profile Percentile in DB...");
         await this.repository.updateProfilePercentile(userId, percentile);
 
-        console.log("ARTHA: Final Tier 2 Percentile:", percentile);
-        console.log("---- ARTHA: Process Tier 2 Result End ----\n");
+        this.logger.log("Final Tier 2 Percentile: " + percentile);
 
         // Calculate and Save Readiness Index
         const readinessIndex = await this.calculateReadiness(userId, 2, { subject_score: percentile });
@@ -347,13 +353,15 @@ export class ArthaService {
         };
 
         if (assessmentId) {
-            await this.repository.completeAssessment(assessmentId, assessmentData);
+            await this.repository.completeAssessment(assessmentId, { ...assessmentData, status: 'PENDING' });
         } else {
-            await this.repository.saveAssessment(profile.id, {
+            const newAssessment = await this.repository.saveAssessment(profile.id, {
                 ...assessmentData,
+                status: 'PENDING',
                 startTime: new Date(),
                 submitTime: new Date()
             });
+            assessmentId = newAssessment.id;
         }
 
         // Save to Recent Reports
@@ -363,19 +371,37 @@ export class ArthaService {
             totalMarks: finalTotalQuestions,
             percentile,
             readinessIndex,
-            accuracy: percentile, // Accuracy for Tier 2 is basically the score %
+            accuracy: percentile,
             subjectBreakdown: subjectScores
         });
 
-        console.log("ARTHA: Sending Tier 2 data to AI service with language:", language);
-        await this.generateAndSaveAiFeedback(profile, tier, inputData);
+        // Background Job
+        const analysisData = { selectedExam: examName, subjectScores, language, percentile, subject_score: percentile };
 
-        return this.getStatus(userId);
+        if (this.configService.get('DISABLE_REDIS') === 'true') {
+            this.logger.log(`Redis disabled: Running Tier 2 analysis synchronously`);
+            await this.generateAndSaveAiFeedback(profile, tier, analysisData);
+            await this.repository.completeAssessment(assessmentId, { status: 'COMPLETED' });
+        } else {
+            const job = await this.arthaQueue.add('tier-analysis', {
+                type: 'tier-analysis',
+                userId,
+                assessmentId,
+                tier: 2,
+                data: analysisData
+            }, {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 5000 }
+            });
+            await this.repository.completeAssessment(assessmentId, { jobId: job.id });
+        }
+
+        const status = await this.getStatus(userId);
+        return { ...status, status: 'processing', jobId: assessmentId };
     }
 
     async processTier3(userId: string, assessmentId?: string, language?: string, attemptedCountOverride?: number, totalQuestionsOverride?: number) {
-        console.log("\n---- ARTHA: Process Tier 3 Result Start ----");
-        console.log("ARTHA: User ID:", userId);
+        this.logger.log(`Process Tier 3 Result Start for user ${userId}`);
 
         let inputData: any;
         const tier = 3;
@@ -383,7 +409,7 @@ export class ArthaService {
         let totalQuestions = 15; // Tier 3 default
 
         if (assessmentId) {
-            console.log("ARTHA: Processing results for assessment ID:", assessmentId);
+            this.logger.log(`Processing results for assessment ID: ${assessmentId}`);
             const allAttempts = await this.repository.findQuestionAttempts(assessmentId);
             const correctCount = allAttempts.filter(a => a.isCorrect).length;
             attemptedCount = allAttempts.length;
@@ -393,7 +419,7 @@ export class ArthaService {
             // Tier 3 usually has a fixed or dynamic count
             totalQuestions = attemptedCount > 15 ? attemptedCount : 15;
 
-            console.log("ARTHA: Tier 3 Results - Correct:", correctCount, "Attempted:", attemptedCount);
+            this.logger.log(`Tier 3 Results - Correct: ${correctCount}, Attempted: ${attemptedCount}`);
 
             const accuracy = this.metricsService.calculateAccuracy(correctCount, attemptedCount);
             const speed = this.metricsService.calculateSpeed(totalTime, attemptedCount);
@@ -412,12 +438,9 @@ export class ArthaService {
                 inputData.score = score;
                 inputData.percentile = Math.max(0, Math.min(100, Number(((score / totalQuestions) * 100).toFixed(2))));
 
-                console.log(`ARTHA Percentile Engine: Calculating percentile`);
-                console.log(`totalScore (corrected) → ${score}`);
-                console.log(`totalQuestions → ${totalQuestions}`);
-                console.log(`percentile → ${inputData.percentile}`);
+                this.logger.log(`Percentile calculated: ${inputData.percentile}% (corrected score: ${score})`);
 
-                console.log("ARTHA: Updating Profile Percentile in DB...");
+                this.logger.log("Updating Profile Percentile in DB...");
                 await this.repository.updateProfilePercentile(userId, inputData.percentile);
             } catch (err) {
                 this.logger.error('ARTHA: Percentile calculation error for Tier 3', err);
@@ -429,23 +452,15 @@ export class ArthaService {
         const finalTotalQuestionsT3 = totalQuestionsOverride || examRecordT3?.noOfQuestions || 15;
         const finalAttemptedCountT3 = attemptedCountOverride || attemptedCount;
 
-        console.log(`\nARTHA Progress Engine: Finalizing Tier-3 Progress`);
-        console.log(`ARTHA Progress Engine: Total Questions Retrieved`);
-        console.log(`Total Questions In Tier: ${finalTotalQuestionsT3}`);
-
-        console.log(`ARTHA Progress Engine: Attempt Count Updated`);
-        console.log(`Attempted Questions: ${finalAttemptedCountT3}`);
-
-        console.log(`ARTHA Progress Engine: Calculating Progress`);
-        console.log(`Formula: attempted / total * 100`);
+        this.logger.log(`Finalizing Tier-3 Progress: totalQuestions ${finalTotalQuestionsT3}, attempted ${finalAttemptedCountT3}`);
 
         const progress = finalTotalQuestionsT3 > 0 ? Math.min(100, Math.round((finalAttemptedCountT3 / finalTotalQuestionsT3) * 100)) : 0;
 
-        console.log(`ARTHA: Updating Profile Tier 3 Progress: ${progress}%`);
+        this.logger.log(`Updating Profile Tier 3 Progress: ${progress}%`);
         await this.repository.updateTier3Progress(userId, progress);
 
         if (!assessmentId) {
-            console.log("ARTHA: Loading existing Tier 3 metrics from database...");
+            this.logger.log("Loading existing Tier 3 metrics from database...");
             const metrics = await this.repository.findTier3Metrics(userId);
             inputData = { 
                 accuracy: metrics.accuracy,
@@ -462,8 +477,7 @@ export class ArthaService {
             consistency_score: inputData.consistency
         });
 
-        console.log("ARTHA: Final Tier 3 Percentile:", inputData.percentile || 0);
-        console.log("---- ARTHA: Process Tier 3 Result End ----\n");
+        this.logger.log("Final Tier 3 Percentile: " + (inputData.percentile || 0));
 
         // Add language to inputs for AI
         inputData.language = language;
@@ -483,13 +497,15 @@ export class ArthaService {
         if (!finalProfile) throw new Error("Artha Profile not found after update");
 
         if (assessmentId) {
-            await this.repository.completeAssessment(assessmentId, assessmentData);
+            await this.repository.completeAssessment(assessmentId, { ...assessmentData, status: 'PENDING' });
         } else {
-            await this.repository.saveAssessment(finalProfile.id, {
+            const newAssessment = await this.repository.saveAssessment(finalProfile.id, {
                 ...assessmentData,
+                status: 'PENDING',
                 startTime: new Date(),
                 submitTime: new Date()
             });
+            assessmentId = newAssessment.id;
         }
 
         // Save to Recent Reports
@@ -504,16 +520,39 @@ export class ArthaService {
             readinessIndex: readinessIndexT3
         });
 
-        console.log("ARTHA: Sending Tier 3 data to AI service with language:", language);
-        await this.generateAndSaveAiFeedback(finalProfile, tier, inputData);
+        // Background Job
+        const analysisData = {
+            ...inputData,
+            time_management_score: inputData.speed,
+            mock_average_score: inputData.accuracy,
+            consistency_score: inputData.consistency
+        };
 
-        return this.getStatus(userId);
+        if (this.configService.get('DISABLE_REDIS') === 'true') {
+            this.logger.log(`Redis disabled: Running Tier 3 analysis synchronously`);
+            await this.generateAndSaveAiFeedback(finalProfile, tier, analysisData);
+            await this.repository.completeAssessment(assessmentId, { status: 'COMPLETED' });
+        } else {
+            const job = await this.arthaQueue.add('tier-analysis', {
+                type: 'tier-analysis',
+                userId,
+                assessmentId,
+                tier: 3,
+                data: analysisData
+            }, {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 5000 }
+            });
+            await this.repository.completeAssessment(assessmentId, { jobId: job.id });
+        }
+
+        const status = await this.getStatus(userId);
+        return { ...status, status: 'processing', jobId: assessmentId };
     }
 
     private async calculateReadiness(userId: string, tier: number, currentData: any) {
-        console.log(`\nARTHA Readiness Engine: Tier submission received`);
-        console.log(`ARTHA Readiness Engine: Tier detected → Tier ${tier}`);
-        console.log(`ARTHA Readiness Engine: Raw scores extracted → ${JSON.stringify(currentData)}`);
+        this.logger.log(`Readiness Engine: Tier submission received for Tier ${tier}`);
+        this.logger.log(`Raw scores: ${JSON.stringify(currentData)}`);
 
         const profile = await this.repository.findProfileByUserId(userId);
         
@@ -523,7 +562,7 @@ export class ArthaService {
         let mock_average_score = 0;
         let consistency_score = 0;
 
-        console.log(`\nARTHA Readiness Engine: Normalizing scores`);
+        this.logger.log(`ARTHA Readiness Engine: Normalizing scores`);
         
         if (tier === 1) {
             aptitude_score = currentData.aptitude_score || 0;
@@ -553,9 +592,9 @@ export class ArthaService {
         consistency_score = Math.max(0, Math.min(100, Number(consistency_score)));
 
         const featureVector = [aptitude_score, subject_score, time_management_score, mock_average_score, consistency_score];
-        console.log(`ARTHA Readiness Engine: Feature vector → [${featureVector.map(v => Number(v.toFixed(2))).join(',')}]`);
+        this.logger.log(`Feature vector: [${featureVector.map(v => Number(v.toFixed(2))).join(',')}]`);
         
-        console.log(`\nARTHA Readiness Engine: Calling readiness_model`);
+        this.logger.log(`Calling readiness_model`);
 
         try {
             const response = await fetch(`${this.ML_SERVICE_URL}/readiness/calculate`, {
@@ -573,23 +612,22 @@ export class ArthaService {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log(`\nARTHA Readiness Engine: Model response → readiness_index = ${result.readinessIndex}`);
+                this.logger.log(`Model response: readiness_index = ${result.readinessIndex}`);
                 
                 const readinessIndex = Math.round(result.readinessIndex);
                 
-                console.log(`ARTHA Readiness Engine: Updating career readiness index in DB`);
+                this.logger.log(`Updating career readiness index in DB`);
                 await this.repository.updateProfileReadiness(userId, readinessIndex);
 
-                console.log(`ARTHA Readiness Engine: Returning readiness index to frontend.`);
                 return readinessIndex;
             } else {
-                console.error(`ARTHA Readiness Engine ERROR: Model prediction failed status ${response.status}`);
+                this.logger.error(`Model prediction failed status ${response.status}`);
                 const errorText = await response.text();
-                console.error(`ARTHA Readiness Engine ERROR Response: ${errorText}`);
+                this.logger.error(`Response: ${errorText}`);
                 throw new Error("ML Service returned non-200");
             }
         } catch (error) {
-            console.error(`ARTHA Readiness Engine ERROR [Fallback Activated]: ${error.message}`);
+            this.logger.error(`Readiness Engine ERROR [Fallback Activated]: ${error.message}`);
             
             // Fallback deterministic calculation if ML is down/crashed due to memory
             let fallbackScore = 0;
@@ -604,7 +642,7 @@ export class ArthaService {
             const calculatedFallback = Math.round(fallbackScore);
             const finalReadiness = Math.max(profile?.readinessIndex || 0, calculatedFallback);
             
-            console.log(`ARTHA Readiness Engine: Using fallback readiness index: ${finalReadiness}`);
+            this.logger.log(`Using fallback readiness index: ${finalReadiness}`);
             await this.repository.updateProfileReadiness(userId, finalReadiness);
             return finalReadiness;
         }
@@ -612,7 +650,7 @@ export class ArthaService {
 
     private async generateAndSaveAiFeedback(profile: any, tier: number, data: any) {
         try {
-            console.log("ARTHA: Sending payload to AI Service:", { tier, language: data.language });
+            this.logger.log(`Sending payload to AI Service for Tier ${tier}`);
             
             const response = await fetch(`${this.AI_SERVICE_URL}/ai/intelligence`, {
                 method: 'POST',
@@ -626,7 +664,7 @@ export class ArthaService {
 
             if (response.ok) {
                 const feedback = await response.json();
-                console.log("ARTHA: AI output generated");
+                this.logger.log("AI output generated");
                 return await this.repository.saveFeedback(profile.id, tier, feedback);
             } else {
                 this.logger.error(`ARTHA: AI Service returned error: ${response.statusText}`);

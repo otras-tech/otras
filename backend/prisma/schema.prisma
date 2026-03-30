@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -26,6 +27,8 @@ model User {
   referralCode          String                     @unique
   preferredLanguage     String                     @default("en")
   isDeleted             Boolean                    @default(false) // ✅ Added for scalability
+  role                  String                     @default("USER")
+  refreshTokens         RefreshToken[]
   applications          Application[]
   arthaRecentReports    ArthaRecentReport[]
   careerReadinessScores CareerReadinessTestScore[]
@@ -40,6 +43,7 @@ model User {
   @@index([otrId]) // ✅ Added for scalability
   @@index([referralCode]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
+  @@index([role])
 }
 
 model Job {
@@ -425,6 +429,8 @@ model ArthaAssessment {
   readinessIndex Float?
   score          Float?
   totalMarks     Int?
+  status         String                 @default("COMPLETED")
+  jobId          String?
   profile        ArthaProfile           @relation(fields: [profileId], references: [id])
   attempts       ArthaQuestionAttempt[]
 
@@ -512,9 +518,23 @@ model Roadmap {
   recommendations     String[]
   phase1              String
   phase2              String
+  status              String                @default("COMPLETED")
+  jobId               String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @default(now()) @updatedAt // ✅ Added for scalability
   IntelligenceProfile IntelligenceProfile @relation(fields: [profileId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) // jti
+  userId    Int
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // 🚀 SCALABILITY RECOMMENDATIONS (500K-1M USERS)

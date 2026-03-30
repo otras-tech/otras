@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var StudyPlanController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudyPlanController = void 0;
 const common_1 = require("@nestjs/common");
@@ -29,8 +30,9 @@ __decorate([
     (0, swagger_1.ApiPropertyOptional)({ example: false }),
     __metadata("design:type", Boolean)
 ], UpdateActivityStatusDto.prototype, "missed", void 0);
-let StudyPlanController = class StudyPlanController {
+let StudyPlanController = StudyPlanController_1 = class StudyPlanController {
     studyPlanService;
+    logger = new common_1.Logger(StudyPlanController_1.name);
     constructor(studyPlanService) {
         this.studyPlanService = studyPlanService;
     }
@@ -53,7 +55,7 @@ let StudyPlanController = class StudyPlanController {
         return this.studyPlanService.simulateDayPassed(id);
     }
     async simulateDateChange(id) {
-        console.log("Simulate date change triggered for:", id);
+        this.logger.log(`Simulate date change triggered for: ${id}`);
         return this.studyPlanService.moveMissedTasks(id);
     }
     async delete(id) {
@@ -128,7 +130,7 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], StudyPlanController.prototype, "delete", null);
-exports.StudyPlanController = StudyPlanController = __decorate([
+exports.StudyPlanController = StudyPlanController = StudyPlanController_1 = __decorate([
     (0, swagger_1.ApiTags)('Study Plans'),
     (0, common_1.Controller)('study-plan'),
     __metadata("design:paramtypes", [study_plan_service_1.StudyPlanService])

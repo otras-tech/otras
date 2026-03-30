@@ -1,4 +1,5 @@
 import { Injectable, Logger, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { StudyPlanRepository } from '../repository/study-plan.repository';
 import { ReschedulerService } from './rescheduler.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
@@ -32,20 +33,21 @@ export class StudyPlanService {
   constructor(
     private readonly repository: StudyPlanRepository,
     private readonly rescheduler: ReschedulerService,
+    private readonly configService: ConfigService,
   ) {}
 
   async generate(dto: CreateStudyPlanDto) {
     try {
       this.logger.log(`Study Plan: Generating plan for ${dto.targetExam}`);
       
-      console.log(`Checking existence for User ID: ${dto.userId}`);
+      this.logger.log(`Checking existence for User ID: ${dto.userId}`);
       const userExists = await this.repository.userExists(dto.userId);
-      console.log(`User exists: ${userExists}`);
+      this.logger.log(`User exists: ${userExists}`);
       if (!userExists) {
         throw new NotFoundException(`User with ID ${dto.userId} not found.`);
       }
       
-      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000/api/v1';
+      const aiServiceUrl = this.configService.get('AI_SERVICE_URL') || 'http://localhost:8000/api/v1';
       const fullUrl = `${aiServiceUrl}/study-plan`;
       this.logger.log(`Calling AI Service at: ${fullUrl}`);
 
@@ -64,7 +66,7 @@ export class StudyPlanService {
         }
 
         const aiData = await response.json();
-        console.log(`Backend: AI plan generated. Summary: ${aiData?.summary?.substring(0, 50)}...`);
+        this.logger.log(`AI plan generated. Summary: ${aiData?.summary?.substring(0, 50)}...`);
         return this.assignSequentialDates(aiData);
       } catch (e) {
         this.logger.error(`AI Service Connection Failed: ${e.message}`);

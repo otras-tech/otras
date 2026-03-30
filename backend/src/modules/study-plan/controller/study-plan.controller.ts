@@ -9,6 +9,7 @@ import {
   UsePipes,
   ValidationPipe,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import { StudyPlanService } from '../service/study-plan.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
@@ -24,6 +25,7 @@ class UpdateActivityStatusDto {
 @ApiTags('Study Plans')
 @Controller('study-plan')
 export class StudyPlanController {
+  private readonly logger = new Logger(StudyPlanController.name);
   constructor(private readonly studyPlanService: StudyPlanService) {}
 
   @Post('generate')
@@ -71,7 +73,7 @@ export class StudyPlanController {
   }
 
   async simulateDateChange(@Param('id') id: string) {
-    console.log("Simulate date change triggered for:", id);
+    this.logger.log(`Simulate date change triggered for: ${id}`);
     return this.studyPlanService.moveMissedTasks(id);
   }
 

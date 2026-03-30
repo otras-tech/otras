@@ -1,78 +1,84 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { execSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import 'dotenv/config';
+import { Logger as PinoLogger } from 'nestjs-pino';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import { ConfigService } from '@nestjs/config';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import * as express from 'express';
 
 async function bootstrap() {
-  // Robust .env loader
-  const envPath = path.resolve(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    envContent.split(/\r?\n/).forEach(line => {
-      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-      if (match) {
-        let key = match[1];
-        let value = match[2] || '';
-        if (value.length > 0 && value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
-        } else if (value.length > 0 && value.startsWith("'") && value.endsWith("'")) {
-          value = value.substring(1, value.length - 1);
-        }
-        process.env[key] = value;
-      }
-    });
-  }
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const configService = app.get(ConfigService);
 
-  const port = process.env.PORT || 4000;
-  
-  // Kill port logic
-  try {
-    if (process.platform === 'win32') {
-      try {
-        const stdout = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`).toString();
-        const pid = stdout.trim().split(/\s+/).pop();
-        if (pid && pid !== '0' && pid !== 'LISTENING') {
-          console.log(`Killing process ${pid} on port ${port}`);
-          execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
-        }
-      } catch (e) { }
-    }
-  } catch (e) { }
 
-  // ...
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  // ✅ Production: Trust Proxy for load balancers
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // ✅ Production: Security Headers
+  app.use(helmet());
+
+  const pinoLogger = app.get(PinoLogger);
+  app.useLogger(pinoLogger);
+  app.setGlobalPrefix('api/v1');
+
+  // ✅ Production: Restricted CORS
+  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
+
+  app.enableCors({
+    origin: allowedOrigins ? allowedOrigins.split(',') : false, // no wildcard in prod
+    credentials: true,
+  });
+
+  // ✅ Production: Global Validation Pipe (Strict)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true, // Fail if unknown properties are sent
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // ✅ Production: Global Exception Filter
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // ✅ Production: Global Transformation Interceptor
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   // ✅ Optimized: Express middleware for large payloads
-  // Set these BEFORE Swagger and other middleware
-  const express = require('express');
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // ✅ Added Swagger Documentation
-  const config = new DocumentBuilder()
-    .setTitle('Otras API')
-    .setDescription('Production-grade scalable backend APIs for 1M+ users')
-    .setVersion('1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'access-token',
-    )
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  // ✅ Swagger Documentation (Disabled in production)
+  if (configService.get('NODE_ENV') !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Otras API')
+      .setDescription('Production-grade scalable backend APIs')
+      .setVersion('1.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'access-token',
+      )
+      .build();
 
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
+
+  const port = configService.get<number>('PORT') || 4000;
+  const logger = new Logger('Bootstrap');
   try {
     await app.listen(port);
-    console.log(`Backend is running on: http://localhost:${port}/api/docs`);
+    logger.log(`Backend is running on: http://localhost:${port}/api/docs`);
   } catch (error) {
-    console.error("Backend failed to start:", error);
+    logger.error("Backend failed to start", error instanceof Error ? error.stack : error);
   }
 }
 bootstrap();

@@ -1,4 +1,4 @@
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '../../../database/prisma.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 export declare class StudyPlanRepository {
     private readonly prisma;
@@ -27,9 +27,9 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -65,9 +65,9 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -103,9 +103,9 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -174,9 +174,9 @@ export declare class StudyPlanRepository {
     }>;
     delete(id: string): Promise<{
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;

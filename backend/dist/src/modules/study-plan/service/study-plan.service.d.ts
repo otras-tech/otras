@@ -1,11 +1,13 @@
+import { ConfigService } from '@nestjs/config';
 import { StudyPlanRepository } from '../repository/study-plan.repository';
 import { ReschedulerService } from './rescheduler.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 export declare class StudyPlanService {
     private readonly repository;
     private readonly rescheduler;
+    private readonly configService;
     private readonly logger;
-    constructor(repository: StudyPlanRepository, rescheduler: ReschedulerService);
+    constructor(repository: StudyPlanRepository, rescheduler: ReschedulerService, configService: ConfigService);
     generate(dto: CreateStudyPlanDto): Promise<any>;
     save(dto: CreateStudyPlanDto, aiData: any): Promise<{
         days: ({
@@ -30,9 +32,9 @@ export declare class StudyPlanService {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -69,9 +71,9 @@ export declare class StudyPlanService {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -107,9 +109,9 @@ export declare class StudyPlanService {
         })[];
     } & {
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;
@@ -142,9 +144,9 @@ export declare class StudyPlanService {
     private viewPlan;
     delete(id: string): Promise<{
         id: string;
-        userId: number;
         createdAt: Date;
         updatedAt: Date;
+        userId: number;
         weakAreas: string[];
         examId: number | null;
         targetExam: string;

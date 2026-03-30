@@ -8,12 +8,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ArthaRepository_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArthaRepository = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../../prisma/prisma.service");
-let ArthaRepository = class ArthaRepository {
+const prisma_service_1 = require("../../../database/prisma.service");
+let ArthaRepository = ArthaRepository_1 = class ArthaRepository {
     prisma;
+    logger = new common_1.Logger(ArthaRepository_1.name);
     constructor(prisma) {
         this.prisma = prisma;
     }
@@ -145,6 +147,8 @@ let ArthaRepository = class ArthaRepository {
                 score: data.score,
                 totalMarks: data.totalMarks,
                 readinessIndex: data.readinessIndex,
+                status: data.status,
+                jobId: data.jobId,
                 startTime: data.startTime,
                 submitTime: data.submitTime
             }
@@ -242,7 +246,7 @@ let ArthaRepository = class ArthaRepository {
         });
     }
     async hasActiveSubscription(userId) {
-        console.log("ARTHA: Checking subscription for user", userId);
+        this.logger.log(`Checking subscription for user ${userId}`);
         const payment = await this.prisma.payment.findFirst({
             where: {
                 userId: Number(userId),
@@ -251,15 +255,15 @@ let ArthaRepository = class ArthaRepository {
             include: { subscription: true }
         });
         if (payment) {
-            console.log("ARTHA: Active subscription found", payment.subscription);
+            this.logger.log(`Active subscription found: ${payment.subscription.title}`);
             return true;
         }
-        console.log("ARTHA: Subscription required for tier");
+        this.logger.log("No active subscription found");
         return false;
     }
     async createOrUpdateProfile(data, percentile, progress, readinessIndex = 0) {
         const existing = await this.findProfileByUserId(data.userId);
-        console.log(`ARTHA: Updating Profile Tier 1 Progress: ${progress}%`);
+        this.logger.log(`Updating Profile Tier 1 Progress: ${progress}%`);
         if (existing) {
             return this.prisma.arthaProfile.update({
                 where: { id: existing.id },
@@ -295,7 +299,7 @@ let ArthaRepository = class ArthaRepository {
         const profile = await this.findProfileByUserId(userId);
         if (!profile)
             throw new Error("Artha Profile not found");
-        console.log(`ARTHA: Updating Profile Tier 2 Progress: ${progress}%`);
+        this.logger.log(`Updating Profile Tier 2 Progress: ${progress}%`);
         return this.prisma.arthaProfile.update({
             where: { id: profile.id },
             data: { tier2Progress: progress }
@@ -305,7 +309,7 @@ let ArthaRepository = class ArthaRepository {
         const profile = await this.findProfileByUserId(userId);
         if (!profile)
             throw new Error("Artha Profile not found");
-        console.log(`ARTHA: Updating Profile Tier 3 Progress: ${progress}%`);
+        this.logger.log(`Updating Profile Tier 3 Progress: ${progress}%`);
         return this.prisma.arthaProfile.update({
             where: { id: profile.id },
             data: { tier3Progress: progress }
@@ -380,7 +384,7 @@ let ArthaRepository = class ArthaRepository {
     }
 };
 exports.ArthaRepository = ArthaRepository;
-exports.ArthaRepository = ArthaRepository = __decorate([
+exports.ArthaRepository = ArthaRepository = ArthaRepository_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], ArthaRepository);
