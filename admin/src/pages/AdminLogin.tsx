@@ -1,44 +1,36 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { Lock, Mail, AlertCircle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { adminLogin } from "../services/adminAuthApi";
+import { useAuthStore } from "../store/authStore";
 
 export default function AdminLogin() {
+  const { setAuth } = useAuthStore();
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-
-      const resp = await axios.post(
-        "http://localhost:4000/admin/auth/login",
-        { email, password }
-      );
-
-      localStorage.setItem("adminToken", resp.data.access_token);
-      localStorage.setItem("adminUser", JSON.stringify(resp.data.admin));
-
+  const loginMutation = useMutation({
+    mutationFn: (data: any) => adminLogin(data),
+    onSuccess: (data) => {
+      setAuth(data.admin, data.access_token, data.refresh_token);
       navigate("/");
-
-    } catch (err: any) {
-
-      setError(err.response?.data?.message || "Login failed");
-
-    } finally {
-
-      setLoading(false);
-
+    },
+    onError: (err: any) => {
+      setError(err.message || "Login failed");
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    loginMutation.mutate({ email, password });
   };
+
+  const loading = loginMutation.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-light)]">

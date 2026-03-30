@@ -1,77 +1,66 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 import { Plus, ClipboardList, Target, Layers } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getTests, getExams, getTestPreview, createTest, updateTest, deleteTest } from '../services/adminApi';
 
 export default function TestManagement() {
-    const [tests, setTests] = useState<any[]>([]);
-    const [exams, setExams] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: '', examId: '', questions: [] });
-    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState<any>({ name: '', examId: '', questions: [] });
     const [error, setError] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [preview, setPreview] = useState<any[]>([]);
 
-    useEffect(() => {
-        if (formData.examId) {
-            axios.get(`http://localhost:4000/test/preview/${formData.examId}`)
-                .then(res => setPreview(res.data))
-                .catch(err => {
-                    console.error(err);
-                    setPreview([]);
-                });
-        } else {
-            setPreview([]);
-        }
-    }, [formData.examId]);
+    const { data: tests = [], isLoading: loadingTests } = useQuery({
+        queryKey: ['adminTests'],
+        queryFn: getTests,
+    });
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const { data: exams = [] } = useQuery({
+        queryKey: ['adminExams'],
+        queryFn: getExams,
+    });
 
-    const fetchData = async () => {
-        try {
-            const [testsResp, examsResp] = await Promise.all([
-                axios.get('http://localhost:4000/test'),
-                axios.get('http://localhost:4000/exams'),
-            ]);
-            setTests(Array.isArray(testsResp.data) ? testsResp.data : []);
-            setExams(examsResp.data);
-        } catch (err) {
-            console.error(err);
-            setTests([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: preview = [] } = useQuery({
+        queryKey: ['testPreview', formData.examId],
+        queryFn: () => getTestPreview(formData.examId),
+        enabled: !!formData.examId,
+    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setSubmitting(true);
-        try {
-            if (editingId) {
-                await axios.patch(`http://localhost:4000/test/${editingId}`, {
-                    name: formData.name,
-                    examId: Number(formData.examId),
-                });
-            } else {
-                await axios.post('http://localhost:4000/test', {
-                    name: formData.name,
-                    examId: Number(formData.examId),
-                });
-            }
+    const upsertMutation = useMutation({
+        mutationFn: (data: any) => {
+            const payload = {
+                name: data.name,
+                examId: Number(data.examId),
+            };
+            return editingId ? updateTest(editingId, payload) : createTest(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminTests'] });
             setShowForm(false);
             setEditingId(null);
             setFormData({ name: '', examId: '', questions: [] });
-            fetchData();
-        } catch (err: any) {
-            console.error(err);
-            setError(err.response?.data?.message || `Failed to ${editingId ? 'update' : 'create'} test. Please check requirements.`);
-        } finally {
-            setSubmitting(false);
+            setError(null);
+        },
+        onError: (err: any) => {
+            setError(err.message || 'Operation failed');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteTest(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminTests'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete test.');
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        upsertMutation.mutate(formData);
     };
 
     const handleEdit = (test: any) => {
@@ -85,16 +74,13 @@ export default function TestManagement() {
         window.scrollTo(0, 0);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = (id: number) => {
         if (!window.confirm('Are you sure you want to delete this test? All questions and results tied to it will be removed.')) return;
-        try {
-            await axios.delete(`http://localhost:4000/test/${id}`);
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete test.');
-        }
+        deleteMutation.mutate(id);
     };
+
+    const loading = loadingTests;
+    const submitting = upsertMutation.isPending;
 
     return (
         <div className="space-y-6">

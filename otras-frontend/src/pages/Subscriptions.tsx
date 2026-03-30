@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 import { CreditCard, CheckCircle2, Zap, Sparkles } from "lucide-react";
 import TierCard from "../components/TierCard";
 import { useTranslation } from "../hooks/useTranslation";
 import { loadScript } from "../utils/loadScript";
+import { useAuthStore } from "../store/authStore";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
 
-export default function Subscriptions({ user }) {
+export default function Subscriptions() {
+  const { user } = useAuthStore();
   const { t } = useTranslation();
-  const [plans, setPlans] = useState([]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [userCredits, setUserCredits] = useState(user?.credits || 0);
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
 
   useEffect(() => {
     fetchPlans();
@@ -18,7 +23,7 @@ export default function Subscriptions({ user }) {
 
   const fetchPlans = async () => {
     try {
-      const response = await axios.get("http://localhost:4000/subscriptions");
+      const response = await apiClient.get("/subscriptions");
       setPlans(response.data);
     } catch (error) {
       console.error("Failed to fetch subscription plans", error);
@@ -31,7 +36,7 @@ export default function Subscriptions({ user }) {
   // Refresh user credits upon mounting
   useEffect(() => {
     if (user?.id) {
-      axios.get(`http://localhost:4000/users/${user.id}`).then(res => {
+      apiClient.get(`/users/${user.id}`).then(res => {
         if (res.data?.credits !== undefined) {
           setUserCredits(res.data.credits);
         }
@@ -39,27 +44,26 @@ export default function Subscriptions({ user }) {
     }
   }, [user?.id]);
 
-  const handlePayWithCredits = async (plan) => {
+  const handlePayWithCredits = async (plan: any) => {
+    if (!checkOtr()) return;
     try {
       setProcessingId(`credit-${plan.id}`);
-      const token = localStorage.getItem("token");
 
-      const res = await axios.post("http://localhost:4000/payments/pay-with-credits", {
+      const res = await apiClient.post("/payments/pay-with-credits", {
         subscriptionId: plan.id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       alert(res.data.message || t("subscriptionActivatedCredits"));
       setUserCredits(res.data.remainingCredits);
-    } catch (error) {
+    } catch (error: any) {
       alert(error.response?.data?.message || t("failedPurchaseCredits"));
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handlePay = async (plan) => {
+  const handlePay = async (plan: any) => {
+    if (!checkOtr()) return;
     if (plan.price === 0) {
       alert(t("freePlanMessage"));
       return;
@@ -71,7 +75,7 @@ export default function Subscriptions({ user }) {
       // Load Razorpay script dynamically
       await loadScript("https://checkout.razorpay.com/v1/checkout.js");
 
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) {
         alert(t("loginRequiredSubscription"));
         setProcessingId(null);
@@ -79,12 +83,9 @@ export default function Subscriptions({ user }) {
       }
 
       // 1. Create Order on Backend
-      const orderRes = await axios.post("http://localhost:4000/payments/create-order", {
+      const orderRes = await apiClient.post("/payments/create-order", {
+        userId: user?.id,
         subscriptionId: plan.id,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
       });
 
       const { orderId, amount, currency, keyId } = orderRes.data;
@@ -97,22 +98,19 @@ export default function Subscriptions({ user }) {
         name: t("otrasSubscription"),
         description: t("planDescription", { name: plan.name }),
         order_id: orderId,
-        handler: async function (response) {
+        handler: async function (response: any) {
           try {
             // 3. Verify Payment on Backend
-            const verifyRes = await axios.post("http://localhost:4000/payments/verify", {
+            const verifyRes = await apiClient.post("/payments/verify", {
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
-            }, {
-              headers: { Authorization: `Bearer ${token}` }
             });
-
+            
             if (verifyRes.data.message === 'Payment verified successfully') {
               alert(t("paymentSuccessfulActive"));
-              // Optionally refresh user state or UI here
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error("Verification error:", error);
             alert(t("paymentVerificationFailed"));
           }
@@ -126,15 +124,15 @@ export default function Subscriptions({ user }) {
         }
       };
 
-      const rzp = new window.Razorpay(options);
+      const rzp = new (window as any).Razorpay(options);
 
-      rzp.on('payment.failed', function (response) {
+      rzp.on('payment.failed', function (response: any) {
         console.error("Payment failed", response.error);
         alert(response.error.description);
       });
 
       rzp.open();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Order creation error:", error);
       alert(t("paymentInitializationError"));
     } finally {
@@ -192,6 +190,8 @@ export default function Subscriptions({ user }) {
             <TierCard
               key={plan.id}
               tier={plan.name}
+              name={plan.name}
+              isPopular={plan.isPopular || false}
               price={plan.price === 0 ? t("free") : `₹${plan.price}`}
               duration={plan.duration || t("lifetime")}
               features={plan.features || [
@@ -260,7 +260,7 @@ export default function Subscriptions({ user }) {
 
           <div>
 
-            <h2 className="section-title mb-6 text-white">
+            <h2 className="section-title mb-6 !text-white">
               {t("whyUpgrade")}
             </h2>
 
@@ -403,6 +403,7 @@ export default function Subscriptions({ user }) {
 
       </div>
 
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
 
   );

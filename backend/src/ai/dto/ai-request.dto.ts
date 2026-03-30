@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsArray, IsIn, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 
 export class AiRequestDto {
   @IsString()

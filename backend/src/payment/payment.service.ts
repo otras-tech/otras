@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
@@ -31,7 +35,9 @@ export class PaymentService {
     const amountInPaise = Math.round(subscription.price * 100);
 
     if (amountInPaise < 100) {
-      throw new BadRequestException('Order amount is less than the minimum amount allowed (₹1)');
+      throw new BadRequestException(
+        'Order amount is less than the minimum amount allowed (₹1)',
+      );
     }
 
     let razorpayOrder;
@@ -44,7 +50,7 @@ export class PaymentService {
       });
     } catch (error) {
       throw new BadRequestException(
-        error.error?.description || 'Failed to create Razorpay order'
+        error.error?.description || 'Failed to create Razorpay order',
       );
     }
 
@@ -140,12 +146,12 @@ export class PaymentService {
 
     // Find all Referral records where refereeOtrId === user.otrId
     const referralsAsReferee = await this.prisma.referral.findMany({
-      where: { refereeOtrId: user.otrId }
+      where: { refereeOtrId: user.otrId },
     });
 
     let totalRefereeCredits = 0;
     for (const r of referralsAsReferee) {
-      totalRefereeCredits += (r.creditsEarned || 0);
+      totalRefereeCredits += r.creditsEarned || 0;
     }
 
     if (totalRefereeCredits < price) {
@@ -162,8 +168,8 @@ export class PaymentService {
         updates.push(
           this.prisma.referral.update({
             where: { id: r.id },
-            data: { creditsEarned: { decrement: deduct } }
-          })
+            data: { creditsEarned: { decrement: deduct } },
+          }),
         );
         remainingToDeduct -= deduct;
       }

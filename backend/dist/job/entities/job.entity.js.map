@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/job/entities/job.entity.ts"],"sourcesContent":["export class Job {}\r\n"],"names":["Job"],"mappings":";;;;+BAAaA;;;eAAAA;;;AAAN,IAAA,AAAMA,MAAN,MAAMA;AAAK"}

@@ -1,9 +1,14 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { UserPlus, Mail, AlertCircle, User as UserIcon, Lock } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { adminRegister } from "../services/adminAuthApi";
+import { useAuthStore } from "../store/authStore";
 
 export default function AdminRegister() {
+  const { setAuth } = useAuthStore();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -11,31 +16,25 @@ export default function AdminRegister() {
   });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const resp = await axios.post(
-        "http://localhost:4000/admin/auth/register",
-        formData
-      );
-
-      localStorage.setItem("adminToken", resp.data.access_token);
-      localStorage.setItem("adminUser", JSON.stringify(resp.data.admin));
-
+  const registerMutation = useMutation({
+    mutationFn: (data: any) => adminRegister(data),
+    onSuccess: (data) => {
+      setAuth(data.admin, data.access_token, data.refresh_token);
       navigate("/");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.message || "Registration failed");
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    registerMutation.mutate(formData);
   };
+
+  const loading = registerMutation.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-light)]">

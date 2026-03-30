@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ExamService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async create(data: any) {
     const { subjects, subjectIds, id, ...examData } = data;
@@ -49,7 +49,7 @@ export class ExamService {
   async findAll() {
     return this.prisma.exam.findMany({
       include: { subjects: true },
-      take: 50
+      take: 50,
     });
   }
 
@@ -82,82 +82,92 @@ export class ExamService {
 
     if (exam.tests.length === 0) {
       if (exam.subjects && exam.subjects.length > 0) {
-          const subjects = exam.subjects;
-          const S = subjects.length;
-          const N = exam.noOfQuestions || 100;
-          
-          if (N < S) throw new Error('Total questions cannot be less than number of subjects');
+        const subjects = exam.subjects;
+        const S = subjects.length;
+        const N = exam.noOfQuestions || 100;
 
-          const base = Math.floor(N / S);
-          const remainder = N % S;
+        if (N < S)
+          throw new Error(
+            'Total questions cannot be less than number of subjects',
+          );
 
-          // Shuffle for fair remainder distribution
-          const shuffledSubjects = [...subjects].sort(() => 0.5 - Math.random());
+        const base = Math.floor(N / S);
+        const remainder = N % S;
 
-          const selectedQuestions: { id: number }[] = [];
-          const testSubjectsData: any[] = [];
+        // Shuffle for fair remainder distribution
+        const shuffledSubjects = [...subjects].sort(() => 0.5 - Math.random());
 
-          for (let i = 0; i < S; i++) {
-            const sub = shuffledSubjects[i];
-            let allocation = base;
-            if (i < remainder) allocation += 1;
+        const selectedQuestions: { id: number }[] = [];
+        const testSubjectsData: any[] = [];
 
-            const subQuestions = await this.prisma.question.findMany({
-              where: { subjectId: sub.id },
-              select: { id: true }
-            });
-            
-            if (subQuestions.length < allocation) {
-               throw new Error(`Insufficient questions in Bank for subject: ${sub.name}. Required: ${allocation}`);
-            }
+        for (let i = 0; i < S; i++) {
+          const sub = shuffledSubjects[i];
+          let allocation = base;
+          if (i < remainder) allocation += 1;
 
-            const picked = subQuestions.sort(() => 0.5 - Math.random()).slice(0, allocation);
-            picked.forEach(q => selectedQuestions.push({ id: q.id }));
+          const subQuestions = await this.prisma.question.findMany({
+            where: { subjectId: sub.id },
+            select: { id: true },
+          });
 
-            testSubjectsData.push({
-              subjectId: sub.id,
-              allocatedQuestions: allocation
-            });
+          if (subQuestions.length < allocation) {
+            throw new Error(
+              `Insufficient questions in Bank for subject: ${sub.name}. Required: ${allocation}`,
+            );
           }
 
-          if (selectedQuestions.length > 0) {
-            const newTest = await this.prisma.test.create({
-              data: {
-                name: `${exam.name} Auto-Generated Test`,
-                examId: exam.id,
-                questions: {
-                  connect: selectedQuestions,
-                },
-                testSubjects: {
-                  create: testSubjectsData
-                }
-              },
-              include: {
-                questions: {
-                  include: { subject: true },
-                },
-                testSubjects: { include: { subject: true } }
-              },
-            });
+          const picked = subQuestions
+            .sort(() => 0.5 - Math.random())
+            .slice(0, allocation);
+          picked.forEach((q) => selectedQuestions.push({ id: q.id }));
 
-            const { tests, ...examInfo } = exam;
-            return {
-              test: newTest,
-              exam: examInfo,
-            };
-          }
+          testSubjectsData.push({
+            subjectId: sub.id,
+            allocatedQuestions: allocation,
+          });
+        }
+
+        if (selectedQuestions.length > 0) {
+          const newTest = await this.prisma.test.create({
+            data: {
+              name: `${exam.name} Auto-Generated Test`,
+              examId: exam.id,
+              questions: {
+                connect: selectedQuestions,
+              },
+              testSubjects: {
+                create: testSubjectsData,
+              },
+            },
+            include: {
+              questions: {
+                include: { subject: true },
+              },
+              testSubjects: { include: { subject: true } },
+            },
+          });
+
+          const { tests, ...examInfo } = exam;
+          return {
+            test: newTest,
+            exam: examInfo,
+          };
+        }
       }
-      throw new NotFoundException('No tests found for this exam and no questions available to generate one.');
+      throw new NotFoundException(
+        'No tests found for this exam and no questions available to generate one.',
+      );
     }
 
     // Pick a random test
-    const randomTest = exam.tests[Math.floor(Math.random() * exam.tests.length)];
+    const randomTest =
+      exam.tests[Math.floor(Math.random() * exam.tests.length)];
 
     // Return both test and exam as expected by frontend ArthaTest component
     const { tests, ...examInfo } = exam;
     return {
       test: randomTest,
-      exam: examInfo
+      exam: examInfo,
     };
   }
 

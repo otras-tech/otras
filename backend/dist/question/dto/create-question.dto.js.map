@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/question/dto/create-question.dto.ts"],"sourcesContent":["export class CreateQuestionDto {}\r\n"],"names":["CreateQuestionDto"],"mappings":";;;;+BAAaA;;;eAAAA;;;AAAN,IAAA,AAAMA,oBAAN,MAAMA;AAAmB"}

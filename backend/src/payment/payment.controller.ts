@@ -1,8 +1,24 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaymentService } from './payment.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+
+import { IsNumber, IsNotEmpty } from 'class-validator';
+
+class PayWithCreditsDto {
+  @IsNumber()
+  @IsNotEmpty()
+  subscriptionId: number = 0;
+}
 
 @Controller('payments')
 export class PaymentController {
@@ -23,7 +39,7 @@ export class PaymentController {
 
   @UseGuards(JwtAuthGuard)
   @Post('pay-with-credits')
-  payWithCredits(@Request() req, @Body() dto: { subscriptionId: number }) {
+  payWithCredits(@Request() req, @Body() dto: PayWithCreditsDto) {
     return this.paymentService.payWithCredits(req.user.id, dto.subscriptionId);
   }
 

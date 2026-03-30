@@ -9,32 +9,37 @@ import {
   PlayCircle,
   BarChart3,
 } from "lucide-react";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 import { useTranslation } from "../hooks/useTranslation";
 import IntelligenceFeedback from "../components/artha/IntelligenceFeedback";
 import FormattedText from "../components/FormattedText";
+import { useQueryClient } from "@tanstack/react-query";
 
-export default function ArthaTest({ user }) {
+import { useAuthStore } from "../store/authStore";
+
+export default function ArthaTest() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { state } = useLocation();
   const testData = state?.testData;
   const { test, exam } = testData || {};
   const { t, language } = useTranslation();
+  const queryClient = useQueryClient();
 
-  const [activeTest, setActiveTest] = useState(null);
+  const [activeTest, setActiveTest] = useState<any>(null);
   const [currentSection, setCurrentSection] = useState("");
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState<any[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [arthaStatus, setArthaStatus] = useState(null);
-  const [activeAssessmentId, setActiveAssessmentId] = useState(null);
-  const [activeResultId, setActiveResultId] = useState(null);
+  const [arthaStatus, setArthaStatus] = useState<any>(null);
+  const [activeAssessmentId, setActiveAssessmentId] = useState<any>(null);
+  const [activeResultId, setActiveResultId] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [liveMetrics, setLiveMetrics] = useState(null);
-  const timerRef = useRef(null);
-  const answersRef = useRef([]);
-  const lastActionTimeRef = useRef(null);
+  const [liveMetrics, setLiveMetrics] = useState<any>(null);
+  const timerRef = useRef<any>(null);
+  const answersRef = useRef<any[]>([]);
+  const lastActionTimeRef = useRef<any>(null);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -45,31 +50,36 @@ export default function ArthaTest({ user }) {
       let startId = null;
       try {
         if (testData?.isMockTest) {
-          const resp = await axios.post("http://localhost:4000/mock-test/start-attempt", {
-            otrId: user.otrId,
+          const resp = await apiClient.post("/mock-test/start-attempt", {
+            otrId: user?.otrId,
             mockTestId: test.id,
           });
           startId = resp.data.id;
         } else {
           const targetTier = parseInt(state?.tier || "1", 10);
           if (targetTier === 1) {
-            const resp = await axios.post("http://localhost:4000/artha/start-tier/1", {
-              userId: user.id,
+            const resp = await apiClient.post("/artha/start-tier/1", {
+              userId: user?.id,
             });
             startId = resp.data.id;
           } else {
             // Tier 2 or 3
-            // 1. Start standard Result record (Int ID)
-            const resResult = await axios.post("http://localhost:4000/results/start", {
-              userId: user.id,
-              testId: test.id,
-              tier: targetTier,
-            });
-            setActiveResultId(resResult.data.id);
+            try {
+              const resResult = await apiClient.post("/results/start", {
+                userId: user?.id,
+                testId: test.id,
+                tier: targetTier,
+              });
+              setActiveResultId(resResult.data.id);
+            } catch (err: any) {
+            console.error(err);
+            if (err.response?.status === 500 && err.response?.data?.message?.includes('Foreign key')) {
+            }
+            }
 
             // 2. Start Artha Assessment record (String UUID)
-            const resArtha = await axios.post(`http://localhost:4000/artha/start-tier/${targetTier}`, {
-              userId: user.id,
+            const resArtha = await apiClient.post(`/artha/start-tier/${targetTier}`, {
+              userId: user?.id,
             });
             startId = resArtha.data.id;
           }
@@ -128,17 +138,16 @@ export default function ArthaTest({ user }) {
         timerRef.current = null;
       }
     };
-  }, [activeTest, submitted, timeLeft > 0]);
+  }, [activeTest, submitted, timeLeft]);
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds < 0) return "00:00";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleAnswerChange = async (questionId, selectedOption) => {
-    const isTier3 = state?.tier === "3";
+  const handleAnswerChange = async (questionId: string, selectedOption: string) => {
     const now = Date.now();
     const timeTaken = lastActionTimeRef.current ? Math.floor((now - lastActionTimeRef.current) / 1000) : 0;
     lastActionTimeRef.current = now;
@@ -155,15 +164,12 @@ export default function ArthaTest({ user }) {
 
     // Only record live question attempts for Artha Tier Assessments, not Mock Tests
     if (activeAssessmentId && !testData?.isMockTest) {
-      console.log(`\nARTHA Progress Engine: Question Attempted`);
-      console.log(`Tier: Tier-${state?.tier}`);
-
       try {
-        const question = activeTest.questions.find(q => q.id === questionId);
+        const question = activeTest.questions.find((q: any) => q.id === questionId);
         const isCorrect = question.answer === selectedOption;
         const totalQuestions = activeTest.questions?.length || exam?.noOfQuestions || 15;
 
-        const response = await axios.post("http://localhost:4000/artha/attempt-question", {
+        const response = await apiClient.post("/artha/attempt-question", {
           assessmentId: activeAssessmentId,
           questionId,
           selectedOption,
@@ -174,18 +180,6 @@ export default function ArthaTest({ user }) {
 
         const metrics = response.data;
         setLiveMetrics(metrics);
-
-        // Real-time console logging for all tiers
-        console.log(`\nTier: Tier-${state?.tier}`);
-        console.log(`Attempted Questions: ${metrics.attempted}`);
-        console.log(`Total Questions In Tier: ${totalQuestions}`);
-        console.log(`Calculated Progress: ${metrics.progress}%`);
-
-        if (state?.tier === "3") {
-          console.log(`Accuracy: ${metrics.accuracy}%`);
-          console.log(`Average Speed: ${metrics.speed} sec/question`);
-          console.log(`Consistency: ${metrics.consistency}`);
-        }
       } catch (err) {
         console.error("ARTHA Progress Engine: Error recording attempt", err);
       }
@@ -200,23 +194,23 @@ export default function ArthaTest({ user }) {
     try {
       const questions = activeTest?.questions || [];
       const subjects = Array.from(
-        new Set(questions.map((q) => q.subject?.name).filter(Boolean))
+        new Set(questions.map((q: any) => q.subject?.name).filter(Boolean))
       );
-      const subjectWise = {};
+      const subjectWise: Record<string, any> = {};
 
       let correctCount = 0;
       let wrongCount = 0;
 
-      subjects.forEach((sub) => {
+      subjects.forEach((sub: any) => {
         subjectWise[sub] = { correct: 0, wrong: 0, unanswered: 0, total: 0, score: 0 };
       });
 
-      questions.forEach((q) => {
+      questions.forEach((q: any) => {
         const subName = q.subject?.name;
         if (!subName || !subjectWise[subName]) return;
         subjectWise[subName].total++;
 
-        const userAns = currentAnswers.find((a) => a.questionId === q.id);
+        const userAns = currentAnswers.find((a: any) => a.questionId === q.id);
         if (userAns) {
           if (userAns.selectedOption === q.answer) {
             correctCount++;
@@ -235,7 +229,7 @@ export default function ArthaTest({ user }) {
       const negativeMarks = wrongCount * 0.25;
       const totalScore = correctCount - negativeMarks;
 
-      const payload = {
+      const finalResult: any = {
         totalScore,
         totalMarks: questions.length,
         correctAnswers: correctCount,
@@ -244,11 +238,11 @@ export default function ArthaTest({ user }) {
         subjectBreakdown: subjectWise,
       };
 
-      setResult(payload);
+      setResult(finalResult);
       setSubmitted(true);
 
       if (testData?.isMockTest) {
-        await axios.post("http://localhost:4000/mock-test/exam-attempts", {
+        await apiClient.post("/mock-test/exam-attempts", {
           otrId: user.otrId,
           examId: activeTest.examId,
           score: totalScore,
@@ -261,8 +255,7 @@ export default function ArthaTest({ user }) {
         const targetTier = state?.tier;
 
         if (targetTier === "2" || targetTier === "3") {
-          console.log(`ARTHA: Submitting Tier-${targetTier} exam results`);
-          await axios.post("http://localhost:4000/results", {
+          await apiClient.post("/results", {
             userId: user.id,
             testId: activeTest.id,
             answers: currentAnswers,
@@ -271,8 +264,7 @@ export default function ArthaTest({ user }) {
           });
 
           if (targetTier === "2") {
-            console.log("ARTHA: Updating Tier-2 progress");
-            const resp = await axios.post("http://localhost:4000/artha/tier2", {
+            const resp = await apiClient.post("/artha/tier2", {
               userId: user.id,
               assessmentId: activeAssessmentId,
               language,
@@ -281,8 +273,7 @@ export default function ArthaTest({ user }) {
             });
             setArthaStatus(resp.data);
           } else if (targetTier === "3") {
-            console.log("ARTHA: Updating Tier-3 progress and triggering AI feedback");
-            const resp = await axios.post("http://localhost:4000/artha/tier3", {
+            const resp = await apiClient.post("/artha/tier3", {
               userId: user.id,
               assessmentId: activeAssessmentId,
               language,
@@ -291,46 +282,37 @@ export default function ArthaTest({ user }) {
             });
             setArthaStatus(resp.data);
           }
-          console.log(`ARTHA: Tier-${targetTier} successfully processed`);
         } else {
-          // ARTHA Tier 1 Integration
-          console.log("ARTHA: Submitting Tier 1 assessment results");
-
-          // Map subjects to logical, quant, verbal (Matching Seed names)
           const logicalScore = subjectWise["logical"]?.score || 0;
           const quantScore = subjectWise["quant"]?.score || 0;
           const verbalScore = subjectWise["verbal"]?.score || 0;
 
-          const payload = {
+          const resp = await apiClient.post("/artha/tier1", {
             userId: user.id,
             logicalScore,
             quantScore,
             verbalScore,
             attemptedCount: currentAnswers.length,
-            totalQuestions: questions.length || 15
-          };
-
-          const resp = await axios.post("http://localhost:4000/artha/tier1", {
-            ...payload,
+            totalQuestions: questions.length || 15,
             assessmentId: activeAssessmentId,
             language
           });
-          console.log("ARTHA: Tier 1 successfully processed", resp.data);
           setArthaStatus(resp.data);
         }
-
       }
+
+      // Invalidate Artha cache so the engine page updates reliably
+      queryClient.invalidateQueries({ queryKey: ['arthaStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['mockExams'] });
     } catch (err) {
       console.error("Failed to submit test", err);
-      alert("Submission failed. The test may have already been submitted or there was a server error.");
+      alert("Submission failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 1. Result View
   if (submitted && result) {
-    console.log("ARTHA: Rendering AI feedback in report");
     return (
       <div className="max-w-4xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center">
@@ -338,17 +320,9 @@ export default function ArthaTest({ user }) {
             <CheckCircle2 size={32} />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-1">
-            {arthaStatus?.feedback?.tier === 3 ? t("performanceIntelligenceInsight") :
-              arthaStatus?.feedback?.tier === 2 ? t("subjectCompetencyInsight") :
-                t("testCompleted")}
+            {t("testCompleted")}
           </h1>
-          <p className="text-slate-500 mb-6">
-            {arthaStatus?.feedback?.tier === 3 ? t("tier3Processed") :
-              arthaStatus?.feedback?.tier === 2 ? t("tier2Processed") :
-                t("tier1Processed")}
-          </p>
 
-          {/* Score Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
               <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-1">
@@ -434,7 +408,7 @@ export default function ArthaTest({ user }) {
               </thead>
               <tbody>
                 {Object.entries(result.subjectBreakdown).map(
-                  ([subject, stats], i) => (
+                  ([subject, stats]: [string, any], i) => (
                     <tr
                       key={subject}
                       className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
@@ -476,7 +450,8 @@ export default function ArthaTest({ user }) {
               <p className="text-slate-500 text-sm max-w-sm mx-auto">{t("AI Processing")}</p>
               <button
                 onClick={async () => {
-                  const resp = await axios.get(`http://localhost:4000/artha/status/${user.id}`);
+                  if (!user) return;
+                  const resp = await apiClient.get(`/artha/status/${user.id}`);
                   setArthaStatus(resp.data);
                 }}
                 className="text-indigo-600 font-bold text-sm hover:underline"
@@ -509,7 +484,7 @@ export default function ArthaTest({ user }) {
     );
 
     // Group questions by subject for the full palette
-    const groupedQuestions = questions.reduce((acc, q) => {
+    const groupedQuestions = questions.reduce((acc: any, q: any) => {
       const subjectName = q.subject?.name || "General";
       if (!acc[subjectName]) acc[subjectName] = [];
       acc[subjectName].push(q);
@@ -603,13 +578,13 @@ export default function ArthaTest({ user }) {
                 <Layout size={18} className="text-indigo-500" /> {t("questionPalette")}
               </h3>
               <div className="overflow-y-auto pr-2 space-y-6 custom-scrollbar">
-                {Object.entries(groupedQuestions).map(([sectionName, qs]) => (
+                {Object.entries(groupedQuestions).map(([sectionName, qs]: [string, any]) => (
                   <div key={sectionName} className="space-y-3">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-2">
                       {sectionName}
                     </p>
                     <div className="grid grid-cols-5 gap-2">
-                      {qs.map((q, i) => {
+                      {qs.map((q: any, i: number) => {
                         const isAnswered = answers.some((a) => a.questionId === q.id);
                         const isCurrentSection = q.subject?.name === currentSection;
                         return (
@@ -666,7 +641,7 @@ export default function ArthaTest({ user }) {
 
           {/* Questions */}
           <div className="lg:col-span-3 space-y-6">
-            {filteredQuestions.map((q, i) => (
+            {filteredQuestions.map((q: any, i: number) => (
               <div
                 key={q.id}
                 id={`question-${q.id}`}
@@ -679,7 +654,7 @@ export default function ArthaTest({ user }) {
                   {i + 1}. <FormattedText text={q.text} />
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {q.options.map((opt) => (
+                  {q.options.map((opt: string) => (
                     <button
                       key={opt}
                       onClick={() => handleAnswerChange(q.id, opt)}

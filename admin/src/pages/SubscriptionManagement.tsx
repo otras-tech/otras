@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSubscriptions, createSubscription, updateSubscription, deleteSubscription } from '../services/adminApi';
 import { CreditCard, Plus, Trash2, Edit2, CheckCircle2, AlertCircle } from 'lucide-react';
-import axios from 'axios';
 
 interface Subscription {
     id: number;
     title: string;
-    price: string;
+    price: string | number;
     features: string[];
     isRecommended: boolean;
 }
 
 export default function SubscriptionManagement() {
-
-    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [isEditing, setIsEditing] = useState(false);
+    const [editId, setEditId] = useState<number | null>(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -23,87 +23,72 @@ export default function SubscriptionManagement() {
         isRecommended: false
     });
 
-    const [editId, setEditId] = useState<number | null>(null);
+    const { data: subscriptions = [], isLoading: loading } = useQuery({
+        queryKey: ['adminSubscriptions'],
+        queryFn: getSubscriptions,
+    });
 
-    useEffect(() => {
-        fetchSubscriptions();
-    }, []);
-
-    const fetchSubscriptions = async () => {
-        try {
-            const resp = await axios.get('http://localhost:4000/subscriptions');
-            setSubscriptions(resp.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        const cleanPrice = formData.price.replace(/[^0-9.]/g, '');
-
-        const data = {
-            ...formData,
-            price: parseFloat(cleanPrice) || 0,
-            features: formData.features.split(',').map(f => f.trim())
-        };
-
-        try {
-            if (editId) {
-                await axios.patch(`http://localhost:4000/subscriptions/${editId}`, data);
-            } else {
-                await axios.post('http://localhost:4000/subscriptions', data);
-            }
-
-            fetchSubscriptions();
-
+    const upsertMutation = useMutation({
+        mutationFn: (data: any) => {
+            const cleanPrice = data.price.toString().replace(/[^0-9.]/g, '');
+            const payload = {
+                ...data,
+                price: parseFloat(cleanPrice) || 0,
+                features: data.features.split(',').map((f: string) => f.trim())
+            };
+            return editId ? updateSubscription(editId, payload) : createSubscription(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminSubscriptions'] });
             setIsEditing(false);
-            setFormData({
-                title: '',
-                price: '',
-                features: '',
-                isRecommended: false
-            });
-
-            setEditId(null);
-
-        } catch (err) {
+            resetForm();
+        },
+        onError: (err: any) => {
             console.error(err);
             alert('Failed to save subscription');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteSubscription(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminSubscriptions'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete');
+        }
+    });
+
+    const resetForm = () => {
+        setFormData({
+            title: '',
+            price: '',
+            features: '',
+            isRecommended: false
+        });
+        setEditId(null);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        upsertMutation.mutate(formData);
     };
 
     const handleEdit = (sub: Subscription) => {
-
         setFormData({
             title: sub.title,
-            price: sub.price,
+            price: sub.price.toString(),
             features: sub.features.join(', '),
             isRecommended: sub.isRecommended
         });
-
         setEditId(sub.id);
         setIsEditing(true);
     };
 
-    const handleDelete = async (id: number) => {
-
+    const handleDelete = (id: number) => {
         if (!window.confirm('Delete this plan?')) return;
-
-        try {
-
-            await axios.delete(`http://localhost:4000/subscriptions/${id}`);
-
-            setSubscriptions(subscriptions.filter(s => s.id !== id));
-
-        } catch (err) {
-
-            alert('Failed to delete');
-
-        }
+        deleteMutation.mutate(id);
     };
 
     return (
@@ -264,7 +249,7 @@ export default function SubscriptionManagement() {
 
                 ) : (
 
-                    subscriptions.map(sub => (
+                    subscriptions.map((sub: Subscription) => (
 
                         <div
                             key={sub.id}
@@ -322,7 +307,7 @@ export default function SubscriptionManagement() {
 
                             <ul className="space-y-3 mb-8">
 
-                                {sub.features.map((f, i) => (
+                                {sub.features.map((f: string, i: number) => (
 
                                     <li key={i} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
 

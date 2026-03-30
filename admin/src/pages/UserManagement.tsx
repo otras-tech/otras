@@ -1,65 +1,34 @@
-import { useState, useEffect } from 'react';
-import { Users, Mail, Shield, Trash2, Edit2, Search, Filter } from 'lucide-react';
-import axios from 'axios';
-
-interface User {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    otrId: string;
-    category: string;
-    highestDegree: string;
-    careerPreference: string;
-    createdAt: string;
-}
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getUsers, deleteUser } from '../services/adminApi';
+import { Search, Filter, Users, Mail, Shield, Trash2, Edit2 } from 'lucide-react';
 
 export default function UserManagement() {
-
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
+    const { data: users = [], isLoading: loading } = useQuery({
+        queryKey: ['adminUsers'],
+        queryFn: getUsers,
+    });
 
-    const fetchUsers = async () => {
-        try {
-            const token = localStorage.getItem('adminToken');
-
-            const resp = await axios.get('http://localhost:4000/users', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            setUsers(resp.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDelete = async (id: number) => {
-
-        if (!window.confirm('Are you sure you want to delete this user?')) return;
-
-        try {
-
-            const token = localStorage.getItem('adminToken');
-
-            await axios.delete(`http://localhost:4000/users/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            setUsers(users.filter(u => u.id !== id));
-
-        } catch (err) {
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteUser(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        },
+        onError: () => {
             alert('Failed to delete user');
         }
+    });
+
+    const handleDelete = async (id: number) => {
+        if (!window.confirm('Are you sure you want to delete this user?')) return;
+        deleteMutation.mutate(id);
     };
 
-    const filteredUsers = users.filter(u =>
+    const filteredUsers = users.filter((u: any) =>
         `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.otrId?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -166,7 +135,7 @@ export default function UserManagement() {
                                     </td>
                                 </tr>
 
-                            ) : filteredUsers.map((user) => (
+                            ) : filteredUsers.map((user: any) => (
 
                                 <tr
                                     key={user.id}

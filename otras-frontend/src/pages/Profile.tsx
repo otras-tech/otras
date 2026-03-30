@@ -4,11 +4,26 @@ import { AlertCircle, User, BookOpen, MapPin, Shield, Lock, CheckCircle2, Edit2,
 import FormField, { TextInput, SelectInput } from '../components/FormField';
 import UserCreditsCard from '../components/UserCreditsCard';
 import LoginModal from '../components/LoginModal';
-import axios from 'axios';
 import { useTranslation } from '../hooks/useTranslation';
+import { useAuthStore } from '../store/authStore';
+import { useMutation } from '@tanstack/react-query';
+import { register } from '../services/authApi';
+import { updateProfile } from '../services/profileApi';
 
-export default function Profile({ onAuthSuccess, user: currentUser }) {
+const INDIAN_STATES = [
+  'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+  'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli', 'Daman and Diu', 'Delhi',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra',
+  'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
+  'Uttarakhand', 'West Bengal'
+];
+
+
+export default function Profile() {
   const navigate = useNavigate();
+  const { user: currentUser, setAuth, updateUser } = useAuthStore();
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     firstName: currentUser?.firstName || '',
@@ -25,22 +40,35 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
   });
 
   const [registeredUser, setRegisteredUser] = useState(currentUser);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(!currentUser?.otrId);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
-  const [stateSearch, setStateSearch] = useState('');
+  const [stateSearch, setStateSearch] = useState(currentUser?.domicile === 'selectState' ? '' : (currentUser?.domicile || ''));
 
-  const INDIAN_STATES = [
-    'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
-    'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli', 'Daman and Diu', 'Delhi',
-    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand',
-    'Karnataka', 'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra',
-    'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab',
-    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
-    'Uttarakhand', 'West Bengal'
-  ];
+  const registerMutation = useMutation({
+    mutationFn: (data: any) => register(data),
+    onSuccess: (data) => {
+      const { user: newUser, access_token, refresh_token } = data;
+      setAuth(newUser, access_token, refresh_token || '');
+      setRegisteredUser(newUser);
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Registration failed');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => updateProfile(currentUser!.id, data),
+    onSuccess: (updatedUser) => {
+      updateUser(updatedUser);
+      setIsEditing(false);
+      alert(t('profileUpdatedSuccess'));
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Update failed');
+    }
+  });
 
   useEffect(() => {
     // Sync referral code from URL or localStorage into state
@@ -56,44 +84,25 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
     }
   }, []);
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
     setError('');
-    try {
-      if (currentUser) {
-        // Update existing user
-        const response = await axios.patch(`http://localhost:4000/users/${currentUser.id}`, {
-          ...formData,
-          age: parseInt(formData.age) || null
-        });
-        const updatedUser = response.data;
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setRegisteredUser(updatedUser);
-        if (onAuthSuccess) onAuthSuccess(updatedUser);
-        setIsEditing(false);
-        alert(t('profileUpdatedSuccess'));
-      } else {
-        // Register new user
-        const response = await axios.post('http://localhost:4000/auth/register', {
-          ...formData,
-          age: parseInt(formData.age) || null
-        });
-        const { user: newUser, access_token } = response.data;
-        localStorage.setItem('token', access_token);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        setRegisteredUser(newUser);
-        if (onAuthSuccess) onAuthSuccess(newUser);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Action failed. Please try again.');
-    } finally {
-      setLoading(false);
+    const payload: any = {
+      ...formData,
+      age: parseInt(formData.age as string) || null
+    };
+
+    if (currentUser) {
+      updateMutation.mutate(payload);
+    } else {
+      registerMutation.mutate(payload);
     }
   };
+
+  const loading = registerMutation.isPending || updateMutation.isPending;
 
   if (registeredUser && !currentUser) {
     return (
@@ -146,14 +155,14 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
         </div>
       )}
 
-      {/* Pending Alert */}
-      {!currentUser && (
+      {/* Pending Alert for incomplete profiles or missing OTR */}
+      {(!currentUser || !currentUser.otrId) && (
         <div className="flex items-start gap-3 p-4 rounded-xl bg-yellow-50 border border-yellow-200 mb-5">
           <AlertCircle size={18} className="text-yellow-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-yellow-700 font-semibold text-sm">{t("registrationPending")}</p>
+            <p className="text-yellow-700 font-semibold text-sm">{currentUser ? "OTR Identity Generation Pending" : t("registrationPending")}</p>
             <p className="text-yellow-600 text-sm">
-              {t("completeForm")}
+              {currentUser ? "Please fill all details and click on 'Generate OTR Identity' to proceed." : t("completeForm")}
             </p>
           </div>
         </div>
@@ -198,74 +207,76 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
                 <TextInput
                   placeholder={t("enterFirstName")}
                   value={formData.firstName}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('firstName', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('firstName', e.target.value)}
                 />
               </FormField>
               <FormField label={t("lastName")}>
                 <TextInput
                   placeholder={t("enterLastName")}
                   value={formData.lastName}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('lastName', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('lastName', e.target.value)}
                 />
               </FormField>
               <FormField label={t("emailAddress")}>
                 <TextInput
                   placeholder={t("emailPlaceholder")}
                   value={formData.email}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('email', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('email', e.target.value)}
                 />
               </FormField>
               <FormField label={t("age")}>
                 <TextInput
                   placeholder={t("agePlaceholder")}
                   value={formData.age}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('age', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('age', e.target.value)}
                 />
               </FormField>
               <FormField label={t("category")}>
                 <SelectInput
                   options={[t('categoryGeneral'), t('categoryOBC'), t('categorySC'), t('categoryST'), t('categoryEWS')]}
                   value={formData.category}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('category', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('category', e.target.value)}
                 />
               </FormField>
               {!currentUser && (
-                <>
-                  <FormField label={t("setLoginPassword")}>
-                    <div className="relative">
-                      <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => handleChange('password', e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg pl-8 pr-3 py-2.5 text-sm outline-none focus:border-blue-400"
-                      />
-                    </div>
-                    <p className="text-slate-400 text-xs mt-1">{t("passwordFutureLogins")}</p>
-                  </FormField>
-                  <FormField label={
-                    <div className="flex items-center gap-2">
-                      {t("referralCodeOptional")}
-                      {formData.referralCode && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 animate-pulse">
-                          {t("referralApplied") || "Referral Applied 🎉"}
-                        </span>
-                      )}
-                    </div>
-                  }>
-                    <TextInput
-                      placeholder={t("referralPlaceholder")}
-                      value={formData.referralCode}
-                      onChange={(e) => handleChange('referralCode', e.target.value.toUpperCase())}
+                <FormField label={t("setLoginPassword")}>
+                  <div className="relative">
+                    <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg pl-8 pr-3 py-2.5 text-sm outline-none focus:border-blue-400"
                     />
-                    <p className="text-slate-400 text-xs mt-1">{t("enterFriendCode")}</p>
-                  </FormField>
-                </>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1">{t("passwordFutureLogins")}</p>
+                </FormField>
+              )}
+
+              {/* Show referral input if user doesn't have an OTR ID yet (linking phase) */}
+              {(!currentUser || !currentUser.otrId) && (
+                <FormField label={
+                  <div className="flex items-center gap-2">
+                    {t("referralCodeOptional")}
+                    {formData.referralCode && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 animate-pulse">
+                        {t("referralApplied") || "Referral Applied 🎉"}
+                      </span>
+                    )}
+                  </div>
+                }>
+                  <TextInput
+                    placeholder={t("referralPlaceholder")}
+                    value={formData.referralCode}
+                    onChange={(e: any) => handleChange('referralCode', e.target.value.toUpperCase())}
+                  />
+                  <p className="text-slate-400 text-xs mt-1">{t("enterFriendCode")}</p>
+                </FormField>
               )}
             </div>
           </div>
@@ -290,16 +301,16 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
                 <SelectInput
                   options={[t('bachelorsDegree'), t('mastersDegree'), t('12thHSC'), t('10thSSC')]}
                   value={formData.highestDegree}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('highestDegree', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('highestDegree', e.target.value)}
                 />
               </FormField>
               <FormField label={t("careerPreference")}>
                 <TextInput
                   placeholder={t("careerPlaceholder")}
                   value={formData.careerPreference}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('careerPreference', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('careerPreference', e.target.value)}
                 />
               </FormField>
 
@@ -308,44 +319,56 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 pb-2 border-b border-slate-200">{t('locationInformation')}</h3>
               </div>
               <FormField label={t("domicileState")}>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     type="text"
                     placeholder={t("searchSelectState")}
-                    value={formData.domicile === 'selectState' ? stateSearch : (isStateDropdownOpen ? stateSearch : formData.domicile)}
-                    disabled={currentUser && !isEditing}
-                    onChange={(e) => {
-                      setIsStateDropdownOpen(true);
-                      setStateSearch(e.target.value);
-                      if (formData.domicile !== 'selectState') handleChange('domicile', 'selectState');
-                    }}
+                    value={isStateDropdownOpen ? stateSearch : (formData.domicile === 'selectState' ? "" : formData.domicile)}
+                    disabled={!!(currentUser && !isEditing)}
                     onFocus={() => {
-                      if (!currentUser || isEditing) setIsStateDropdownOpen(true);
+                      if (!currentUser || isEditing) {
+                        setIsStateDropdownOpen(true);
+                        // If it's a new or temp user, we might want to show all states
+                        if (formData.domicile === 'selectState') setStateSearch("");
+                        else setStateSearch(formData.domicile);
+                      }
                     }}
                     onBlur={() => {
-                      // Small delay to allow click event on option to fire before closing
-                      setTimeout(() => setIsStateDropdownOpen(false), 200);
+                      // Moderate delay to allow click event on option to fire before closing
+                      setTimeout(() => setIsStateDropdownOpen(false), 300);
                     }}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
+                    onChange={(e) => {
+                      setStateSearch(e.target.value);
+                      if (!isStateDropdownOpen) setIsStateDropdownOpen(true);
+                    }}
+                    className="w-full border border-slate-200 rounded-lg pl-3 pr-10 py-2.5 text-sm outline-none focus:border-blue-400 disabled:bg-slate-50 disabled:text-slate-500 transition-all font-medium"
                   />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <MapPin size={16} />
+                  </div>
+                  
                   {isStateDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar py-1 animate-in fade-in zoom-in duration-100">
                       {INDIAN_STATES.filter(s => s.toLowerCase().includes(stateSearch.toLowerCase())).length > 0 ? (
                         INDIAN_STATES.filter(s => s.toLowerCase().includes(stateSearch.toLowerCase())).map(state => (
-                          <div
+                          <button
                             key={state}
-                            onMouseDown={() => {
+                            type="button"
+                            onMouseDown={(e) => {
+                              // Use onMouseDown to prevent blur from closing the list before selection
+                              e.preventDefault();
                               handleChange('domicile', state);
-                              setStateSearch('');
+                              setStateSearch(state);
                               setIsStateDropdownOpen(false);
                             }}
-                            className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors ${formData.domicile === state ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600'}`}
+                            className={`w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between ${formData.domicile === state ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'}`}
                           >
                             {state}
-                          </div>
+                            {formData.domicile === state && <CheckCircle2 size={14} className="text-blue-600" />}
+                          </button>
                         ))
                       ) : (
-                        <div className="px-4 py-3 text-sm text-slate-500 text-center">{t('noStatesFound')}</div>
+                        <div className="px-4 py-4 text-sm text-slate-400 text-center italic">{t('noStatesFound')}</div>
                       )}
                     </div>
                   )}
@@ -355,8 +378,8 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
                 <TextInput
                   placeholder={t("pincodePlaceholder")}
                   value={formData.pincode}
-                  disabled={currentUser && !isEditing}
-                  onChange={(e) => handleChange('pincode', e.target.value)}
+                  disabled={!!(currentUser && !isEditing)}
+                  onChange={(e: any) => handleChange('pincode', e.target.value)}
                 />
               </FormField>
             </div>
@@ -397,8 +420,8 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
                   currentUser ? t('saving') : t('generating')
                 ) : (
                   <>
-                    {currentUser ? <Save size={16} /> : null}
-                    {currentUser ? t('saveChanges') : t('generateOtrIdentity')}
+                    {(currentUser && currentUser.otrId) ? <Save size={16} /> : null}
+                    {(currentUser && !currentUser.otrId) ? t('generateOtrIdentity') : (currentUser ? t('saveChanges') : t('generateOtrIdentity'))}
                   </>
                 )}
               </button>
@@ -423,15 +446,35 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
             <div className="bg-blue-800/60 rounded-xl p-4 mb-4">
               <p className="text-blue-300 text-xs uppercase tracking-widest mb-1">{t('otrRegistrationIdLabel')}</p>
               <p className="text-2xl font-extrabold tracking-widest text-white">
-                {currentUser ? currentUser.otrId : (registeredUser ? registeredUser.otrId : t('notGeneratedYet'))}
+                {currentUser?.otrId || (registeredUser?.otrId || "NOT GENERATED")}
               </p>
             </div>
+            {!currentUser?.otrId && (
+              <div className="flex items-start gap-2 bg-yellow-400/20 rounded-lg p-3 text-xs text-yellow-100 mb-4 border border-yellow-400/30">
+                <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-yellow-400" />
+                <p>You haven't generated your OTR ID yet. Complete your profile first.</p>
+              </div>
+            )}
             <div className="flex items-start gap-2 bg-blue-800/40 rounded-lg p-3 text-xs text-blue-300">
               <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-cyan-400" />
               <div>
                 <p className="font-bold text-cyan-400 mb-0.5">{t('howItWorks')}</p>
                 <p>{t('otrAutoGenerated')}</p>
                 <p className="mt-1">{t('completeFormToGenerate')}</p>
+              </div>
+            </div>
+
+            {/* Referral Code Sidebar Section */}
+            <div className="mt-5 pt-5 border-t border-blue-400/30">
+              <div className="flex items-center gap-3 mb-3">
+                <Gift size={20} className="text-blue-200" />
+                <span className="font-bold">{t('yourReferralCode')}</span>
+              </div>
+              <div className="bg-white/10 rounded-xl p-3 text-center border border-white/10">
+                <p className="text-[10px] text-blue-200 uppercase tracking-widest mb-1">Share to earn credits</p>
+                <p className="text-xl font-black tracking-[0.3em]">
+                  {currentUser?.referralCode || (registeredUser?.referralCode || "NONE")}
+                </p>
               </div>
             </div>
           </div>
@@ -470,8 +513,7 @@ export default function Profile({ onAuthSuccess, user: currentUser }) {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={(user) => {
-          if (onAuthSuccess) onAuthSuccess(user);
+        onLoginSuccess={(user: any) => {
           // Auto-fill form data for the logged in user to avoid sync issues
           setFormData(prev => ({
             ...prev,

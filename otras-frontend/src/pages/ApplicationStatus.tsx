@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, CheckCircle2, Briefcase } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { useTranslation } from '../hooks/useTranslation';
+import { useAuthStore } from '../store/authStore';
 
-export default function ApplicationStatus({ user }) {
+export default function ApplicationStatus() {
+    const { user } = useAuthStore();
     const { t } = useTranslation();
-    const [applications, setApplications] = useState([]);
+    const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expandedId, setExpandedId] = useState(null);
+    const [expandedId, setExpandedId] = useState<number | null>(null);
 
     useEffect(() => {
         if (user) fetchApplications();
     }, [user]);
 
     const fetchApplications = async () => {
+        if (!user) return;
         try {
-            const resp = await axios.get(`http://localhost:4000/applications/user/otr/${user.otrId}`);
+            const resp = await apiClient.get(`/applications/user/${user.id}`);
             setApplications(resp.data);
         } catch (err) {
             console.error(err);
@@ -54,10 +57,10 @@ export default function ApplicationStatus({ user }) {
                     {applications.map((app) => (
                         <div
                             key={app.id}
-                            className={`app-card overflow-hidden transition-all duration-300 ${expandedId === app.id ? 'ring-4' : ''}`}
+                            className={`app-card overflow-hidden transition-all duration-300 ${expandedId === app.id ? 'ring-4 shadow-xl' : ''}`}
                             style={{ 
                                 borderColor: expandedId === app.id ? 'var(--color-primary)' : 'var(--border-light)',
-                                '--tw-ring-color': 'var(--color-primary-light)'
+                                boxShadow: expandedId === app.id ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' : 'none'
                             }}
                         >
                             <div
@@ -66,10 +69,10 @@ export default function ApplicationStatus({ user }) {
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
-                                        {app.exam.name[0]}
+                                        {app.exam?.name?.[0] || 'E'}
                                     </div>
                                     <div>
-                                        <h3 className="card-title text-slate-900">{app.exam.name}</h3>
+                                        <h3 className="card-title text-slate-900">{app.exam?.name}</h3>
                                         <p className="label !mt-1">{app.status}</p>
                                     </div>
                                 </div>
@@ -86,7 +89,7 @@ export default function ApplicationStatus({ user }) {
                                     <div className="rounded-2xl p-6 border" style={{ background: 'var(--bg-light)', borderColor: 'var(--border-light)' }}>
                                         <div className="space-y-6 relative border-l-2 ml-4 pl-8 py-2" style={{ borderColor: 'var(--border-muted)' }}>
                                             {statusMapping.map((step, idx) => {
-                                                const currentStatusIdx = statusMapping.findIndex(s => s.dbValue === (app.exam.applicationStatus || 'Application Success'));
+                                                const currentStatusIdx = statusMapping.findIndex(s => s.dbValue === (app.exam?.applicationStatus || 'Application Success'));
                                                 const isCompleted = idx <= currentStatusIdx;
 
                                                 return (

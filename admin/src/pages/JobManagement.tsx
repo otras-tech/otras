@@ -1,51 +1,59 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getJobs, createJob, deleteJob } from '../services/adminApi';
 import { Plus, Trash2, Calendar, Briefcase } from 'lucide-react';
 
 export default function JobManagement() {
-
-    const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
-
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         deadline: ''
     });
 
-    useEffect(() => {
-        fetchJobs();
-    }, []);
+    const { data: jobs = [], isLoading: loading } = useQuery({
+        queryKey: ['adminJobs'],
+        queryFn: getJobs,
+    });
 
-    const fetchJobs = async () => {
-        try {
-            const resp = await axios.get('http://localhost:4000/jobs');
-            setJobs(resp.data);
-        } catch (err) {
+    const createMutation = useMutation({
+        mutationFn: (data: any) => createJob(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminJobs'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+            setShowForm(false);
+            setFormData({ title: '', description: '', deadline: '' });
+        },
+        onError: (err: any) => {
             console.error(err);
-        } finally {
-            setLoading(false);
+            alert('Failed to post job');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteJob(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminJobs'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete job');
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        createMutation.mutate({
+            ...formData,
+            deadline: new Date(formData.deadline).toISOString(),
+        });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-
-        e.preventDefault();
-
-        try {
-
-            await axios.post('http://localhost:4000/jobs', {
-                ...formData,
-                deadline: new Date(formData.deadline).toISOString(),
-            });
-
-            setShowForm(false);
-            fetchJobs();
-
-        } catch (err) {
-            console.error(err);
-        }
+    const handleDelete = (id: number) => {
+        if (!window.confirm('Are you sure?')) return;
+        deleteMutation.mutate(id);
     };
 
     return (
@@ -235,7 +243,10 @@ export default function JobManagement() {
                         </div>
 
 
-                        <button className="p-2 text-[var(--text-muted)] hover:text-[var(--danger)] transition-[var(--transition-fast)]">
+                        <button
+                            onClick={() => handleDelete(job.id)}
+                            className="p-2 text-[var(--text-muted)] hover:text-[var(--danger)] transition-[var(--transition-fast)]"
+                        >
 
                             <Trash2 size={18} />
 

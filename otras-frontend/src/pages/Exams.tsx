@@ -2,43 +2,31 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, MapPin, BookOpen, Shield, Briefcase, ExternalLink, Bookmark } from 'lucide-react';
 import ExamCard from '../components/ExamCard';
-import axios from 'axios';
 import { useTranslation } from '../hooks/useTranslation';
-import { User } from '../types';
+import { useAuthStore } from "../store/authStore";
 
-interface ExamsProps {
-  user: User | null;
-}
+import { useQuery } from "@tanstack/react-query";
+import { getExams, getJobs } from "../services/examApi";
 
-export default function Exams({ user }: ExamsProps) {
+export default function Exams() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const [exams, setExams] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<string[]>([]);
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: exams = [], isLoading: loadingExams } = useQuery({
+    queryKey: ['exams'],
+    queryFn: getExams,
+  });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [examsResp, jobsResp] = await Promise.all([
-        axios.get('http://localhost:4000/exams'),
-        axios.get('http://localhost:4000/jobs'),
-      ]);
-      setExams(examsResp.data);
-      setJobs(jobsResp.data);
-    } catch (err) {
-      console.error('Failed to fetch exams/jobs', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: jobs = [], isLoading: loadingJobs } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: getJobs,
+  });
+
+  const loading = loadingExams || loadingJobs;
 
   const handleSave = (id: string) => {
     setSaved((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
@@ -53,7 +41,7 @@ export default function Exams({ user }: ExamsProps) {
   };
 
   const filtered = exams.filter(
-    (e) => !query || e.name.toLowerCase().includes(query.toLowerCase())
+    (e: any) => !query || e.name.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -104,7 +92,7 @@ export default function Exams({ user }: ExamsProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6">
-              {filtered.map((exam) => (
+              {filtered.map((exam: any) => (
                 <div key={exam.id} className="group relative">
                   <ExamCard
                     exam={{
@@ -139,7 +127,7 @@ export default function Exams({ user }: ExamsProps) {
             </div>
             
             <div className="p-6 space-y-4">
-              {jobs.slice(0, 3).map(job => (
+              {jobs.slice(0, 3).map((job: any) => (
                 <div key={job.id} className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-sm transition-all group cursor-pointer">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">

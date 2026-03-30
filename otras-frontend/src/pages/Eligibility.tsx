@@ -1,16 +1,29 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { CheckCircle, AlertCircle, XCircle, Zap } from 'lucide-react';
 import FormField, { TextInput, SelectInput } from '../components/FormField';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function Eligibility({ user }: { user?: any } = {}) {
+import { useAuthStore } from '../store/authStore';
+
+export default function Eligibility() {
+  const { user } = useAuthStore();
   const { t } = useTranslation();
 
-  const [age, setAge] = useState('24');
-  const [qual, setQual] = useState("Bachelor's Degree");
-  const [cat, setCat] = useState('General');
-  const [state, setState] = useState('Maharashtra');
+  const [age, setAge] = useState(user?.age?.toString() || '24');
+  const [qual, setQual] = useState(user?.highestDegree || "Bachelor's Degree");
+  const [cat, setCat] = useState(user?.category || 'General');
+  const [state, setState] = useState(user?.domicile || 'Maharashtra');
+
+  // Sync if user data loads later
+  useEffect(() => {
+    if (user) {
+      if (user.age) setAge(user.age.toString());
+      if (user.highestDegree) setQual(user.highestDegree);
+      if (user.category) setCat(user.category);
+      if (user.domicile) setState(user.domicile);
+    }
+  }, [user]);
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +37,8 @@ export default function Eligibility({ user }: { user?: any } = {}) {
     try {
 
       const [examsResp, jobsResp] = await Promise.all([
-        axios.get('http://localhost:4000/exams'),
-        axios.get('http://localhost:4000/jobs'),
+        apiClient.get('/exams'),
+        apiClient.get('/jobs'),
       ]);
 
       setExams(examsResp.data);
@@ -39,11 +52,11 @@ export default function Eligibility({ user }: { user?: any } = {}) {
 
   const getResults = () => {
 
-    const fully = [];
-    const almost = [];
-    const inel = [];
+    const fully: any[] = [];
+    const almost: any[] = [];
+    const inel: any[] = [];
 
-    exams.forEach(exam => {
+    exams.forEach((exam: any) => {
 
       const examQual = exam.eligibility?.toLowerCase() || '';
       const userQual = qual.toLowerCase();
@@ -145,15 +158,16 @@ export default function Eligibility({ user }: { user?: any } = {}) {
 
               <FormField label={t("currentAge")}>
                 <TextInput
+                  placeholder="24"
                   value={age}
-                  onChange={(e) => setAge(e.target.value)}
+                  onChange={(e: any) => setAge(e.target.value)}
                 />
               </FormField>
 
               <FormField label={t("highestQualification")}>
                 <SelectInput
                   value={qual}
-                  onChange={(e) => setQual(e.target.value)}
+                  onChange={(e: any) => setQual(e.target.value)}
                   options={[
                     "Bachelor's Degree",
                     "Master's Degree",
@@ -166,7 +180,7 @@ export default function Eligibility({ user }: { user?: any } = {}) {
               <FormField label={t("reservationCategory")}>
                 <SelectInput
                   value={cat}
-                  onChange={(e) => setCat(e.target.value)}
+                  onChange={(e: any) => setCat(e.target.value)}
                   options={[
                     'General',
                     'OBC',
@@ -179,8 +193,9 @@ export default function Eligibility({ user }: { user?: any } = {}) {
 
               <FormField label={t("domicileState")}>
                 <TextInput
+                  placeholder="Maharashtra"
                   value={state}
-                  onChange={(e) => setState(e.target.value)}
+                  onChange={(e: any) => setState(e.target.value)}
                 />
               </FormField>
 
@@ -327,12 +342,11 @@ export default function Eligibility({ user }: { user?: any } = {}) {
                         {exam.reason}
                       </p>
 
-                      {exam.bullets?.map((b, j) => (
+                      {exam.bullets?.map((b: any, j: number) => (
 
                         <p key={j} className="text-subtle text-xs">
                           • {b}
                         </p>
-
                       ))}
 
                     </div>

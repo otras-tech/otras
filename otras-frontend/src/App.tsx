@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { User } from './types';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { useAuthStore } from './store/authStore';
+import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import PageContainer from './components/PageContainer';
@@ -29,22 +29,9 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 
-// Set up Axios Interceptor for JWT tokens
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
+  const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,29 +45,6 @@ export default function App() {
       localStorage.setItem('referralCode', ref.toUpperCase());
     }
   }, [location.search]);
-
-  useEffect(() => {
-    if (user?.id) {
-      axios.get(`http://localhost:4000/users/${user.id}/dashboard`)
-        .catch(err => {
-          if (err.response?.status === 401 || err.response?.status === 404) {
-            console.warn('Session invalid or stale. Logging out...');
-            logout();
-          }
-        });
-    }
-  }, [user?.id]);
-
-  const handleAuthSuccess = (userData: User) => {
-    setUser(userData);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setUser(null);
-    navigate('/login');
-  };
 
   return (
     <div className="font-sans">
@@ -98,31 +62,31 @@ export default function App() {
       <PageContainer collapsed={collapsed} isAuthPage={isAuthPage}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login onAuthSuccess={handleAuthSuccess} />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           
-          <Route path="/dashboard" element={<Dashboard user={user} />} />
-          <Route path="/eligibility" element={<Eligibility user={user} />} />
-          <Route path="/artha" element={<ArthaEngine user={user} />} />
-          <Route path="/exams" element={<Exams user={user} />} />
-          <Route path="/exams/:id" element={<ExamDetails user={user} />} />
-          <Route path="/studyplan" element={<StudyPlan user={user} />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/profile" element={<Profile onAuthSuccess={handleAuthSuccess} user={user} />} />
-          <Route path="/career" element={<CareerAI user={user} />} />
-          <Route path="/mocktests" element={<MockTests user={user} />} />
-          <Route path="/analytics" element={<Analytics user={user} />} />
-          <Route path="/subscriptions" element={<Subscriptions user={user} />} />
-          <Route path="/applications" element={<ApplicationStatus user={user} />} />
-          <Route path="/refer-earn" element={<ReferEarn user={user} />} />
-          <Route path="/previous-papers" element={<PreviousPapers />} />
-          <Route path="/company-instructions" element={<CompanyInstructions />} />
-          <Route path="/exam-instructions" element={<ExamInstructions />} />
-          <Route path="/artha-test" element={<ArthaTest user={user} />} />
-          <Route path="/tier-assessment/:tier" element={<TierAssessment user={user} />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/eligibility" element={<ProtectedRoute><Eligibility /></ProtectedRoute>} />
+          <Route path="/artha" element={<ProtectedRoute><ArthaEngine /></ProtectedRoute>} />
+          <Route path="/exams" element={<ProtectedRoute><Exams /></ProtectedRoute>} />
+          <Route path="/exams/:id" element={<ProtectedRoute><ExamDetails /></ProtectedRoute>} />
+          <Route path="/studyplan" element={<ProtectedRoute><StudyPlan /></ProtectedRoute>} />
+          <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/career" element={<ProtectedRoute><CareerAI /></ProtectedRoute>} />
+          <Route path="/mocktests" element={<ProtectedRoute><MockTests /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+          <Route path="/applications" element={<ProtectedRoute><ApplicationStatus /></ProtectedRoute>} />
+          <Route path="/refer-earn" element={<ProtectedRoute><ReferEarn /></ProtectedRoute>} />
+          <Route path="/previous-papers" element={<ProtectedRoute><PreviousPapers /></ProtectedRoute>} />
+          <Route path="/company-instructions" element={<ProtectedRoute><CompanyInstructions /></ProtectedRoute>} />
+          <Route path="/exam-instructions" element={<ProtectedRoute><ExamInstructions /></ProtectedRoute>} />
+          <Route path="/artha-test" element={<ProtectedRoute><ArthaTest /></ProtectedRoute>} />
+          <Route path="/tier-assessment/:tier" element={<ProtectedRoute><TierAssessment /></ProtectedRoute>} />
           
-          <Route path="*" element={<Navigate to={isAuthPage ? "/" : "/dashboard"} replace />} />
+          <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} replace />} />
         </Routes>
       </PageContainer>
     </div>

@@ -1,63 +1,58 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSubjects, getExams, createSubject, updateSubject, deleteSubject } from '../services/adminApi';
 import { Plus, Edit2, Trash2, Tag } from 'lucide-react';
 
 export default function SubjectManagement() {
-    const [subjects, setSubjects] = useState<any[]>([]);
-    const [exams, setExams] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: '', examId: '' });
+    const [formData, setFormData] = useState<any>({ name: '', examId: '' });
     const [editingId, setEditingId] = useState<number | null>(null);
 
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
+    const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
+        queryKey: ['adminSubjects'],
+        queryFn: getSubjects,
+    });
 
-    const fetchInitialData = async () => {
-        try {
-            const [subResp, examResp] = await Promise.all([
-                axios.get('http://localhost:4000/subjects'),
-                axios.get('http://localhost:4000/exams')
-            ]);
-            setSubjects(subResp.data);
-            setExams(examResp.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: exams = [] } = useQuery({
+        queryKey: ['adminExams'],
+        queryFn: getExams,
+    });
 
-    const fetchSubjects = async () => {
-        try {
-            const resp = await axios.get('http://localhost:4000/subjects');
-            setSubjects(resp.data);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const payload = {
-            ...formData,
-            examId: formData.examId ? Number(formData.examId) : undefined
-        };
-        try {
-            if (editingId) {
-                await axios.patch(`http://localhost:4000/subjects/${editingId}`, payload);
-            } else {
-                await axios.post('http://localhost:4000/subjects', payload);
-            }
+    const upsertMutation = useMutation({
+        mutationFn: (data: any) => {
+            const payload = {
+                ...data,
+                examId: data.examId ? Number(data.examId) : undefined
+            };
+            return editingId ? updateSubject(editingId, payload) : createSubject(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminSubjects'] });
             setShowForm(false);
             setFormData({ name: '', examId: '' });
             setEditingId(null);
-            fetchSubjects();
-        } catch (err) {
+        },
+        onError: (err: any) => {
             console.error(err);
             alert('Failed to save subject');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteSubject(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminSubjects'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete subject');
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        upsertMutation.mutate(formData);
     };
 
     const handleEdit = (subject: any) => {
@@ -69,16 +64,12 @@ export default function SubjectManagement() {
         setShowForm(true);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = (id: number) => {
         if (!window.confirm('Are you sure you want to delete this subject?')) return;
-        try {
-            await axios.delete(`http://localhost:4000/subjects/${id}`);
-            fetchSubjects();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete subject');
-        }
+        deleteMutation.mutate(id);
     };
+
+    const loading = loadingSubjects;
 
     return (
         <div className="space-y-6">

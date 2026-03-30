@@ -15,19 +15,13 @@ import Analytics from './pages/Analytics';
 import Reports from './pages/Reports';
 import Referrals from './pages/Referrals';
 
-import axios from 'axios';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuthStore } from './store/authStore';
 
-// Set up Axios Interceptor for admin JWT tokens
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('adminToken');
+  const token = useAuthStore(state => state.token);
   if (!token) {
     return <Navigate to="/login" replace />;
   }
@@ -36,34 +30,37 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<AdminLogin />} />
-        <Route path="/register" element={<AdminRegister />} />
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<AdminLogin />} />
+          <Route path="/register" element={<AdminRegister />} />
 
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="jobs" element={<JobManagement />} />
-          <Route path="exams" element={<ExamManagement />} />
-          <Route path="subjects" element={<SubjectManagement />} />
-          <Route path="questions" element={<QuestionManagement />} />
-          <Route path="tests" element={<TestManagement />} />
-          <Route path="subscriptions" element={<SubscriptionManagement />} />
-          <Route path="pyps" element={<PypManagement />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="referrals" element={<Referrals />} />
-        </Route>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="jobs" element={<JobManagement />} />
+            <Route path="exams" element={<ExamManagement />} />
+            <Route path="subjects" element={<SubjectManagement />} />
+            <Route path="questions" element={<QuestionManagement />} />
+            <Route path="tests" element={<TestManagement />} />
+            <Route path="subscriptions" element={<SubscriptionManagement />} />
+            <Route path="pyps" element={<PypManagement />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="referrals" element={<Referrals />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
   );
 }
+
 
 export default App;

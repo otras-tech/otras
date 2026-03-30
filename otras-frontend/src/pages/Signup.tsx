@@ -1,73 +1,77 @@
 import { Link, useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import signupImage from "../LandingPage/assets/signup-image.png";
+import { useMutation } from "@tanstack/react-query";
+import { register } from "../services/authApi";
+import { useAuthStore } from "../store/authStore";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
 
   const [formData, setFormData] = useState({
-    fullName: "",
-    username: "",
     email: "",
-    phone: "",
     password: "",
     confirmPassword: "",
-    referralCode: localStorage.getItem('referralCode') || "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+
+  const signupMutation = useMutation({
+    mutationFn: (data: any) => register(data),
+    onSuccess: (data) => {
+      const { user, access_token, refresh_token } = data;
+      setAuth(user, access_token, refresh_token || '');
+      navigate("/dashboard");
+    },
+    onError: (err: any) => {
+      setError(err.message || "Registration failed. Please try again.");
+    }
+  });
 
   useEffect(() => {
-    // Sync referral code from URL or localStorage into state
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
-    const stored = localStorage.getItem('referralCode');
     
-    if (ref && formData.referralCode !== ref.toUpperCase()) {
-      setFormData(prev => ({ ...prev, referralCode: ref.toUpperCase() }));
+    if (ref) {
       localStorage.setItem('referralCode', ref.toUpperCase());
-    } else if (stored && !formData.referralCode) {
-      setFormData(prev => ({ ...prev, referralCode: stored }));
     }
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    const { fullName, username, email, phone, password, confirmPassword } =
-      formData;
-
-    if (!fullName || !username || !email || !phone || !password || !confirmPassword) {
-      alert("Please fill all fields");
+    const { email, password, confirmPassword } = formData;
+    if (!email || !password || !confirmPassword) {
+      setError("Please fill all required fields");
       return;
     }
-
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
-
-    alert("Account created successfully");
-    navigate("/login");
+    signupMutation.mutate(formData);
   };
+
+  const loading = signupMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-800 to-blue-700 flex items-center justify-center px-6 py-10">
       
-      {/* MAIN CARD (SIZE REDUCED) */}
-      <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl grid md:grid-cols-2">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[30px] bg-white shadow-2xl grid md:grid-cols-2">
 
-        {/* LEFT IMAGE SECTION */}
-        <div className="hidden md:flex items-center justify-center bg-slate-100 p-6">
+        <div className="hidden md:flex items-center justify-center bg-blue-50 p-8">
           <img
             src={signupImage}
             alt="Signup visual"
@@ -75,139 +79,98 @@ export default function Signup() {
           />
         </div>
 
-        {/* FORM SECTION */}
-        <div className="flex items-center justify-center p-6 md:p-8">
-          <div className="w-full max-w-sm">
+        <div className="flex items-center justify-center p-8 md:p-12">
+          <div className="w-full max-w-md">
 
-            <h1 className="text-3xl font-extrabold text-center text-blue-700">
-              CREATE ACCOUNT
+            <h1 className="text-4xl font-extrabold text-center text-blue-800">
+              SIGN UP
             </h1>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+            <p className="mt-4 text-center text-slate-500">
+              Create your OTRAS account to get started
+            </p>
 
-              {/* FULL NAME */}
-              <input
-                type="text"
-                name="fullName"
-                placeholder="Full Name"
-                value={formData.fullName}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-800 outline-none focus:border-blue-600"
-              />
+            {error && (
+              <div className="mt-6 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2.5 text-red-600 text-sm font-medium">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
 
-              {/* USERNAME */}
-              <input
-                type="text"
-                name="username"
-                placeholder="Username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-800 outline-none focus:border-blue-600"
-              />
+            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
 
-              {/* EMAIL */}
               <input
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder="Email Address"
+                required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-800 outline-none focus:border-blue-600"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
               />
 
-              {/* PHONE */}
-              <input
-                type="tel"
-                name="phone"
-                placeholder="Phone (10 digits)"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-800 outline-none focus:border-blue-600"
-              />
-
-              {/* PASSWORD */}
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="Password"
+                  required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-gray-800 outline-none focus:border-blue-600"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
 
-              {/* CONFIRM PASSWORD */}
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   placeholder="Confirm Password"
+                  required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-gray-800 outline-none focus:border-blue-600"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
                 />
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
 
-              {/* REFERRAL CODE */}
-              <div className="relative">
-                <input
-                  type="text"
-                  name="referralCode"
-                  placeholder="Referral Code (Optional)"
-                  value={formData.referralCode}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-800 outline-none focus:border-blue-600"
-                />
-                {formData.referralCode && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                    Applied 🎉
-                  </span>
-                )}
-              </div>
 
-              {/* BUTTON */}
               <button
                 type="submit"
-                className="w-full rounded-lg bg-blue-700 py-3 text-base font-semibold text-white transition hover:bg-blue-800"
+                disabled={loading}
+                className="w-full rounded-xl bg-blue-700 py-4 text-lg font-bold text-white transition-all hover:bg-blue-600 shadow-lg shadow-blue-700/20 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
               >
-                Get Started
+                {loading && <Loader2 size={20} className="animate-spin" />}
+                {loading ? 'Processing...' : 'Create Account'}
               </button>
 
             </form>
 
-            {/* LOGIN LINK */}
-            <p className="mt-6 text-center text-gray-700 text-sm">
+            <p className="mt-8 text-center text-gray-700 text-sm">
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-orange-500 hover:text-orange-600"
+                className="font-bold text-orange-500 hover:text-orange-600 underline underline-offset-4"
               >
                 Login here
               </Link>
             </p>
 
-            {/* BACK HOME */}
-            <p className="mt-4 text-center text-sm">
-              <Link to="/" className="text-blue-600 hover:text-blue-800">
+            <p className="mt-6 text-center text-sm">
+              <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">
                 ← Back to Home
               </Link>
             </p>

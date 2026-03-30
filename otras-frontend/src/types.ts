@@ -1,5 +1,5 @@
 export interface User {
-  id: string;
+  id: string | number;
   firstName: string;
   lastName: string;
   email: string;
@@ -7,6 +7,7 @@ export interface User {
   credits: number;
   avatarUrl?: string;
   otrId?: string;
+  referralCode?: string;
 }
 
 export interface DashboardStats {

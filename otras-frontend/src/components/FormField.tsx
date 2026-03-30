@@ -7,7 +7,7 @@ export default function FormField({ label, children }) {
   );
 }
 
-export function TextInput({ value, onChange, placeholder, type = 'text', className = '' }) {
+export function TextInput({ value, onChange, placeholder, type = 'text', className = '', disabled = false }) {
   return (
     <input
       type={type}
@@ -19,7 +19,7 @@ export function TextInput({ value, onChange, placeholder, type = 'text', classNa
   );
 }
 
-export function SelectInput({ value, onChange, options, className = '' }) {
+export function SelectInput({ value, onChange, options, className = '', disabled = false }) {
   return (
     <select
       value={value}

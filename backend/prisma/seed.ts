@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -180,7 +179,7 @@ async function main() {
   // 5. Create 5 Random Tests (Linked to SSC as an example)
   for (let t = 1; t <= 5; t++) {
     // Pick 5 questions from each of the first 4 subjects for a 20-question mock test
-    const testQs = [];
+    const testQs: any[] = [];
     for (let sIdx = 0; sIdx < 4; sIdx++) {
       const subQs = await prisma.question.findMany({
         where: { subjectId: subjects[sIdx].id },
@@ -339,3 +338,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

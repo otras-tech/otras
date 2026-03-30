@@ -5,12 +5,18 @@ import FormattedText from "../components/FormattedText";
 import FormField, { TextInput, SelectInput } from "../components/FormField";
 import { useTranslation } from "../hooks/useTranslation";
 import { generateStudyPlan, saveStudyPlan, getSavedPlans, updateActivityStatus, moveToNextDay, simulateDateChange } from "../services/studyPlanApi";
+import { useAuthStore } from "../store/authStore";
+import apiClient from "../api/apiClient";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
 
-export default function StudyPlan({ user: propUser }) {
+export default function StudyPlan() {
+  const { user } = useAuthStore();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
 
   const examOptions = [
     { value: "UPSC Civil Services", label: t("upscCivilServices") },
@@ -51,8 +57,8 @@ export default function StudyPlan({ user: propUser }) {
   const [prefTime, setPrefTime] = useState(t("morningPrefTimeDefault"));
   const [duration, setDuration] = useState("7");
 
-  const effectiveUser = propUser || JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = (effectiveUser.id && effectiveUser.id !== 7) ? effectiveUser.id : 1;
+  const effectiveUser = user || {};
+  const userId = effectiveUser.id;
   const getSafeDayName = (date) => {
     if (!date) return t("days");
     const locale = language === 'hi' ? 'hi-IN' : language === 'te' ? 'te-IN' : 'en-US';
@@ -66,11 +72,8 @@ export default function StudyPlan({ user: propUser }) {
 
     const checkSub = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/users/${userId}/tier-status`);
-        if (res.ok) {
-          const data = await res.json();
-          setHasSubscription(!!data.hasActiveSubscription);
-        }
+        const resp = await apiClient.get(`/users/${userId}/tier-status`);
+        setHasSubscription(!!resp.data.hasActiveSubscription);
       } catch (err) {
         console.error("Subscription check failed", err);
       }
@@ -107,6 +110,7 @@ export default function StudyPlan({ user: propUser }) {
   };
 
   const handleArchitectPlan = async () => {
+    if (!checkOtr()) return;
     setLoading(true);
     const payload = {
       userId, targetExam, examDate, currentLevel: level,
@@ -763,6 +767,7 @@ export default function StudyPlan({ user: propUser }) {
           animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
   );
 }

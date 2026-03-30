@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -22,18 +23,26 @@ import { ReferralModule } from './referral/referral.module';
 import { StudyPlanModule } from './modules/study-plan/study-plan.module';
 import { AiModule } from './ai/ai.module';
 import { LanguageMiddleware } from './middleware/language.middleware';
-import { ArthaModule } from './modules/artha/artha.module'
-import { CareerAIModule } from './modules/career-ai/career-ai.module'
+import { ArthaModule } from './modules/artha/artha.module';
+import { CareerAIModule } from './modules/career-ai/career-ai.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-yet';
 import { BullModule } from '@nestjs/bullmq';
-
-
+import { LoggerModule } from './logger/logger.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     PrometheusModule.register(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     CacheModule.register({
       isGlobal: true,
       store: redisStore.redisStore as any,
@@ -47,11 +56,39 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
         port: parseInt(process.env.REDIS_PORT || '6379'),
       },
     }),
-    PrismaModule, AuthModule, UserModule, JobModule, ExamModule, TestModule, QuestionModule, ResultModule, AdminModule, SubscriptionModule, PypModule, SubjectModule, ApplicationModule, CategoryModule, MockTestModule, CareerReadinessModule, PaymentModule, ReferralModule, StudyPlanModule, AiModule, ArthaModule, CareerAIModule],
+    PrismaModule,
+    AuthModule,
+    UserModule,
+    JobModule,
+    ExamModule,
+    TestModule,
+    QuestionModule,
+    ResultModule,
+    AdminModule,
+    SubscriptionModule,
+    PypModule,
+    SubjectModule,
+    ApplicationModule,
+    CategoryModule,
+    MockTestModule,
+    CareerReadinessModule,
+    PaymentModule,
+    ReferralModule,
+    StudyPlanModule,
+    AiModule,
+    ArthaModule,
+    CareerAIModule,
+    LoggerModule,
+  ],
 
   controllers: [AppController],
-  providers: [AppService],
-
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

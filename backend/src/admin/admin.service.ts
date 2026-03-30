@@ -1,47 +1,39 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Admin } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
-    constructor(
-        private prisma: PrismaService,
-        private jwtService: JwtService,
-    ) { }
+  constructor(private prisma: PrismaService) {}
 
-    async register(data: any) {
-        const hashedPassword = await bcrypt.hash(data.password, 10);
-        try {
-            const admin = await this.prisma.admin.create({
-                data: {
-                    ...data,
-                    password: hashedPassword,
-                },
-            });
-            return this.login(admin);
-        } catch (error) {
-            if (error.code === 'P2002') {
-                throw new ConflictException('Admin email or username already exists');
-            }
-            throw error;
-        }
+  async register(data: any): Promise<Admin> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    try {
+      const admin = await this.prisma.admin.create({
+        data: {
+          ...data,
+          password: hashedPassword,
+        },
+      });
+      return admin;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Admin email or username already exists');
+      }
+      throw error;
     }
+  }
 
-    async login(admin: any) {
-        const payload = { email: admin.email, sub: admin.id, role: 'admin' };
-        const { password, ...result } = admin;
-        return {
-            access_token: this.jwtService.sign(payload),
-            admin: result,
-        };
+  async validateAdmin(identifier: string, pass: string): Promise<Admin | null> {
+    let admin = await this.prisma.admin.findUnique({ where: { email: identifier } });
+    if (!admin) {
+      admin = await this.prisma.admin.findUnique({ where: { username: identifier } });
     }
-
-    async validateAdmin(email: string, pass: string): Promise<any> {
-        const admin = await this.prisma.admin.findUnique({ where: { email } });
-        if (admin && await bcrypt.compare(pass, admin.password)) {
-            return admin;
-        }
-        return null;
+    
+    if (admin && (await bcrypt.compare(pass, admin.password))) {
+      return admin;
     }
+    return null;
+  }
 }

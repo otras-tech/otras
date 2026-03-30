@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Get, Param, Patch, ParseIntPipe, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Patch,
+  ParseIntPipe,
+  Delete,
+} from '@nestjs/common';
 import { StudyPlanService } from '../service/study-plan.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 
@@ -9,19 +18,19 @@ export class StudyPlanController {
   @Post('generate')
   async generate(@Body() dto: CreateStudyPlanDto) {
     try {
-      console.log("Processing StudyPlan generate request...");
+      console.log('Processing StudyPlan generate request...');
       const result = await this.studyPlanService.generate(dto);
-      console.log("StudyPlan generation successful in controller.");
+      console.log('StudyPlan generation successful in controller.');
       return result;
     } catch (e) {
-      console.error("FATAL: StudyPlan Controller Generate Error:", e);
+      console.error('FATAL: StudyPlan Controller Generate Error:', e);
       throw e;
     }
   }
 
   @Post('save')
-  async save(@Body() body: { dto: CreateStudyPlanDto, aiData: any }) {
-    console.log("Saving StudyPlan:", body.dto.targetExam);
+  async save(@Body() body: { dto: CreateStudyPlanDto; aiData: any }) {
+    console.log('Saving StudyPlan:', body.dto.targetExam);
     return this.studyPlanService.save(body.dto, body.aiData);
   }
 
@@ -40,9 +49,12 @@ export class StudyPlanController {
     @Param('activityId') activityId: string,
     @Body('userId', ParseIntPipe) userId: number,
     @Body('completed') completed?: boolean,
-    @Body('missed') missed?: boolean
+    @Body('missed') missed?: boolean,
   ) {
-    return this.studyPlanService.updateActivityStatus(activityId, userId, { completed, missed });
+    return this.studyPlanService.updateActivityStatus(activityId, userId, {
+      completed,
+      missed,
+    });
   }
 
   @Post(':id/next-day')
@@ -57,7 +69,7 @@ export class StudyPlanController {
 
   @Post('simulate-date-change/:id')
   async simulateDateChange(@Param('id') id: string) {
-    console.log("Simulate date change triggered for:", id);
+    console.log('Simulate date change triggered for:', id);
     return this.studyPlanService.moveMissedTasks(id);
   }
 

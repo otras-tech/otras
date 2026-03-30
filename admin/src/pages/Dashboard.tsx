@@ -1,32 +1,20 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { getAdminStats } from '../services/adminApi';
 import { Briefcase, BookOpen, ClipboardList, TrendingUp, Users } from 'lucide-react';
 
 export default function Dashboard() {
-    const [stats, setStats] = useState({ jobs: 0, exams: 0, tests: 0, users: 0 });
+    const { data: stats = { jobs: 0, exams: 0, tests: 0, users: 0 }, isLoading } = useQuery({
+        queryKey: ['adminStats'],
+        queryFn: getAdminStats,
+    });
 
-    useEffect(() => {
-        fetchStats();
-    }, []);
-
-    const fetchStats = async () => {
-        try {
-            const [uResp, eResp, jResp] = await Promise.all([
-                axios.get("http://localhost:4000/users"),
-                axios.get("http://localhost:4000/exams"),
-                axios.get("http://localhost:4000/jobs"),
-            ]);
-
-            setStats({
-                jobs: jResp.data.length,
-                exams: eResp.data.length,
-                tests: 0, // Assuming tests are no longer fetched or are 0
-                users: uResp.data.length,
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+            </div>
+        );
+    }
 
     const cards = [
         { label: 'Active Jobs', value: stats.jobs, icon: Briefcase, color: 'bg-[var(--color-primary)]' },

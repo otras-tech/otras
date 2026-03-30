@@ -1,13 +1,13 @@
 export function buildPrompt(data: any, language: string) {
-  let languageInstruction = "";
-  if (language === "hi") {
-    languageInstruction = "Respond entirely in Hindi.";
+  let languageInstruction = '';
+  if (language === 'hi') {
+    languageInstruction = 'Respond entirely in Hindi.';
   }
-  if (language === "te") {
-    languageInstruction = "Respond entirely in Telugu.";
+  if (language === 'te') {
+    languageInstruction = 'Respond entirely in Telugu.';
   }
-  if (language === "en") {
-    languageInstruction = "Respond entirely in English.";
+  if (language === 'en') {
+    languageInstruction = 'Respond entirely in English.';
   }
 
   return `

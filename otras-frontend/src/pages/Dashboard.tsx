@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -21,10 +20,15 @@ import {
   ResponsiveContainer
 } from "recharts";
 import ScheduleItem from "../components/ScheduleItem";
-import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
 import { getSavedPlans } from "../services/studyPlanApi";
-import { User, DashboardStats } from "../types";
+import { DashboardStats } from "../types";
+import { useAuthStore } from "../store/authStore";
+
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "../api/apiClient";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
 
 interface DashboardData {
   stats: DashboardStats;
@@ -32,47 +36,34 @@ interface DashboardData {
   studyPlans: any[];
 }
 
-interface DashboardProps {
-  user: User | null;
-}
-
-export default function Dashboard({ user: propUser }: DashboardProps) {
-
+export default function Dashboard() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
 
-  useEffect(() => {
-    const userId = propUser?.id || JSON.parse(localStorage.getItem("user") || "{}")?.id;
-    if (userId) {
-      fetchDashboardData(userId);
-    } else {
-      setLoading(false);
-    }
-  }, [propUser?.id]);
-
-  const fetchDashboardData = async (userId: string) => {
-    try {
-      setLoading(true);
-      console.log("DASHBOARD: Fetching data for userId", userId);
+  const { data, isLoading } = useQuery<DashboardData>({
+    queryKey: ['dashboard', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("User not found");
       const [resp, plans] = await Promise.all([
-        axios.get(`http://localhost:4000/users/${userId}/dashboard`),
-        getSavedPlans(userId).catch((err) => {
-          console.error("DASHBOARD: Failed to fetch plans", err);
-          return [];
-        })
+        apiClient.get(`/users/${user.id}/dashboard`),
+        getSavedPlans(user.id).catch(() => [])
       ]);
-      console.log("DASHBOARD: Plans received:", plans?.length);
-      setData({ ...resp.data, studyPlans: plans || [] });
-    } catch (err) {
-      console.error("Failed to fetch dashboard data", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { ...resp.data, studyPlans: plans };
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  const user = propUser || JSON.parse(localStorage.getItem("user") || "{}");
+  if (!user) return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   const stats: DashboardStats =
     data?.stats ||
@@ -167,7 +158,7 @@ export default function Dashboard({ user: propUser }: DashboardProps) {
           </h1>
 
           <p className="text-slate-500 text-sm">
-            {user.otrId
+            {(user.otrId && !user.otrId.startsWith('XX'))
               ? `${t("otrId")} ${user.otrId}. ${t("examRoadmap")}`
               : t("completeOTR")}
           </p>
@@ -201,7 +192,7 @@ export default function Dashboard({ user: propUser }: DashboardProps) {
 
       {/* OTR BANNER */}
 
-      {!user.otrId && (
+      {(user.otrId?.startsWith('XX') || !user.otrId) && (
 
         <div className="rounded-xl p-4 flex items-center justify-between border-2 border-cyan-200 bg-cyan-50">
 
@@ -283,7 +274,12 @@ export default function Dashboard({ user: propUser }: DashboardProps) {
             </p>
 
             <button
-              onClick={() => navigate(`/${card.page}`)}
+              onClick={() => {
+                if (card.page === 'eligibility' || card.page === 'career') {
+                  if (!checkOtr()) return;
+                }
+                navigate(`/${card.page}`);
+              }}
               className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1 transition-all ${card.primary
                 ? "bg-blue-700 text-white hover:bg-blue-800"
                 : "border border-blue-200 text-blue-600 hover:bg-blue-50"
@@ -441,6 +437,7 @@ export default function Dashboard({ user: propUser }: DashboardProps) {
 
       </div>
 
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
   );
 }

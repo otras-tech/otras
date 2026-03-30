@@ -6,6 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   providers: [PypService],
-  controllers: [PypController]
+  controllers: [PypController],
 })
-export class PypModule { }
+export class PypModule {}

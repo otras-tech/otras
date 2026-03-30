@@ -17,7 +17,9 @@ export class CareerReadinessService {
       throw new Error(`Invalid testId: ${data.testId}`);
     }
 
-    this.logger.log(`Saving career readiness result for user ${data.otrId}, test ${testId}`);
+    this.logger.log(
+      `Saving career readiness result for user ${data.otrId}, test ${testId}`,
+    );
 
     // Fetch the test with questions and subjects
     const test = await this.prisma.test.findUnique({
@@ -35,7 +37,16 @@ export class CareerReadinessService {
     }
 
     // Calculate subject-wise scores with +1 correct, -0.25 wrong
-    const subjectBreakdown: Record<string, { correct: number; wrong: number; unanswered: number; total: number; score: number }> = {};
+    const subjectBreakdown: Record<
+      string,
+      {
+        correct: number;
+        wrong: number;
+        unanswered: number;
+        total: number;
+        score: number;
+      }
+    > = {};
 
     let correctAnswers = 0;
     let wrongAnswers = 0;
@@ -43,7 +54,13 @@ export class CareerReadinessService {
     test.questions.forEach((q) => {
       const subjectName = q.subject?.name || 'General';
       if (!subjectBreakdown[subjectName]) {
-        subjectBreakdown[subjectName] = { correct: 0, wrong: 0, unanswered: 0, total: 0, score: 0 };
+        subjectBreakdown[subjectName] = {
+          correct: 0,
+          wrong: 0,
+          unanswered: 0,
+          total: 0,
+          score: 0,
+        };
       }
       subjectBreakdown[subjectName].total++;
 
@@ -69,7 +86,9 @@ export class CareerReadinessService {
 
     // Safer check-then-act approach to avoid Prisma upsert naming issues
     try {
-      this.logger.log(`Searching for existing score: otrId=${data.otrId}, testId=${testId}`);
+      this.logger.log(
+        `Searching for existing score: otrId=${data.otrId}, testId=${testId}`,
+      );
       const existing = await this.prisma.careerReadinessTestScore.findFirst({
         where: {
           otrId: data.otrId,
@@ -87,7 +106,9 @@ export class CareerReadinessService {
       };
 
       if (existing) {
-        this.logger.log(`EXISTING RECORD FOUND (id=${(existing as any).id}). Updating...`);
+        this.logger.log(
+          `EXISTING RECORD FOUND (id=${(existing as any).id}). Updating...`,
+        );
         return await this.prisma.careerReadinessTestScore.update({
           where: { id: (existing as any).id } as any,
           data: scoreData,

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Sparkles, Rocket, Calendar, Map, CheckCircle2, Target, Zap, ListChecks, ChevronDown, ChevronUp, Lock, ChevronRight, Crown } from "lucide-react";
-import axios from "axios";
+import apiClient from "../api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../hooks/useTranslation";
 import FormattedText from "../components/FormattedText";
 import { useWebSockets } from "../hooks/useWebSockets";
 
-interface CareerAIProps {
-  user: any;
-}
+import { useAuthStore } from "../store/authStore";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
 
 interface RoadmapData {
   summary: string;
@@ -17,10 +17,12 @@ interface RoadmapData {
   oneYear: Array<{ phase: string; tasks: string[] }>;
 }
 
-const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
+const CareerAI: React.FC = () => {
+  const { user } = useAuthStore();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const isInitialMount = useRef(true);
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
   const [hasSubscription, setHasSubscription] = useState(false);
   const { lastNotification } = useWebSockets(user);
 
@@ -42,7 +44,7 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
     oneYear: []
   });
 
-  const [activeMonth, setActiveMonth] = useState(null);
+  const [activeMonth, setActiveMonth] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   const EXAM_OPTIONS = [
@@ -117,6 +119,7 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
   const recommendations = Array.isArray(careerData?.recommendations) ? careerData.recommendations : [];
 
   const generateRoadmap = useCallback(async (isAuto = false) => {
+    if (!checkOtr()) return;
     setLoading(true);
     console.log(`CareerAI: Request sent${isAuto ? ' [Auto-Regenerate]' : ''}`);
 
@@ -134,7 +137,7 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
         userId: user?.id,
       };
 
-      const resp = await axios.post("http://localhost:4000/career-ai/generate-roadmap", payload);
+      const resp = await apiClient.post("/career-ai/generate-roadmap", payload);
 
       console.log("CareerAI: Response received");
       const result = resp.data;
@@ -157,7 +160,7 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
       if (!user?.id) return;
       try {
         console.log("CareerAI: Syncing with Artha Profile...");
-        const resp = await axios.get(`http://localhost:4000/artha/status/${user.id}`);
+        const resp = await apiClient.get(`/artha/status/${user.id}`);
         const status = resp.data;
 
         if (status) {
@@ -236,11 +239,8 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
     const checkSub = async () => {
       if (!user?.id) return;
       try {
-        const res = await fetch(`http://localhost:4000/users/${user.id}/tier-status`);
-        if (res.ok) {
-          const data = await res.json();
-          setHasSubscription(!!data.hasActiveSubscription);
-        }
+        const resp = await apiClient.get(`/users/${user.id}/tier-status`);
+        setHasSubscription(!!resp.data.hasActiveSubscription);
       } catch (err) {
         console.error("Subscription check failed", err);
       }
@@ -252,7 +252,7 @@ const CareerAI: React.FC<CareerAIProps> = ({ user }) => {
     navigate("/subscriptions");
   };
 
-const handleInputChange = (e) => {
+  const handleInputChange = (e: any) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -262,23 +262,23 @@ const handleInputChange = (e) => {
     }));
   };
 
-  const handleSliderChange = (e) => {
+  const handleSliderChange = (e: any) => {
     const val = parseInt(e.target.value);
     setFormData(prev => ({ ...prev, readinessIndex: val }));
   };
 
-  const safeRender = (val) => {
+  const safeRender = (val: any): string => {
     if (val === null || val === undefined) return "";
     if (typeof val === 'object') {
-      if (Array.isArray(val)) return val.map(item => safeRender(item)).join(", ");
+      if (Array.isArray(val)) return val.map((item: any) => safeRender(item)).join(", ");
       return Object.values(val)
-        .map(v => (typeof v === 'object' ? safeRender(v) : v))
+        .map((v: any) => (typeof v === 'object' ? safeRender(v) : v))
         .join(" ");
     }
     return String(val);
   };
 
-  const toggleMonth = (index) => {
+  const toggleMonth = (index: number) => {
     if (hasSubscription) {
       setActiveMonth(activeMonth === index ? null : index);
     } else {
@@ -687,6 +687,7 @@ const handleInputChange = (e) => {
         )}
 
       </div>
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
   );
 };

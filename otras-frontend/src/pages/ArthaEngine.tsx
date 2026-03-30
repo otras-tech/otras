@@ -1,40 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, GraduationCap, TrendingUp, ShieldCheck, ChevronDown } from "lucide-react";
-import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
 import IntelligenceFeedback from "../components/artha/IntelligenceFeedback";
+import { useAuthStore } from "../store/authStore";
+import { useQuery } from "@tanstack/react-query";
+import { getArthaStatus } from "../services/arthaApi";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
 
-export default function ArthaEngine({ user }) {
+export default function ArthaEngine() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [tierStatus, setTierStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchTierStatus();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const fetchTierStatus = async () => {
-    try {
-      setLoading(true);
-      console.log("ARTHA: Fetching tier status", user.id);
-      const resp = await axios.get(`http://localhost:4000/artha/status/${user.id}`);
-      console.log("ARTHA: Tier status response", resp.data);
-      setTierStatus(resp.data);
-    } catch (err) {
-      console.error("Failed to fetch tier status", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: tierStatus, isLoading } = useQuery({
+    queryKey: ['arthaStatus', user?.id],
+    queryFn: () => getArthaStatus(user!.id),
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
 
 
   const handleTier2Action = () => {
+    if (!checkOtr()) return;
     console.log("ARTHA: Tier-2 button clicked");
     console.log("ARTHA: Tier status", tierStatus);
     if (tierStatus?.tier2.subscriptionRequired) {
@@ -46,6 +36,7 @@ export default function ArthaEngine({ user }) {
   };
 
   const handleTier3Action = () => {
+    if (!checkOtr()) return;
     console.log("ARTHA: Tier-3 button clicked");
     console.log("ARTHA: Tier status", tierStatus);
     if (tierStatus?.tier3.subscriptionRequired) {
@@ -56,7 +47,7 @@ export default function ArthaEngine({ user }) {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -143,6 +134,7 @@ export default function ArthaEngine({ user }) {
 
           <button
             onClick={() => {
+              if (!checkOtr()) return;
               console.log("ARTHA: Tier-1 assessment started");
               navigate("/company-instructions", { state: { tier: 1 } });
             }}
@@ -410,6 +402,7 @@ export default function ArthaEngine({ user }) {
 
         </div>
       </div>
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
   );
 }

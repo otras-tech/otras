@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/exam/dto/create-exam.dto.ts"],"sourcesContent":["export class CreateExamDto {}\r\n"],"names":["CreateExamDto"],"mappings":";;;;+BAAaA;;;eAAAA;;;AAAN,IAAA,AAAMA,gBAAN,MAAMA;AAAe"}

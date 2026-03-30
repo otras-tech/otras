@@ -1,15 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ExamService } from './exam.service';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 
 @Controller('exams')
-@UseInterceptors(CacheInterceptor)
 export class ExamController {
   constructor(private readonly examService: ExamService) {}
 
   @Get()
-  @CacheTTL(300000)
   findAll() {
     return this.examService.findAll();
   }

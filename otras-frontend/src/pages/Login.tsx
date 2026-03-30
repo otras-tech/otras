@@ -1,19 +1,34 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import axios from "axios";
 import { Eye, EyeOff, Loader2, AlertCircle, User as UserIcon, Lock } from "lucide-react";
 import loginImage from "../LandingPage/assets/login-image.png";
+import { useAuthStore } from "../store/authStore";
 
-export default function Login({ onAuthSuccess }) {
+import { useMutation } from "@tanstack/react-query";
+import { login } from "../services/authApi";
+
+export default function Login() {
+  const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const loginMutation = useMutation({
+    mutationFn: (data: any) => login(data),
+    onSuccess: (data) => {
+      const { user, access_token, refresh_token } = data;
+      setAuth(user, access_token, refresh_token || '');
+      navigate('/dashboard');
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Invalid OTR ID/Email or password.');
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -22,31 +37,13 @@ export default function Login({ onAuthSuccess }) {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const response = await axios.post('http://localhost:4000/auth/login', {
-        email: loginId,
-        password
-      });
-
-      const { user, access_token } = response.data;
-
-      // Store auth data
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
-
-      // Inform parent component
-      if (onAuthSuccess) {
-        onAuthSuccess(user);
-      }
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTR ID/Email or password.');
-    } finally {
-      setLoading(false);
-    }
+    loginMutation.mutate({
+      email: loginId,
+      password
+    });
   };
+
+  const loading = loginMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-800 to-blue-700 flex items-center justify-center px-6 py-10">
@@ -138,10 +135,10 @@ export default function Login({ onAuthSuccess }) {
             <p className="mt-8 text-center text-gray-700">
               Don&apos;t have an account?{" "}
               <Link
-                to="/profile"
+                to="/signup"
                 className="font-bold text-orange-500 hover:text-orange-600"
               >
-                Register here
+                Sign up here
               </Link>
             </p>
 

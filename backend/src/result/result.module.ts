@@ -9,4 +9,4 @@ import { UserModule } from '../user/user.module';
   controllers: [ResultController],
   exports: [ResultService],
 })
-export class ResultModule { }
+export class ResultModule {}

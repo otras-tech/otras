@@ -10,14 +10,14 @@ export class MockTestService {
     return this.prisma.mockTest.findMany({
       where: categoryId ? { categoryId } : undefined,
       include: { category: true },
-      take: 50
+      take: 50,
     });
   }
 
   async findOne(id: number) {
     return this.prisma.mockTest.findUnique({
       where: { id },
-      include: { category: true }
+      include: { category: true },
     });
   }
 
@@ -26,33 +26,43 @@ export class MockTestService {
     if (!user) throw new NotFoundException('User with this OTR ID not found');
 
     // 1. Try to find a direct MockTest
-    let mockTest = await this.prisma.mockTest.findUnique({ where: { id: mockTestOrTestId } });
+    let mockTest = await this.prisma.mockTest.findUnique({
+      where: { id: mockTestOrTestId },
+    });
 
     // 2. If not found, it might be a Test ID from an Exam
     if (!mockTest) {
-      const test = await this.prisma.test.findUnique({ where: { id: mockTestOrTestId } });
+      const test = await this.prisma.test.findUnique({
+        where: { id: mockTestOrTestId },
+      });
       if (test) {
         // Find or create "Official Assessment" MockTest for this exam
-        const categoryName = "Official Assessment";
-        let category = await this.prisma.mockTestCategory.findUnique({ where: { name: categoryName } });
+        const categoryName = 'Official Assessment';
+        let category = await this.prisma.mockTestCategory.findUnique({
+          where: { name: categoryName },
+        });
         if (!category) {
-          category = await this.prisma.mockTestCategory.create({ data: { name: categoryName } });
+          category = await this.prisma.mockTestCategory.create({
+            data: { name: categoryName },
+          });
         }
 
         mockTest = await this.prisma.mockTest.findFirst({
-          where: { examId: test.examId, categoryId: category.id }
+          where: { examId: test.examId, categoryId: category.id },
         });
 
         if (!mockTest) {
-          const exam = await this.prisma.exam.findUnique({ where: { id: test.examId } });
+          const exam = await this.prisma.exam.findUnique({
+            where: { id: test.examId },
+          });
           mockTest = await this.prisma.mockTest.create({
             data: {
               title: `${exam?.name || 'Exam'} - Official Assessment`,
               duration: 60,
-              sectionType: "Full Length",
+              sectionType: 'Full Length',
               categoryId: category.id,
-              examId: test.examId
-            }
+              examId: test.examId,
+            },
           });
         }
       }
@@ -66,14 +76,21 @@ export class MockTestService {
         mockTestId: mockTest.id,
         score: 0,
         totalMarks: 0,
-        startTime: new Date()
-      }
+        startTime: new Date(),
+      },
     });
   }
 
-  async submitAttempt(dto: { otrId: string, mockTestId: number, score: number, totalMarks: number }) {
+  async submitAttempt(dto: {
+    otrId: string;
+    mockTestId: number;
+    score: number;
+    totalMarks: number;
+  }) {
     // Check if user exists
-    const user = await this.prisma.user.findUnique({ where: { otrId: dto.otrId }});
+    const user = await this.prisma.user.findUnique({
+      where: { otrId: dto.otrId },
+    });
     if (!user) throw new NotFoundException('User with this OTR ID not found');
 
     return this.prisma.mockTestAttempt.create({
@@ -82,7 +99,7 @@ export class MockTestService {
         mockTestId: dto.mockTestId,
         score: dto.score,
         totalMarks: dto.totalMarks,
-      }
+      },
     });
   }
 
@@ -90,19 +107,21 @@ export class MockTestService {
     return this.prisma.mockTestAttempt.findFirst({
       where: { otrId },
       orderBy: { attemptedAt: 'desc' },
-      include: { mockTest: { include: { category: true } } }
+      include: { mockTest: { include: { category: true } } },
     });
   }
 
   async calculateRank(mockTestId: number, otrId: string) {
     const userAttempt = await this.prisma.mockTestAttempt.findFirst({
       where: { mockTestId, otrId },
-      orderBy: { score: 'desc' }
+      orderBy: { score: 'desc' },
     });
 
     if (!userAttempt) {
-       const total = await this.prisma.mockTestAttempt.count({ where: { mockTestId } });
-       return { msg: 'User has not attempted this test yet', total };
+      const total = await this.prisma.mockTestAttempt.count({
+        where: { mockTestId },
+      });
+      return { msg: 'User has not attempted this test yet', total };
     }
 
     const betterAttemptsCount = await this.prisma.mockTestAttempt.count({
@@ -110,15 +129,17 @@ export class MockTestService {
         mockTestId,
         OR: [
           { score: { gt: userAttempt.score } },
-          { 
+          {
             score: userAttempt.score,
-            attemptedAt: { lt: userAttempt.attemptedAt }
-          }
-        ]
-      }
+            attemptedAt: { lt: userAttempt.attemptedAt },
+          },
+        ],
+      },
     });
 
-    const total = await this.prisma.mockTestAttempt.count({ where: { mockTestId } });
+    const total = await this.prisma.mockTestAttempt.count({
+      where: { mockTestId },
+    });
     const rank = betterAttemptsCount + 1;
     const percentile = total > 1 ? ((total - rank) / total) * 100 : 100;
     const topPercentage = (rank / total) * 100;
@@ -127,25 +148,37 @@ export class MockTestService {
       rank,
       total,
       topPercentage: Math.ceil(topPercentage),
-      percentile: Math.round(percentile * 10) / 10
+      percentile: Math.round(percentile * 10) / 10,
     };
   }
 
-  async submitExamAttempt(dto: { otrId: string, examId: number, score: number, totalMarks: number, attemptId?: number, correctAnswers?: number, subjectBreakdown?: any }) {
-    this.logger.log(`Antigravity Debug - submitExamAttempt called with: ${JSON.stringify(dto)}`);
+  async submitExamAttempt(dto: {
+    otrId: string;
+    examId: number;
+    score: number;
+    totalMarks: number;
+    attemptId?: number;
+    correctAnswers?: number;
+    subjectBreakdown?: any;
+  }) {
+    this.logger.log(
+      `Antigravity Debug - submitExamAttempt called with: ${JSON.stringify(dto)}`,
+    );
     // 1. Ensure user exists
-    const user = await this.prisma.user.findUnique({ where: { otrId: dto.otrId } });
+    const user = await this.prisma.user.findUnique({
+      where: { otrId: dto.otrId },
+    });
     if (!user) throw new NotFoundException('User with this OTR ID not found');
 
     // 2. Ensure "Official Assessment" category exists
-    const categoryName = "Official Assessment";
+    const categoryName = 'Official Assessment';
     let category = await this.prisma.mockTestCategory.findUnique({
-      where: { name: categoryName }
+      where: { name: categoryName },
     });
 
     if (!category) {
       category = await this.prisma.mockTestCategory.create({
-        data: { name: categoryName }
+        data: { name: categoryName },
       });
     }
 
@@ -153,35 +186,37 @@ export class MockTestService {
     let mockTest = await this.prisma.mockTest.findFirst({
       where: {
         examId: dto.examId,
-        categoryId: category.id
-      }
+        categoryId: category.id,
+      },
     });
 
     if (!mockTest) {
-      const exam = await this.prisma.exam.findUnique({ where: { id: dto.examId } });
+      const exam = await this.prisma.exam.findUnique({
+        where: { id: dto.examId },
+      });
       mockTest = await this.prisma.mockTest.create({
         data: {
           title: `${exam?.name || 'Exam'} - Official Assessment`,
           duration: 60,
-          sectionType: "Full Length",
+          sectionType: 'Full Length',
           categoryId: category.id,
-          examId: dto.examId
-        }
+          examId: dto.examId,
+        },
       });
     }
 
     // 4. Create or update the attempt
     if (dto.attemptId) {
-        return this.prisma.mockTestAttempt.update({
-            where: { id: dto.attemptId },
-            data: {
-                score: dto.score,
-                totalMarks: dto.totalMarks,
-                correctAnswers: dto.correctAnswers ?? null,
-                subjectBreakdown: dto.subjectBreakdown ?? undefined,
-                submitTime: new Date()
-            }
-        });
+      return this.prisma.mockTestAttempt.update({
+        where: { id: dto.attemptId },
+        data: {
+          score: dto.score,
+          totalMarks: dto.totalMarks,
+          correctAnswers: dto.correctAnswers ?? null,
+          subjectBreakdown: dto.subjectBreakdown ?? undefined,
+          submitTime: new Date(),
+        },
+      });
     }
 
     return this.prisma.mockTestAttempt.create({
@@ -193,8 +228,8 @@ export class MockTestService {
         correctAnswers: dto.correctAnswers ?? null,
         subjectBreakdown: dto.subjectBreakdown ?? undefined,
         startTime: new Date(),
-        submitTime: new Date()
-      }
+        submitTime: new Date(),
+      },
     });
   }
 
@@ -206,14 +241,16 @@ export class MockTestService {
         otrId,
         OR: [
           { submitTime: { not: null } },
-          { score: { gt: 0 } }          // Catch attempts submitted via submitExamAttempt with real scores
-        ]
+          { score: { gt: 0 } }, // Catch attempts submitted via submitExamAttempt with real scores
+        ],
       },
       include: { mockTest: true },
       orderBy: { attemptedAt: 'desc' },
-      take: 30
+      take: 30,
     });
-    this.logger.log(`getUserMockAttempts: Found ${attempts.length} submitted attempts for ${otrId}`);
+    this.logger.log(
+      `getUserMockAttempts: Found ${attempts.length} submitted attempts for ${otrId}`,
+    );
     return attempts;
   }
 }

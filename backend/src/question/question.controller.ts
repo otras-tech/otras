@@ -1,9 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { QuestionService } from './question.service';
 
 @Controller('question')
 export class QuestionController {
-  constructor(private readonly questionService: QuestionService) { }
+  constructor(private readonly questionService: QuestionService) {}
 
   @Post()
   create(@Body() data: any) {

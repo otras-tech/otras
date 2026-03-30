@@ -1,9 +1,27 @@
+import { IsString, IsNumber, IsOptional } from 'class-validator';
+
 export class ArthaProgressDto {
-    userId: string
-    logicalScore: number
-    quantScore: number
-    verbalScore: number
-    language?: string
-    totalQuestions?: number
-    attemptedCount?: number
+  @IsString()
+  userId: string = '';
+
+  @IsNumber()
+  logicalScore: number = 0;
+
+  @IsNumber()
+  quantScore: number = 0;
+
+  @IsNumber()
+  verbalScore: number = 0;
+
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @IsNumber()
+  @IsOptional()
+  totalQuestions?: number;
+
+  @IsNumber()
+  @IsOptional()
+  attemptedCount?: number;
 }

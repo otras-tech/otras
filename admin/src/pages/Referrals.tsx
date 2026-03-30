@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getReferrals } from '../services/adminApi';
 import {
     Gift,
     Users,
@@ -25,42 +27,21 @@ type ReferralData = {
 };
 
 export default function Referrals() {
-    const [referrals, setReferrals] = useState<ReferralData[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: referrals = [], isLoading: loading } = useQuery({
+        queryKey: ['adminReferrals'],
+        queryFn: getReferrals,
+    });
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    useEffect(() => {
-        fetchReferrals();
-    }, []);
-
-    const fetchReferrals = async () => {
-        try {
-            const token = localStorage.getItem('adminToken');
-            const response = await fetch('http://localhost:4000/referrals/admin/all', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setReferrals(data);
-            }
-        } catch (error) {
-            console.error('Error fetching referrals:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Calculate aggregated stats
     const totalReferrals = referrals.length;
-    const successfulReferrals = referrals.filter(r => r.status === 'Qualified Referral').length;
-    const activeReferrers = new Set(referrals.map(r => r.referrerId)).size;
+    const successfulReferrals = referrals.filter((r: ReferralData) => r.status === 'Qualified Referral').length;
+    const activeReferrers = new Set(referrals.map((r: ReferralData) => r.referrerId)).size;
     
     // Group by referrer
-    const referrersMap = referrals.reduce((acc, curr) => {
+    const referrersMap = referrals.reduce((acc: Record<number, any>, curr: ReferralData) => {
         if (!acc[curr.referrerId]) {
             acc[curr.referrerId] = {
                 user: `${curr.referrer.firstName} ${curr.referrer.lastName}`,
@@ -256,7 +237,7 @@ export default function Referrals() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-light)]">
-                            {paginatedActivity.map((ref) => (
+                            {paginatedActivity.map((ref: ReferralData) => (
                                 <tr key={ref.id} className="hover:bg-[var(--sidebar-hover)] transition-[var(--transition-fast)]">
                                     <td className="p-4 pl-6">
                                         <p className="text-sm font-medium text-[var(--text-main)]">{ref.referrer.firstName} {ref.referrer.lastName}</p>
@@ -298,7 +279,7 @@ export default function Referrals() {
                         </span>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
                                 disabled={currentPage === 1}
                                 className="p-2 border border-[var(--border-light)] rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-main)] disabled:opacity-50 disabled:cursor-not-allowed transition-[var(--transition-fast)]"
                             >
@@ -308,7 +289,7 @@ export default function Referrals() {
                                 {currentPage} / {totalPages}
                             </span>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
                                 disabled={currentPage === totalPages}
                                 className="p-2 border border-[var(--border-light)] rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-main)] disabled:opacity-50 disabled:cursor-not-allowed transition-[var(--transition-fast)]"
                             >

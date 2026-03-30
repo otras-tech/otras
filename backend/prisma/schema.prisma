@@ -7,15 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
 model User {
   id                    Int                        @id @default(autoincrement())
   firstName             String
   lastName              String
   email                 String                     @unique
   password              String
+  role                  Role                       @default(USER)
   age                   Int?
   category              String?
-  otrId                 String                     @unique
+  otrId                 String?                    @unique
   highestDegree         String?
   careerPreference      String?
   domicile              String?
@@ -23,8 +30,10 @@ model User {
   createdAt             DateTime                   @default(now())
   updatedAt             DateTime                   @updatedAt
   credits               Int                        @default(0)
-  referralCode          String                     @unique
+  referralCode          String?                    @unique
   preferredLanguage     String                     @default("en")
+  refreshToken          String?
+  lastLogin             DateTime?
   applications          Application[]
   arthaRecentReports    ArthaRecentReport[]
   careerReadinessScores CareerReadinessTestScore[]
@@ -37,6 +46,7 @@ model User {
 
   @@index([createdAt])
   @@index([otrId])
+  @@index([role])
 }
 
 model Job {
@@ -150,6 +160,8 @@ model Admin {
   username  String   @unique
   email     String   @unique
   password  String
+  refreshToken String?
+  lastLogin    DateTime?
   createdAt DateTime @default(now())
 }
 
@@ -286,7 +298,8 @@ model Payment {
 model Referral {
   id            Int      @id @default(autoincrement())
   referrerId    Int
-  refereeOtrId  String
+  refereeId     Int?
+  refereeOtrId  String?
   status        String   @default("Joined")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

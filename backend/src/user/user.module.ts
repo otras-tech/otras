@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module, forwardRef, Logger } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { ResultModule } from '../result/result.module';
@@ -10,4 +10,9 @@ import { MockTestModule } from '../mock-test/mock-test.module';
   controllers: [UserController],
   exports: [UserService],
 })
-export class UserModule { }
+export class UserModule {
+  private readonly logger = new Logger(UserModule.name);
+  constructor() {
+    this.logger.log('UserModule initialized');
+  }
+}

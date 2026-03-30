@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getPyps, getExams, createPyp, deletePyp } from '../services/adminApi';
 import { FileText, Plus, Trash2, Link as LinkIcon, Download } from "lucide-react";
-import axios from "axios";
 
 interface PYP {
   id: number;
@@ -16,70 +17,66 @@ interface Exam {
 }
 
 export default function PypManagement() {
-  const [pyps, setPyps] = useState<PYP[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
     fileUrl: "",
     examId: 0,
   });
 
-  useEffect(() => {
-    fetchPyps();
-    fetchExams();
-  }, []);
+  const { data: pyps = [], isLoading: loadingPyps } = useQuery({
+    queryKey: ['adminPyps'],
+    queryFn: getPyps,
+  });
 
-  const fetchPyps = async () => {
-    try {
-      const resp = await axios.get("http://localhost:4000/pyps");
-      setPyps(resp.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: exams = [] } = useQuery({
+    queryKey: ['adminExams'],
+    queryFn: getExams,
+  });
 
-  const fetchExams = async () => {
-    try {
-      const resp = await axios.get("http://localhost:4000/exams");
-      setExams(resp.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      await axios.post("http://localhost:4000/pyps", {
-        ...formData,
-        year: +formData.year,
-        examId: +formData.examId,
-      });
-
-      fetchPyps();
+  const createMutation = useMutation({
+    mutationFn: (data: any) => {
+      const payload = {
+        ...data,
+        year: +data.year,
+        examId: +data.examId,
+      };
+      return createPyp(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPyps'] });
       setIsEditing(false);
       setFormData({ year: new Date().getFullYear(), fileUrl: "", examId: 0 });
-    } catch {
+    },
+    onError: (err: any) => {
+      console.error(err);
       alert("Failed to save paper");
     }
-  };
+  });
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Delete this paper?")) return;
-
-    try {
-      await axios.delete(`http://localhost:4000/pyps/${id}`);
-      setPyps(pyps.filter((p) => p.id !== id));
-    } catch {
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deletePyp(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPyps'] });
+    },
+    onError: (err: any) => {
+      console.error(err);
       alert("Failed to delete");
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(formData);
   };
+
+  const handleDelete = (id: number) => {
+    if (!window.confirm("Delete this paper?")) return;
+    deleteMutation.mutate(id);
+  };
+
+  const loading = loadingPyps;
 
   return (
     <div className="space-y-6">
@@ -124,7 +121,7 @@ export default function PypManagement() {
               >
                 <option value={0}>Select Exam</option>
 
-                {exams.map((exam) => (
+                {exams.map((exam: Exam) => (
                   <option key={exam.id} value={exam.id}>
                     {exam.name}
                   </option>
@@ -220,7 +217,7 @@ export default function PypManagement() {
                   </td>
                 </tr>
               ) : (
-                pyps.map((pyp) => (
+                pyps.map((pyp: PYP) => (
                   <tr key={pyp.id} className="hover:bg-[var(--bg-light)]">
 
                     <td className="px-6 py-4">

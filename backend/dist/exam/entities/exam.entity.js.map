@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/exam/entities/exam.entity.ts"],"sourcesContent":["export class Exam {}\r\n"],"names":["Exam"],"mappings":";;;;+BAAaA;;;eAAAA;;;AAAN,IAAA,AAAMA,OAAN,MAAMA;AAAM"}

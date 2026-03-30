@@ -7,7 +7,10 @@ export class Tier3MetricsService {
     return (correctCount / attemptedQuestions) * 100;
   }
 
-  calculateSpeed(totalTimeInSeconds: number, attemptedQuestions: number): number {
+  calculateSpeed(
+    totalTimeInSeconds: number,
+    attemptedQuestions: number,
+  ): number {
     if (attemptedQuestions === 0) return 0;
     return totalTimeInSeconds / attemptedQuestions;
   }
@@ -21,7 +24,7 @@ export class Tier3MetricsService {
     for (let i = 0; i < attempts.length; i += groupSize) {
       const group = attempts.slice(i, i + groupSize);
       if (group.length === 0) continue;
-      const groupCorrect = group.filter(a => a.isCorrect).length;
+      const groupCorrect = group.filter((a) => a.isCorrect).length;
       const groupAccuracy = (groupCorrect / group.length) * 100;
       groups.push(groupAccuracy);
     }

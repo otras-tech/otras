@@ -1,22 +1,31 @@
+import { useQuery } from '@tanstack/react-query';
+import { getAdminStats } from '../services/adminApi';
 import { BarChart3, TrendingUp, Users, BookOpen, Zap } from "lucide-react";
 
 export default function Analytics() {
-  const stats = [
-    { icon: Users, label: "Active Today", value: "142", trend: "+12%" },
-    { icon: BookOpen, label: "Mocks Started", value: "890", trend: "+24%" },
-    { icon: Zap, label: "Readiness Avg", value: "72%", trend: "+3%" },
-    { icon: TrendingUp, label: "Conversion", value: "18.4%", trend: "+1.2%" },
-  ];
+    const { data: statsData, isLoading } = useQuery({
+        queryKey: ['adminStats'],
+        queryFn: getAdminStats,
+    });
 
-  const exams = [
-    { name: "SSC CGL 2026", count: 420 },
-    { name: "UPSC Civil Services", count: 310 },
-    { name: "JEE Advanced", count: 280 },
-    { name: "IBPS PO Mock", count: 150 },
-  ];
+    const stats = [
+        { icon: Users, label: "Total Users", value: statsData?.users || "0", trend: "+5%" },
+        { icon: BookOpen, label: "Total Exams", value: statsData?.exams || "0", trend: "+8%" },
+        { icon: Zap, label: "Active Today", value: statsData?.activeToday || "0", trend: "+12%" },
+        { icon: TrendingUp, label: "Conversion", value: statsData?.conversion || "0%", trend: "+1.2%" },
+    ];
 
-  return (
-    <div className="space-y-6">
+    const exams = [
+        { name: "SSC CGL 2026", count: 420 },
+        { name: "UPSC Civil Services", count: 310 },
+        { name: "JEE Advanced", count: 280 },
+        { name: "IBPS PO Mock", count: 150 },
+    ];
+
+    if (isLoading) return <div className="py-20 text-center text-slate-400">Loading metrics...</div>;
+
+    return (
+        <div className="space-y-6">
 
       {/* Header */}
       <div>

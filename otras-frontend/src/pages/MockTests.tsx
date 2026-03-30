@@ -8,75 +8,49 @@ import {
   Target,
   AlertCircle
 } from "lucide-react";
-import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
 
-export default function MockTests({ user }) {
+import { useAuthStore } from "../store/authStore";
+import { useOtrCheck } from "../hooks/useOtrCheck";
+import OtrRequiredModal from "../components/OtrRequiredModal";
+
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getExams } from "../services/examApi";
+import { getRandomTest } from "../services/arthaApi";
+
+export default function MockTests() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { checkOtr, isOtrModalOpen, closeOtrModal } = useOtrCheck();
 
-  const [exams, setExams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchingTest, setFetchingTest] = useState(null);
-
-  useEffect(() => {
-    fetchExams();
-  }, []);
-
-  const fetchExams = async () => {
-
-    setLoading(true);
-
-    try {
-
-      const resp = await axios.get("http://localhost:4000/exams");
-
-      const filteredExams = resp.data.filter(e => {
-
+  const { data: exams = [], isLoading: loading } = useQuery({
+    queryKey: ['mockExams'],
+    queryFn: async () => {
+      const allExams = await getExams();
+      return allExams.filter((e: any) => {
         const name = (e.name || "").toLowerCase().trim();
-
         return !name.includes("tier 1") && !name.includes("tier1");
-
       });
-
-      setExams(filteredExams);
-
-    } catch (err) {
-
-      console.error("Failed to fetch exams", err);
-
-    } finally {
-
-      setLoading(false);
-
     }
+  });
 
-  };
-
-
-  const handleStartExam = async (examId) => {
-
-    setFetchingTest(examId);
-
-    try {
-
-      const response = await axios.get(
-        `http://localhost:4000/exams/${examId}/random-test`
-      );
-
-      navigate('/artha-test', { state: { testData: { ...response.data, isMockTest: true } } });
-
-    } catch (err) {
-
+  const startExamMutation = useMutation({
+    mutationFn: (examId: string) => getRandomTest(examId),
+    onSuccess: (data) => {
+      navigate('/artha-test', { state: { testData: { ...data, isMockTest: true } } });
+    },
+    onError: (err: any) => {
       console.error("Failed to fetch random test:", err);
       alert(t("noTestsAvailable"));
-
-    } finally {
-
-      setFetchingTest(null);
-
     }
+  });
 
+  const fetchingTest = startExamMutation.isPending ? "loading" : null;
+
+  const handleStartExam = (examId: string) => {
+    if (!checkOtr()) return;
+    startExamMutation.mutate(examId);
   };
 
 
@@ -134,7 +108,7 @@ export default function MockTests({ user }) {
 
         {exams.length > 0 ? (
 
-          exams.map((exam) => (
+          exams.map((exam: any) => (
 
             <div
               key={exam.id}
@@ -182,16 +156,16 @@ export default function MockTests({ user }) {
 
               <button
                 onClick={() => handleStartExam(exam.id)}
-                disabled={fetchingTest === exam.id}
+                disabled={startExamMutation.isPending}
                 className="btn-primary w-full flex items-center justify-center gap-2"
               >
 
-                {fetchingTest === exam.id
+                {startExamMutation.isPending
                   ? <Loader2 size={18} className="animate-spin" />
                   : <PlayCircle size={18} />
                 }
 
-                {fetchingTest === exam.id
+                {startExamMutation.isPending
                   ? t("initializing")
                   : t("startAssessment")
                 }
@@ -222,6 +196,7 @@ export default function MockTests({ user }) {
 
       </div>
 
+      <OtrRequiredModal isOpen={isOtrModalOpen} onClose={closeOtrModal} />
     </div>
 
   );

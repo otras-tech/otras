@@ -1,58 +1,57 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ClipboardList, ChevronRight, GraduationCap } from "lucide-react";
-import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
+import { useQuery } from "@tanstack/react-query";
+import { getArthaStatus } from "../services/arthaApi";
+import { getExams } from "../services/examApi";
+import { useAuthStore } from "../store/authStore";
 
-export default function TierAssessment({ user }) {
+export default function TierAssessment() {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { tier } = useParams();
   const { t } = useTranslation();
   
-  const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState("");
-  const [loading, setLoading] = useState(true);
+
+  const { data: tierStatus, isLoading: loadingStatus } = useQuery({
+    queryKey: ['arthaStatus', user?.id],
+    queryFn: () => getArthaStatus(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const { data: exams = [], isLoading: loadingExams } = useQuery({
+    queryKey: ['mockExams'],
+    queryFn: async () => {
+      const allExams = await getExams();
+      return allExams.filter((exam: any) => {
+        const name = (exam.name || "").toLowerCase().trim();
+        return !name.includes("tier 1") && !name.includes("tier1");
+      });
+    },
+    enabled: !!tierStatus,
+  });
 
   useEffect(() => {
-    fetchExamsAndVerify();
-  }, [tier]);
-
-  const fetchExamsAndVerify = async () => {
-    try {
-      setLoading(true);
-      const statusResp = await axios.get(`http://localhost:4000/artha/status/${user?.id || 0}`);
-      const tierStatus = statusResp.data;
-
+    if (tierStatus) {
       if (tier === '2' && !tierStatus.tier2?.unlocked) {
         if (tierStatus.tier2?.subscriptionRequired) {
           navigate("/subscriptions");
         } else {
           navigate("/artha");
         }
-        return;
-      }
-
-      if (tier === '3' && !tierStatus.tier3?.unlocked) {
+      } else if (tier === '3' && !tierStatus.tier3?.unlocked) {
         if (tierStatus.tier3?.subscriptionRequired) {
           navigate("/subscriptions");
         } else {
           navigate("/artha");
         }
-        return;
       }
-
-      const resp = await axios.get(`http://localhost:4000/exams`);
-      const filteredExams = resp.data.filter((exam) => {
-        const name = (exam.name || "").toLowerCase().trim();
-        return !name.includes("tier 1") && !name.includes("tier1");
-      });
-      setExams(filteredExams);
-    } catch (err) {
-      console.error(`Failed to fetch data`, err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [tier, tierStatus, navigate]);
+
+  const loading = loadingStatus || loadingExams;
 
   const handleContinue = () => {
     if (!selectedExamId) return;
@@ -116,7 +115,7 @@ export default function TierAssessment({ user }) {
                 className="w-full p-4 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-semibold focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition-all appearance-none"
               >
                 <option value="" disabled>{t("selectAnExam")}</option>
-                {exams.map((exam) => (
+                {exams.map((exam: any) => (
                   <option key={exam.id} value={exam.id}>
                     {exam.name}
                   </option>

@@ -1,4 +1,11 @@
+import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
+
 export class CreateTestDto {
-    name: string;
-    examId: number;
+  @IsString()
+  @IsNotEmpty()
+  name: string = '';
+
+  @IsNumber()
+  @IsNotEmpty()
+  examId: number = 0;
 }

@@ -3,7 +3,9 @@ import { CareerReadinessService } from './career-readiness.service';
 
 @Controller('career-readiness')
 export class CareerReadinessController {
-  constructor(private readonly careerReadinessService: CareerReadinessService) {}
+  constructor(
+    private readonly careerReadinessService: CareerReadinessService,
+  ) {}
 
   @Post()
   async saveResult(

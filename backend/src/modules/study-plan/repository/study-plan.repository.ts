@@ -29,29 +29,31 @@ export class StudyPlanRepository {
         days: {
           create: days.map((dayPlan) => {
             const date = new Date(dayPlan.date);
-            const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+            const dayName = date.toLocaleDateString('en-US', {
+              weekday: 'short',
+            });
             return {
               day: dayName,
               date: date,
               activities: {
-              create: dayPlan.activities.map((activity) => ({
-                timeSlot: activity.timeSlot,
-                description: activity.description,
-                focusArea: activity.focusArea,
-              })),
-            },
-          };
-        }),
+                create: dayPlan.activities.map((activity) => ({
+                  timeSlot: activity.timeSlot,
+                  description: activity.description,
+                  focusArea: activity.focusArea,
+                })),
+              },
+            };
+          }),
         },
       },
       include: {
         days: {
           include: {
             activities: {
-              orderBy: { timeSlot: 'asc' }
+              orderBy: { timeSlot: 'asc' },
             },
           },
-          orderBy: { date: 'asc' }
+          orderBy: { date: 'asc' },
         },
       },
     });
@@ -64,10 +66,10 @@ export class StudyPlanRepository {
         days: {
           include: {
             activities: {
-              orderBy: { timeSlot: 'asc' }
+              orderBy: { timeSlot: 'asc' },
             },
           },
-          orderBy: { date: 'asc' }
+          orderBy: { date: 'asc' },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -81,10 +83,10 @@ export class StudyPlanRepository {
         days: {
           include: {
             activities: {
-              orderBy: { timeSlot: 'asc' }
+              orderBy: { timeSlot: 'asc' },
             },
           },
-          orderBy: { date: 'asc' }
+          orderBy: { date: 'asc' },
         },
       },
     });
@@ -94,7 +96,7 @@ export class StudyPlanRepository {
     return this.prisma.studyActivity.update({
       where: { id: activityId },
       data,
-      include: { day: true }
+      include: { day: true },
     });
   }
 
@@ -108,7 +110,6 @@ export class StudyPlanRepository {
     });
   }
 
-
   async updateDayDate(dayId: string, date: Date) {
     return this.prisma.studyPlanDay.update({
       where: { id: dayId },
@@ -116,7 +117,10 @@ export class StudyPlanRepository {
     });
   }
 
-  async createActivity(dayId: string, data: { timeSlot: string; description: string; focusArea?: string }) {
+  async createActivity(
+    dayId: string,
+    data: { timeSlot: string; description: string; focusArea?: string },
+  ) {
     return this.prisma.studyActivity.create({
       data: {
         dayId,

@@ -5,7 +5,7 @@ import { OpenAiProvider } from './providers/openai.provider';
 
 @Injectable()
 export class AiService {
-  constructor(private readonly openAiProvider: OpenAiProvider) { }
+  constructor(private readonly openAiProvider: OpenAiProvider) {}
 
   async generate(dto: AiRequestDto) {
     const { language, ...data } = dto;
@@ -42,10 +42,13 @@ export class AiService {
     } catch (error) {
       // Fallback to simulation if microservice is down
       console.error('AI Service call failed:', error.message);
-      
+
       const prompt = buildPrompt(data, language);
-      const systemPrompt = "You are an institutional career advisor.";
-      const simulatedResponse = await this.openAiProvider.generateCompletion(systemPrompt, prompt);
+      const systemPrompt = 'You are an institutional career advisor.';
+      const simulatedResponse = await this.openAiProvider.generateCompletion(
+        systemPrompt,
+        prompt,
+      );
 
       return {
         status: 'success',

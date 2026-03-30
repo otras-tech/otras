@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { X, Lock, User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+  const { setAuth } = useAuthStore();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,14 +29,13 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
         password
       });
 
-      const { user, access_token } = response.data;
+      const { user, access_token, refresh_token } = response.data;
       
-      // Store auth data
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
+      // Sync with global store
+      setAuth(user, access_token, refresh_token || '');
 
       // Inform parent component
-      onLoginSuccess(user);
+      if (onLoginSuccess) onLoginSuccess(user);
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTR ID/Email or password.');

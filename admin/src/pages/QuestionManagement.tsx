@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getQuestions, getSubjects, getExams, createQuestion, updateQuestion, deleteQuestion } from '../services/adminApi';
 import { Plus, HelpCircle, Edit2, Trash2, Filter, CheckCircle2, BookOpen } from 'lucide-react';
 
 export default function QuestionManagement() {
-    const [questions, setQuestions] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [exams, setExams] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -22,62 +20,54 @@ export default function QuestionManagement() {
         subjectId: ''
     });
 
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
+    const { data: subjects = [] } = useQuery({
+        queryKey: ['adminSubjects'],
+        queryFn: getSubjects,
+    });
 
-    useEffect(() => {
-        fetchQuestions();
-    }, [filters]);
+    const { data: exams = [] } = useQuery({
+        queryKey: ['adminExams'],
+        queryFn: getExams,
+    });
 
-    const fetchInitialData = async () => {
-        try {
-            const [subResp, examResp] = await Promise.all([
-                axios.get('http://localhost:4000/subjects'),
-                axios.get('http://localhost:4000/exams')
-            ]);
-            setSubjects(subResp.data);
-            setExams(examResp.data);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    const { data: questions = [], isLoading: loadingQuestions } = useQuery({
+        queryKey: ['adminQuestions', filters],
+        queryFn: () => getQuestions(filters),
+    });
 
-    const fetchQuestions = async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (filters.subjectId) params.append('subjectId', filters.subjectId);
-            if (filters.examId) params.append('examId', filters.examId);
-
-            const resp = await axios.get(`http://localhost:4000/question?${params.toString()}`);
-            setQuestions(resp.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const data = {
-            ...formData,
-            subjectId: Number(formData.subjectId)
-        };
-        try {
-            if (editingId) {
-                await axios.patch(`http://localhost:4000/question/${editingId}`, data);
-            } else {
-                await axios.post('http://localhost:4000/question', data);
-            }
+    const upsertMutation = useMutation({
+        mutationFn: (data: any) => {
+            const payload = {
+                ...data,
+                subjectId: Number(data.subjectId)
+            };
+            return editingId ? updateQuestion(editingId, payload) : createQuestion(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminQuestions'] });
             setShowForm(false);
             resetForm();
-            fetchQuestions();
-        } catch (err) {
+        },
+        onError: (err: any) => {
             console.error(err);
             alert('Failed to save question');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteQuestion(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminQuestions'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete question');
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        upsertMutation.mutate(formData);
     };
 
     const resetForm = () => {
@@ -101,16 +91,12 @@ export default function QuestionManagement() {
         setShowForm(true);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = (id: number) => {
         if (!window.confirm('Delete this question?')) return;
-        try {
-            await axios.delete(`http://localhost:4000/question/${id}`);
-            fetchQuestions();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete question');
-        }
+        deleteMutation.mutate(id);
     };
+
+    const loading = loadingQuestions;
 
     return (
         <div className="space-y-6">
@@ -225,7 +211,7 @@ export default function QuestionManagement() {
                             >
                                 <option value="">Select Correct Option</option>
 
-                                {formData.options.map((opt, i) => (
+                                {formData.options.map((opt: string, i: number) => (
                                     opt && <option key={i} value={opt}>
                                         Option {i + 1}: {opt}
                                     </option>
@@ -237,7 +223,7 @@ export default function QuestionManagement() {
 
                         <div className="col-span-2 grid grid-cols-2 gap-4">
 
-                            {formData.options.map((option, index) => (
+                            {formData.options.map((option: string, index: number) => (
 
                                 <div key={index} className="space-y-1">
 

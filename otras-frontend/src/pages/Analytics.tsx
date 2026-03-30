@@ -1,43 +1,31 @@
-import { useState, useEffect } from 'react';
 import { Target, BookOpen, Award, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../api/apiClient';
+import { useAuthStore } from '../store/authStore';
 
-export default function Analytics({ user }) {
+export default function Analytics() {
+  const { user } = useAuthStore();
   const { t } = useTranslation();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchData(user.id);
-    } else {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  const fetchData = async (userId) => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`http://localhost:4000/users/${userId}/dashboard`);
-      setData(res.data);
-    } catch (err) {
-      console.error("Failed to fetch analytics data", err);
-      setError("Failed to load analytics data");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['analytics', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("User not found");
+      const res = await apiClient.get(`/users/${user.id}/dashboard`);
+      return res.data;
+    },
+    enabled: !!user?.id,
+  });
 
   const stats = data?.stats || { readinessIndex: 0, testsCompleted: 0, recentTend: [], percentile: 0, logicalScore: 0, quantScore: 0, verbalScore: 0 };
   const recentResults = data?.recentResults || [];
 
   const averageAccuracy = recentResults.length > 0
-    ? Math.round(recentResults.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / recentResults.length)
+    ? Math.round(recentResults.reduce((acc: number, curr: any) => acc + (curr.percentage || 0), 0) / recentResults.length)
     : 0;
 
-  const calculateConsistency = (results) => {
+  const calculateConsistency = (results: any[]) => {
     if (results.length < 2) return 100;
     const scores = results.map(r => r.percentage || 0);
     const mean = scores.reduce((a, b) => a + b) / scores.length;
@@ -47,13 +35,13 @@ export default function Analytics({ user }) {
   const consistency = calculateConsistency(recentResults);
 
   const mockTests = data?.mockTests || [];
-  const sortedTests = [...mockTests].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const sortedTests = [...mockTests].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   
-  const trendDataMap = new Map();
-  sortedTests.forEach(test => {
+  const trendDataMap = new Map<string, { totalScore: number, count: number }>();
+  sortedTests.forEach((test: any) => {
     const date = new Date(test.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     if (!trendDataMap.has(date)) trendDataMap.set(date, { totalScore: 0, count: 0 });
-    const current = trendDataMap.get(date);
+    const current = trendDataMap.get(date)!;
     current.totalScore += (test.score || 0);
     current.count += 1;
   });
@@ -68,7 +56,7 @@ export default function Analytics({ user }) {
   } else if (displayTrends.length === 0) {
     displayTrends = [
       { date: 'Start', score: 0 },
-      ...stats.recentTend.map((s, i) => ({ date: `Test ${i+1}`, score: s }))
+      ...stats.recentTend.map((s: number, i: number) => ({ date: `Test ${i+1}`, score: s }))
     ];
   }
 
@@ -100,11 +88,11 @@ export default function Analytics({ user }) {
   }
 
   if (subjectHeatmap.length === 0 && mockTests.length > 0) {
-    const avgScore = Math.max(0, Math.round(mockTests.reduce((acc, t) => acc + (t.score || 0), 0) / mockTests.length));
+    const avgScore = Math.max(0, Math.round(mockTests.reduce((acc: number, t: any) => acc + (t.score || 0), 0) / mockTests.length));
     if (avgScore > 0) subjectHeatmap.push({ subject: 'Overall Readiness', accuracy: avgScore });
   }
 
-  subjectHeatmap = subjectHeatmap.map(item => {
+  subjectHeatmap = (subjectHeatmap as any[]).map(item => {
     let color = 'var(--text-muted)';
     if (item.accuracy >= 80) color = 'var(--color-primary-dark)'; 
     else if (item.accuracy >= 50) color = 'var(--color-primary)'; 
@@ -122,8 +110,8 @@ export default function Analytics({ user }) {
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
       <div className="app-card text-center p-8 bg-white border border-red-100 max-w-md">
         <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-800 mb-2">{error}</h2>
-        <button onClick={() => fetchData(user.id)} className="text-blue-600 font-bold hover:underline">Try Again</button>
+        <h2 className="text-xl font-bold text-slate-800 mb-2">{String(error)}</h2>
+        <button onClick={() => refetch()} className="text-blue-600 font-bold hover:underline">Try Again</button>
       </div>
     </div>
   );
@@ -147,7 +135,7 @@ export default function Analytics({ user }) {
           <StatsCard
             title={t("mocksTaken")}
             value={stats.testsCompleted || "0"}
-            change={recentResults.length > 0 ? `+${recentResults.filter(r => new Date(r.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}` : "0"}
+            change={recentResults.length > 0 ? `+${recentResults.filter((r: any) => new Date(r.createdAt).getTime() > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getTime()).length}` : "0"}
             changeLabel={t("last30Days")}
             icon={<BookOpen size={20} />}
           />
@@ -250,7 +238,7 @@ export default function Analytics({ user }) {
   );
 }
 
-function StatsCard({ title, value, change, changeLabel, icon }) {
+function StatsCard({ title, value, change, changeLabel, icon }: { title: string, value: string, change: string | number, changeLabel: string, icon: React.ReactNode }) {
   return (
     <div className="app-card p-8 flex flex-col justify-between hover-lift transition-all duration-300 group">
       <div className="flex justify-between items-start mb-6">
@@ -270,7 +258,7 @@ function StatsCard({ title, value, change, changeLabel, icon }) {
   );
 }
 
-function SubjectProgress({ label, value, color = "var(--color-primary)" }) {
+function SubjectProgress({ label, value, color = "var(--color-primary)" }: { label: string, value: number, color?: string }) {
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center text-sm font-black tracking-tight uppercase">

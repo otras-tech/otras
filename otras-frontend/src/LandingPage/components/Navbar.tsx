@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import Otras from "../assets/Otras1.png";
 
@@ -40,12 +40,12 @@ export default function Navbar() {
             Login
           </Link>
 
-          <button
-            onClick={() => navigate("/profile")}
+          <Link
+            to="/signup"
             className="btn-primary"
           >
-            Get Started
-          </button>
+            Get Started <ArrowRight size={18} />
+          </Link>
         </div>
 
         {/* MOBILE MENU BUTTON */}
@@ -92,15 +92,13 @@ export default function Navbar() {
               Login
             </Link>
 
-            <button
-              onClick={() => {
-                setOpen(false);
-                navigate("/profile");
-              }}
+            <Link
+              to="/dashboard"
               className="btn-primary justify-center w-full"
+              onClick={() => setOpen(false)}
             >
               Get Started
-            </button>
+            </Link>
 
           </div>
 

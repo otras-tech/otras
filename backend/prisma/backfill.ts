@@ -5,7 +5,8 @@ const prisma = new PrismaClient();
 async function main() {
   const users = await prisma.user.findMany();
   for (const user of users) {
-    const code = `${user.firstName.toUpperCase()}${String(user.id).slice(-3)}`;
+    const namePrefix = (user.firstName || 'CANDIDATE').toUpperCase().slice(0, 3);
+    const code = `${namePrefix}${String(user.id).slice(-3)}`;
     await prisma.user.update({
       where: { id: user.id },
       data: { referralCode: code }

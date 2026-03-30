@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 import { Plus, BookOpen, FileText, Edit2, Trash2, Zap } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getExams, getSubjects, createExam, updateExam, deleteExam } from '../services/adminApi';
 
 export default function ExamManagement() {
-    const [exams, setExams] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         name: '',
         shortDescription: '',
         longDescription: '',
@@ -20,79 +19,77 @@ export default function ExamManagement() {
         subjectIds: [] as number[]
     });
 
-    useEffect(() => {
-        fetchExams();
-        fetchSubjects();
-    }, []);
+    const { data: exams = [], isLoading: loadingExams } = useQuery({
+        queryKey: ['adminExams'],
+        queryFn: getExams,
+    });
 
-    const fetchSubjects = async () => {
-        try {
-            const resp = await axios.get('http://localhost:4000/subjects');
-            setSubjects(resp.data);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    const { data: subjects = [] } = useQuery({
+        queryKey: ['adminSubjects'],
+        queryFn: getSubjects,
+    });
 
-    const fetchExams = async () => {
-        try {
-            const resp = await axios.get('http://localhost:4000/exams');
-            setExams(resp.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const { subjectIds, id, subjects, createdAt, updatedAt, tests, pyps, applications, ...rest } = formData as any;
-
+    const upsertMutation = useMutation({
+        mutationFn: (data: any) => {
+            const { subjectIds, id, subjects: _, createdAt, updatedAt, tests, pyps, applications, ...rest } = data;
             const payload = {
                 ...rest,
-                cutoff: Number(formData.cutoff),
-                noOfQuestions: Number(formData.noOfQuestions),
+                cutoff: Number(data.cutoff),
+                noOfQuestions: Number(data.noOfQuestions),
                 subjects: subjectIds,
             };
-
-            if (id) {
-                await axios.patch(`http://localhost:4000/exams/${id}`, payload);
-            } else {
-                await axios.post('http://localhost:4000/exams', payload);
-            }
-
+            return id ? updateExam(id, payload) : createExam(payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminExams'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
             setShowForm(false);
-            setFormData({
-                name: '',
-                shortDescription: '',
-                longDescription: '',
-                pattern: 'SSC',
-                eligibility: '',
-                noOfQuestions: 100,
-                cutoff: 0,
-                syllabus: '',
-                applicationStatus: 'Application Success',
-                subjectIds: []
-            });
-
-            fetchExams();
-        } catch (err) {
+            resetForm();
+        },
+        onError: (err: any) => {
             console.error(err);
+            alert('Operation failed. Check logs.');
         }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deleteExam(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['adminExams'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        },
+        onError: (err: any) => {
+            console.error(err);
+            alert('Failed to delete exam.');
+        }
+    });
+
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            shortDescription: '',
+            longDescription: '',
+            pattern: 'SSC',
+            eligibility: '',
+            noOfQuestions: 100,
+            cutoff: 0,
+            syllabus: '',
+            applicationStatus: 'Application Success',
+            subjectIds: []
+        });
     };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('Are you sure you want to delete this exam and all its associated data (Tests, Applications, etc.)?')) return;
-        try {
-            await axios.delete(`http://localhost:4000/exams/${id}`);
-            fetchExams();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete exam. Check backend logs.');
-        }
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        upsertMutation.mutate(formData);
     };
+
+    const handleDelete = (id: number) => {
+        if (!window.confirm('Are you sure you want to delete this exam and all its associated data?')) return;
+        deleteMutation.mutate(id);
+    };
+
+    const loading = loadingExams;
 
     return (
         <div className="space-y-6">
@@ -272,7 +269,7 @@ export default function ExamManagement() {
                                     type="button"
                                     onClick={() => {
                                         const ids = formData.subjectIds.includes(subject.id)
-                                            ? formData.subjectIds.filter(id => id !== subject.id)
+                                            ? formData.subjectIds.filter((id: number) => id !== subject.id)
                                             : [...formData.subjectIds, subject.id];
 
                                         setFormData({ ...formData, subjectIds: ids });

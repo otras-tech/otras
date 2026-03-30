@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Download, Calendar, BookOpen } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { useTranslation } from '../hooks/useTranslation';
 
 export default function PreviousPapers() {
@@ -16,7 +16,7 @@ export default function PreviousPapers() {
 
     const fetchPyps = async () => {
         try {
-            const resp = await axios.get('http://localhost:4000/pyps');
+            const resp = await apiClient.get('/pyps');
             setPyps(resp.data);
         } catch (err) {
             console.error(err);

@@ -57,12 +57,12 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
-            <button 
-              onClick={() => navigate("/dashboard")} 
+            <Link 
+              to="/signup" 
               className="hero-btn-primary"
             >
               Get Started <ArrowRight size={18} />
-            </button>
+            </Link>
 
             <a href="#opportunities" className="hero-btn-secondary">
               Explore Opportunities

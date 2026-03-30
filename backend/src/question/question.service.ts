@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class QuestionService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   create(data: any) {
     const { subjectId, ...rest } = data;
@@ -21,8 +21,8 @@ export class QuestionService {
     if (query?.examId) {
       where.tests = {
         some: {
-          examId: query.examId
-        }
+          examId: query.examId,
+        },
       };
     }
 

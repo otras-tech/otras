@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Calendar, Shield, MapPin, Briefcase, CheckCircle2, LayoutDashboard } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../api/apiClient';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function ExamDetails({ user }) {
+import { useAuthStore } from '../store/authStore';
+
+export default function ExamDetails() {
+    const { user } = useAuthStore();
     const navigate = useNavigate();
     const { state } = useLocation();
     const exam = state?.selectedExam;
@@ -22,7 +25,7 @@ export default function ExamDetails({ user }) {
 
         try {
             setApplying(true);
-            await axios.post('http://localhost:4000/applications', {
+            await apiClient.post('/applications', {
                 userId: user.id,
                 examId: exam.id
             });

@@ -1,9 +1,9 @@
 export class CreateRoadmapDto {
-    logicalScore: number
-    quantScore: number
-    verbalScore: number
-    interests: string[]
-    learningPattern: string
-    confidenceIndex: number
-    aspirations: string
+  logicalScore: number;
+  quantScore: number;
+  verbalScore: number;
+  interests: string[];
+  learningPattern: string;
+  confidenceIndex: number;
+  aspirations: string;
 }
