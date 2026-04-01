@@ -3,9 +3,17 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerService } from './logger.service';
 import { v4 as uuidv4 } from 'uuid';
+import { IncomingMessage, ServerResponse } from 'http';
 
 // Fields that must NEVER appear in logs
-const REDACTED_FIELDS = ['password', 'token', 'secret', 'authorization', 'cookie', 'tokenHash'];
+const REDACTED_FIELDS = [
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'cookie',
+  'tokenHash',
+];
 
 @Module({
   imports: [
@@ -14,17 +22,19 @@ const REDACTED_FIELDS = ['password', 'token', 'secret', 'authorization', 'cookie
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         pinoHttp: {
-          level: config.get<string>('NODE_ENV') !== 'production' ? 'debug' : 'info',
-          transport: config.get<string>('NODE_ENV') !== 'production' 
-            ? { target: 'pino-pretty', options: { colorize: true } } 
-            : undefined,
+          level:
+            config.get<string>('NODE_ENV') !== 'production' ? 'debug' : 'info',
+          transport:
+            config.get<string>('NODE_ENV') !== 'production'
+              ? { target: 'pino-pretty', options: { colorize: true } }
+              : undefined,
 
           // ─── Request ID / Correlation ID ────────────────────────────
           // Uses x-request-id header if present (from API gateway / LB),
           // otherwise generates a UUID. This ID is attached to every log
           // line for the request lifecycle and returned in responses.
-          genReqId: (req: any) => {
-            return req.headers['x-request-id'] || uuidv4();
+          genReqId: (req: IncomingMessage) => {
+            return (req.headers['x-request-id'] as string) || uuidv4();
           },
 
           // ─── Auto-logging ──────────────────────────────────────────
@@ -33,14 +43,30 @@ const REDACTED_FIELDS = ['password', 'token', 'secret', 'authorization', 'cookie
           autoLogging: true,
 
           // ─── Custom Properties ─────────────────────────────────────
-          customProps: (req: any, res: any) => ({
-            userId: req.user?.id || req.user?.sub,
-            correlationId: req.id, // Set by genReqId above
+          customProps: (req: IncomingMessage) => ({
+            userId:
+              (
+                req as IncomingMessage & {
+                  user?: { id?: number; sub?: number };
+                }
+              ).user?.id ||
+              (
+                req as IncomingMessage & {
+                  user?: { id?: number; sub?: number };
+                }
+              ).user?.sub,
+            correlationId: (req as IncomingMessage & { id?: string }).id,
           }),
 
           // ─── Request Serializer (redact sensitive headers) ─────────
           serializers: {
-            req: (req: any) => ({
+            req: (
+              req: IncomingMessage & {
+                id?: string;
+                query?: unknown;
+                params?: unknown;
+              },
+            ) => ({
               id: req.id,
               method: req.method,
               url: req.url,
@@ -53,14 +79,14 @@ const REDACTED_FIELDS = ['password', 'token', 'secret', 'authorization', 'cookie
                 'x-request-id': req.headers?.['x-request-id'],
               },
             }),
-            res: (res: any) => ({
+            res: (res: ServerResponse) => ({
               statusCode: res.statusCode,
             }),
           },
 
           // ─── Redaction paths (pino built-in) ───────────────────────
           redact: {
-            paths: REDACTED_FIELDS.map(f => `*.${f}`),
+            paths: REDACTED_FIELDS.map((f) => `*.${f}`),
             censor: '[REDACTED]',
           },
         },

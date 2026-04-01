@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, Param, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AiRequestDto } from './dto/ai-request.dto';
 import { AiService } from './ai.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';

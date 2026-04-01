@@ -1,31 +1,34 @@
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateOrderDto {
-  @ApiProperty({ example: 1, description: 'User ID requesting the subscription' })
+  @ApiProperty({
+    example: 1,
+    description: 'User ID requesting the subscription',
+  })
   @IsNotEmpty()
   @IsNumber()
-  userId: number;
+  userId!: number;
 
   @ApiProperty({ example: 1, description: 'Subscription plan ID' })
   @IsNotEmpty()
   @IsNumber()
-  subscriptionId: number;
+  subscriptionId!: number;
 }
 
 export class VerifyPaymentDto {
   @ApiProperty({ example: 'order_9Axyz123' })
   @IsNotEmpty()
   @IsString()
-  razorpayOrderId: string;
+  razorpayOrderId!: string;
 
   @ApiProperty({ example: 'pay_9Axyz456' })
   @IsNotEmpty()
   @IsString()
-  razorpayPaymentId: string;
+  razorpayPaymentId!: string;
 
   @ApiProperty({ example: 'abc123signature...' })
   @IsNotEmpty()
   @IsString()
-  razorpaySignature: string;
+  razorpaySignature!: string;
 }

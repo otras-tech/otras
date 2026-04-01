@@ -14,15 +14,15 @@ import { BullModule } from '@nestjs/bullmq';
       ? []
       : [
           BullModule.registerQueue({
-            name: 'artha'
+            name: 'artha',
           }),
         ]),
   ],
   controllers: [ArthaController],
   providers: [
-    ArthaService, 
-    ArthaRepository, 
-    Tier3MetricsService, 
+    ArthaService,
+    ArthaRepository,
+    Tier3MetricsService,
     ArthaProcessor,
     ...(process.env.DISABLE_REDIS === 'true'
       ? [

@@ -22,9 +22,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     });
 
     // ✅ Production: Monitor slow queries (> 200ms)
-    (this as any).$on('query', (e: any) => {
+    // ✅ Production: Monitor slow queries (> 200ms) with structured logging
+    this.$on('query' as never, (e: { duration: number; query: string; params: string; target: string }) => {
       if (e.duration >= 200) {
-        this.logger.warn(`Slow Query: ${e.query} [${e.duration}ms]`);
+        this.logger.warn({
+          msg: `Slow Query Detected`,
+          duration: `${e.duration}ms`,
+          query: e.query,
+          params: e.params,
+        });
       }
     });
   }
@@ -34,7 +40,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     try {
       await this.$connect();
       this.logger.log('PrismaService connected successfully');
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('PrismaService connection failed', error.stack);
       throw error;
     }

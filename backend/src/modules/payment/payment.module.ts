@@ -10,4 +10,3 @@ import { AuthModule } from '../auth/auth.module';
   controllers: [PaymentController],
 })
 export class PaymentModule {}
-

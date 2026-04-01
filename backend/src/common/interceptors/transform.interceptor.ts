@@ -14,9 +14,10 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  Response<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -24,7 +25,7 @@ export class TransformInterceptor<T>
     // Skip transformation for health check and other non-standard routes
     const request = context.switchToHttp().getRequest();
     if (request.url.includes('/health')) {
-        return next.handle();
+      return next.handle();
     }
 
     return next.handle().pipe(

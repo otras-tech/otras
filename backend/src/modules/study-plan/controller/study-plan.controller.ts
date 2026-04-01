@@ -13,7 +13,12 @@ import {
 } from '@nestjs/common';
 import { StudyPlanService } from '../service/study-plan.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
 
 class UpdateActivityStatusDto {
   @ApiPropertyOptional({ example: true })
@@ -39,7 +44,9 @@ export class StudyPlanController {
   @Post('save')
   @ApiOperation({ summary: 'Save the generated study plan to database' })
   @ApiResponse({ status: 201, description: 'Plan saved successfully' })
-  save(@Body() body: { dto: CreateStudyPlanDto; aiData: any }) {
+  save(
+    @Body() body: { dto: CreateStudyPlanDto; aiData: Record<string, unknown> },
+  ) {
     return this.studyPlanService.save(body.dto, body.aiData);
   }
 

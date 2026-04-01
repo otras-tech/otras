@@ -15,14 +15,14 @@ import { AiProcessor } from './processor/ai.processor';
       ? []
       : [
           BullModule.registerQueue({
-            name: 'career-ai'
+            name: 'career-ai',
           }),
         ]),
   ],
   controllers: [AiController],
   providers: [
-    AiService, 
-    OpenAiProvider, 
+    AiService,
+    OpenAiProvider,
     AiProcessor,
     ...(process.env.DISABLE_REDIS === 'true'
       ? [
@@ -33,6 +33,6 @@ import { AiProcessor } from './processor/ai.processor';
         ]
       : []),
   ],
-  exports: [AiService]
+  exports: [AiService],
 })
 export class AiModule {}

@@ -10,7 +10,7 @@ export class CacheService {
   // In-process map of inflight fetch promises. When multiple requests
   // hit the same cold cache key simultaneously, only one executes the
   // DB query; the others await the same Promise.
-  private readonly inflight = new Map<string, Promise<any>>();
+  private readonly inflight = new Map<string, Promise<unknown>>();
 
   constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
@@ -19,16 +19,16 @@ export class CacheService {
   async get<T>(key: string): Promise<T | null> {
     try {
       return (await this.cacheManager.get(key)) as T | null;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error getting key "${key}" from cache`, error.stack);
       return null;
     }
   }
 
-  async set(key: string, value: any, ttl?: number): Promise<void> {
+  async set(key: string, value: unknown, ttl?: number): Promise<void> {
     try {
       await this.cacheManager.set(key, value, ttl);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error setting key "${key}" in cache`, error.stack);
     }
   }
@@ -36,7 +36,7 @@ export class CacheService {
   async del(key: string): Promise<void> {
     try {
       await this.cacheManager.del(key);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error deleting key "${key}" from cache`, error.stack);
     }
   }
@@ -47,16 +47,23 @@ export class CacheService {
    */
   async invalidatePattern(pattern: string): Promise<void> {
     try {
-      const store = (this.cacheManager as any).store;
-      // In cache-manager v5, store.keys is often found on the underlying store object
-      if (store && typeof (store as any).keys === 'function') {
-        const keys = await (store as any).keys(pattern);
+      const store = (
+        this.cacheManager as Cache & {
+          store?: { keys?: (pattern: string) => Promise<string[]> };
+        }
+      ).store;
+      if (store?.keys) {
+        const keys = await store.keys(pattern);
         if (keys && keys.length > 0) {
-          await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
-          this.logger.log(`Invalidated ${keys.length} keys matching pattern: ${pattern}`);
+          await Promise.all(
+            keys.map((key: string) => this.cacheManager.del(key)),
+          );
+          this.logger.log(
+            `Invalidated ${keys.length} keys matching pattern: ${pattern}`,
+          );
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error invalidating pattern "${pattern}"`, error.stack);
     }
   }
@@ -73,7 +80,11 @@ export class CacheService {
    * @param ttl      TTL in milliseconds. A jitter of ±10% is applied to prevent
    *                 synchronized expiry across keys.
    */
-  async getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl: number): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    fetchFn: () => Promise<T>,
+    ttl: number,
+  ): Promise<T> {
     // 1. Try cache first
     const cached = await this.get<T>(key);
     if (cached !== null && cached !== undefined) {
@@ -119,7 +130,10 @@ export class CacheService {
       try {
         await this.cacheManager.del(key);
       } catch (err) {
-        this.logger.warn(`Failed to invalidate key "${key}" — TTL safety net will handle`, err);
+        this.logger.warn(
+          `Failed to invalidate key "${key}" — TTL safety net will handle`,
+          err,
+        );
       }
     }
 
@@ -129,7 +143,10 @@ export class CacheService {
         try {
           await this.invalidatePattern(pattern);
         } catch (err) {
-          this.logger.warn(`Failed to invalidate pattern "${pattern}" — TTL safety net will handle`, err);
+          this.logger.warn(
+            `Failed to invalidate pattern "${pattern}" — TTL safety net will handle`,
+            err,
+          );
         }
       }
     }
@@ -145,13 +162,20 @@ export class CacheService {
    * @param params    Key parameters
    * @param maxPage   Maximum page/cursor depth to cache (default: 10)
    */
-  static buildKey(prefix: string, params: Record<string, any> = {}, maxPage = 10): string | null {
+  static buildKey(
+    prefix: string,
+    params: Record<string, string | number | undefined> = {},
+    maxPage = 10,
+  ): string | null {
     const parts = [prefix];
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null) continue;
 
       // Cap pagination depth to prevent key explosion
-      if ((k === 'cursor' || k === 'page' || k === 'skip') && typeof v === 'number') {
+      if (
+        (k === 'cursor' || k === 'page' || k === 'skip') &&
+        typeof v === 'number'
+      ) {
         if (v > maxPage) return null; // Signal: do not cache deep pages
       }
 

@@ -5,19 +5,19 @@ export class ArthaProgressDto {
   @ApiProperty({ example: 'OTR123456', description: 'User OTR ID' })
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ example: 85.5 })
   @IsNumber()
-  logicalScore: number;
+  logicalScore!: number;
 
   @ApiProperty({ example: 78.0 })
   @IsNumber()
-  quantScore: number;
+  quantScore!: number;
 
   @ApiProperty({ example: 92.0 })
   @IsNumber()
-  verbalScore: number;
+  verbalScore!: number;
 
   @ApiPropertyOptional({ example: 'English' })
   @IsOptional()

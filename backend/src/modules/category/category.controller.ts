@@ -1,14 +1,31 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, UseGuards, UsePipes, ValidationPipe, Patch, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('Mock Tests')
 @Controller('categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) { }
+  constructor(private readonly categoryService: CategoryService) {}
 
   @UseGuards(AdminAuthGuard)
   @ApiBearerAuth('access-token')
@@ -36,7 +53,10 @@ export class CategoryController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto,
+  ) {
     return this.categoryService.update(+id, updateCategoryDto);
   }
 

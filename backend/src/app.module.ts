@@ -14,6 +14,7 @@ import { LoggerModule } from './logger/logger.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './common/redis/redis.module';
 import { CustomCacheModule } from './common/cache/cache.module';
+import { CleanupModule } from './common/cleanup/cleanup.module';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
@@ -78,12 +79,15 @@ import configuration from './config/configuration';
     HealthModule,
     RedisModule,
     CustomCacheModule,
+    CleanupModule,
     // ✅ Production: Rate Limiting (Redis-backed for multi-instance consistency)
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const isRedisDisabled = config.get('DISABLE_REDIS') === 'true' || config.get('DISABLE_REDIS') === true;
+        const isRedisDisabled =
+          config.get('DISABLE_REDIS') === 'true' ||
+          config.get('DISABLE_REDIS') === true;
         const baseConfig = { throttlers: [{ ttl: 60000, limit: 100 }] };
 
         if (isRedisDisabled) {
@@ -94,10 +98,16 @@ import configuration from './config/configuration';
           const redisUrl = config.get('REDIS_URL') || 'redis://127.0.0.1:6379';
           return {
             ...baseConfig,
-            storage: new ThrottlerStorageRedisService(redisUrl),
+            storage: new ThrottlerStorageRedisService(redisUrl, {
+              connectTimeout: 5000,
+              maxRetriesPerRequest: 1,
+            }),
           };
         } catch (err) {
-          console.warn('ThrottlerModule: Redis storage failed, falling back to in-memory', err);
+          console.warn(
+            'ThrottlerModule: Redis storage failed, falling back to in-memory',
+            err,
+          );
           return baseConfig;
         }
       },
@@ -109,22 +119,32 @@ import configuration from './config/configuration';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
         const disableRedisVal = config.get('DISABLE_REDIS');
-        const isRedisDisabled = disableRedisVal === 'true' || disableRedisVal === true;
+        const isRedisDisabled =
+          disableRedisVal === 'true' || disableRedisVal === true;
         if (isRedisDisabled) {
           return { ttl: 600 }; // In-memory fallback
         }
         try {
-          const options: any = {
+          const options = {
             url: config.get('REDIS_URL') || 'redis://127.0.0.1:6379',
             ttl: 600,
-            retryStrategy: (times: number) => Math.min(times * 100, 3000)
+            socket: {
+              connectTimeout: 5000, // ✅ 5s timeout to prevent hanging bootstrap
+            },
+            maxRetriesPerRequest: 1, // ✅ Fail fast to prevent startup hang
+            retryStrategy: (times: number) => {
+              // ✅ Limit retries during bootstrap to prevent infinite hang (exactly 3 attempts)
+              if (times > 3) return null;
+              return Math.min(times * 500, 2000);
+            },
           };
           const store = await redisStore(options);
-          return {
-            store,
-          };
+          return { store };
         } catch (err) {
-          console.warn('CacheModule: Redis Cache failed to initialize, falling back to memory store', err);
+          console.warn(
+            '⚠️ CacheModule: Redis Cache failed to initialize, falling back to memory store',
+            err instanceof Error ? err.message : err,
+          );
           return { ttl: 600 };
         }
       },
@@ -141,10 +161,11 @@ import configuration from './config/configuration';
             port: parseInt(config.get('REDIS_PORT') || '6379'),
             enableOfflineQueue: false,
             lazyConnect: true,
-            maxRetriesPerRequest: null, // Required for BullMQ
+            connectTimeout: 5000, // ✅ 5s connection timeout
+            maxRetriesPerRequest: 1, // ✅ Fail fast
             retryStrategy: (times: number) => {
               if (isRedisDisabled) return null;
-              if (times > 20) return null;
+              if (times > 3) return null; // ✅ Limit retries to 3 attempts
               return Math.min(times * 500, 5000);
             },
           },

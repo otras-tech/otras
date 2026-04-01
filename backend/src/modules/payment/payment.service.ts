@@ -1,21 +1,36 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
+import { Referral } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Razorpay = require('razorpay');
 
 @Injectable()
 export class PaymentService {
-  private razorpay: any;
+  private razorpay!: {
+    orders: {
+      create(options: {
+        amount: number;
+        currency: string;
+        receipt: string;
+      }): Promise<{ id: string; amount: number; currency: string }>;
+    };
+  };
   private readonly logger = new Logger(PaymentService.name);
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {
     this.razorpay = new Razorpay({
       key_id: this.configService.get('RAZORPAY_KEY_ID'),
@@ -36,7 +51,9 @@ export class PaymentService {
     const amountInPaise = Math.round(subscription.price * 100);
 
     if (amountInPaise < 100) {
-      throw new BadRequestException('Order amount is less than the minimum amount allowed (₹1)');
+      throw new BadRequestException(
+        'Order amount is less than the minimum amount allowed (₹1)',
+      );
     }
 
     let razorpayOrder;
@@ -47,9 +64,9 @@ export class PaymentService {
         currency: 'INR',
         receipt: `receipt_${Date.now()}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       throw new BadRequestException(
-        error.error?.description || 'Failed to create Razorpay order'
+        error.error?.description || 'Failed to create Razorpay order',
       );
     }
 
@@ -82,7 +99,9 @@ export class PaymentService {
       .update(body)
       .digest('hex');
 
-    this.logger.log(`Razorpay Debug: OrderId=${dto.razorpayOrderId}, PaymentId=${dto.razorpayPaymentId}`);
+    this.logger.log(
+      `Razorpay Debug: OrderId=${dto.razorpayOrderId}, PaymentId=${dto.razorpayPaymentId}`,
+    );
 
     const isValid = expectedSignature === dto.razorpaySignature;
 
@@ -139,12 +158,12 @@ export class PaymentService {
 
     // Find all Referral records where refereeOtrId === user.otrId
     const referralsAsReferee = await this.prisma.referral.findMany({
-      where: { refereeOtrId: user.otrId }
+      where: { refereeOtrId: user.otrId },
     });
 
     let totalRefereeCredits = 0;
     for (const r of referralsAsReferee) {
-      totalRefereeCredits += (r.creditsEarned || 0);
+      totalRefereeCredits += r.creditsEarned || 0;
     }
 
     if (totalRefereeCredits < price) {
@@ -153,7 +172,7 @@ export class PaymentService {
 
     // Deduct price explicitly from the matching Referral records
     let remainingToDeduct = price;
-    const updates: any[] = [];
+    const updates: Prisma.PrismaPromise<Referral>[] = [];
     for (const r of referralsAsReferee) {
       if (remainingToDeduct <= 0) break;
       if (r.creditsEarned > 0) {
@@ -161,8 +180,8 @@ export class PaymentService {
         updates.push(
           this.prisma.referral.update({
             where: { id: r.id },
-            data: { creditsEarned: { decrement: deduct } }
-          })
+            data: { creditsEarned: { decrement: deduct } },
+          }),
         );
         remainingToDeduct -= deduct;
       }
@@ -209,4 +228,3 @@ export class PaymentService {
     });
   }
 }
-

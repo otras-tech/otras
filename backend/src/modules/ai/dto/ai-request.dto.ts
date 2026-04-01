@@ -1,22 +1,32 @@
-import { IsString, IsNumber, IsArray, IsIn, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AiRequestDto {
   @ApiProperty({ example: 'SSC CGL', description: 'The target exam name' })
   @IsString()
   @IsNotEmpty()
-  exam: string;
+  exam!: string;
 
   @ApiProperty({ example: 85, description: 'Current user score in assessment' })
   @IsNumber()
-  score: number;
+  score!: number;
 
   @ApiPropertyOptional({ example: 85, description: 'Logical reasoning score' })
   @IsNumber()
   @IsOptional()
   logicalScore?: number;
 
-  @ApiPropertyOptional({ example: 70, description: 'Quantitative aptitude score' })
+  @ApiPropertyOptional({
+    example: 70,
+    description: 'Quantitative aptitude score',
+  })
   @IsNumber()
   @IsOptional()
   quantScore?: number;
@@ -31,24 +41,36 @@ export class AiRequestDto {
   @IsOptional()
   confidenceScore?: number;
 
-  @ApiPropertyOptional({ example: ['Geometry', 'Verbal Reasoning'], description: 'List of weak subject areas' })
+  @ApiPropertyOptional({
+    example: ['Geometry', 'Verbal Reasoning'],
+    description: 'List of weak subject areas',
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   weakAreas?: string[];
 
-  @ApiPropertyOptional({ example: ['Tech', 'Management'], description: 'User interests' })
+  @ApiPropertyOptional({
+    example: ['Tech', 'Management'],
+    description: 'User interests',
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   interests?: string[];
 
-  @ApiPropertyOptional({ example: 'Visual', description: 'User learning pattern' })
+  @ApiPropertyOptional({
+    example: 'Visual',
+    description: 'User learning pattern',
+  })
   @IsString()
   @IsOptional()
   learningPattern?: string;
 
-  @ApiPropertyOptional({ example: 'IAS Officer', description: 'User aspirations' })
+  @ApiPropertyOptional({
+    example: 'IAS Officer',
+    description: 'User aspirations',
+  })
   @IsString()
   @IsOptional()
   aspirations?: string;
@@ -58,8 +80,12 @@ export class AiRequestDto {
   @IsOptional()
   userId?: string;
 
-  @ApiProperty({ example: 'en', enum: ['en', 'hi', 'te'], description: 'Preferred language' })
+  @ApiProperty({
+    example: 'en',
+    enum: ['en', 'hi', 'te'],
+    description: 'Preferred language',
+  })
   @IsString()
   @IsIn(['en', 'hi', 'te'])
-  language: 'en' | 'hi' | 'te';
+  language!: 'en' | 'hi' | 'te';
 }

@@ -1,5 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheckService, HealthCheck, HttpHealthIndicator, PrismaHealthIndicator } from '@nestjs/terminus';
+import {
+  HealthCheckService,
+  HealthCheck,
+  HttpHealthIndicator,
+  PrismaHealthIndicator,
+} from '@nestjs/terminus';
 import { PrismaService } from '../database/prisma.service';
 import { HealthService } from './health.service';
 
@@ -23,18 +28,18 @@ export class HealthController {
 
       // Map to the exact structure requested by the user
       return {
-        status: "ok",
-        info: { "all services": "up" },
+        status: 'ok',
+        info: { 'all services': 'up' },
         error: {},
-        details: { "all services": "up" }
+        details: { 'all services': 'up' },
       };
     } catch (e) {
       // Even if Terminus throws (service down), we return "ok" as requested for resilience
       return {
-        status: "ok",
-        info: { "all services": "up" },
+        status: 'ok',
+        info: { 'all services': 'up' },
         error: {},
-        details: { "all services": "up" }
+        details: { 'all services': 'up' },
       };
     }
   }

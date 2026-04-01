@@ -2,6 +2,8 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../database/prisma.service';
 import { Logger } from '@nestjs/common';
+import { SubjectBreakdown, ResultJobData } from '../../common/types/types';
+import { Prisma } from '@prisma/client';
 
 @Processor('result-calculation')
 export class ResultProcessor extends WorkerHost {
@@ -11,13 +13,15 @@ export class ResultProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(job: Job<ResultJobData>): Promise<void> {
     return this.calculateAndSave(job.data, job.id);
   }
 
-  async calculateAndSave(data: any, jobId?: string): Promise<any> {
+  async calculateAndSave(data: ResultJobData, jobId?: string): Promise<void> {
     const { userId, testId, answers, tier, resultId } = data;
-    this.logger.log(`Processing result for User: ${userId}, Test: ${testId}${jobId ? ` (Job: ${jobId})` : ' (Sync)'}`);
+    this.logger.log(
+      `Processing result for User: ${userId}, Test: ${testId}${jobId ? ` (Job: ${jobId})` : ' (Sync)'}`,
+    );
 
     try {
       // 1. Fetch test with minimal fields
@@ -38,16 +42,22 @@ export class ResultProcessor extends WorkerHost {
 
       // 2. Optimized calculation: O(N+M)
       const answerMap = new Map<number, string>(
-        answers.map((a: any) => [a.questionId, a.selectedOption]),
+        answers.map((a) => [a.questionId, a.selectedOption]),
       );
 
       let correctAnswers = 0;
       let wrongAnswers = 0;
-      const subjectBreakdown: Record<string, any> = {};
+      const subjectBreakdown: SubjectBreakdown = {};
 
       test.questions.forEach((q) => {
         const subjectName = q.subject?.name || 'General';
-        subjectBreakdown[subjectName] = subjectBreakdown[subjectName] || { correct: 0, wrong: 0, unanswered: 0, total: 0, score: 0 };
+        subjectBreakdown[subjectName] = subjectBreakdown[subjectName] || {
+          correct: 0,
+          wrong: 0,
+          unanswered: 0,
+          total: 0,
+          score: 0,
+        };
         subjectBreakdown[subjectName].total++;
 
         const userAns = answerMap.get(q.id);
@@ -74,7 +84,8 @@ export class ResultProcessor extends WorkerHost {
           where: { id: resultId },
           data: {
             score: totalScore,
-            subjectBreakdown,
+            subjectBreakdown:
+              subjectBreakdown as unknown as Prisma.InputJsonValue,
             submitTime: new Date(),
           },
         });
@@ -93,11 +104,14 @@ export class ResultProcessor extends WorkerHost {
         }
       });
 
-      this.logger.log(`Successfully processed result${jobId ? ` for Job ID: ${jobId}` : ''}`);
+      this.logger.log(
+        `Successfully processed result${jobId ? ` for Job ID: ${jobId}` : ''}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to process result: ${error.message}`);
-      throw error; 
+      this.logger.error(
+        `Failed to process result: ${(error as Error).message}`,
+      );
+      throw error;
     }
   }
 }
-

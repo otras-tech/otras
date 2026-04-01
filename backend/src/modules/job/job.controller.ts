@@ -1,15 +1,37 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { JobService } from './job.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateJobDto } from './dto/create-job.dto';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('Jobs')
 @Controller('jobs')
 export class JobController {
-  constructor(private readonly jobService: JobService) { }
+  constructor(private readonly jobService: JobService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new job posting' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a new job posting (Admin only)' })
   @ApiResponse({ status: 201, description: 'Job created successfully' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
   create(@Body() createJobDto: CreateJobDto) {

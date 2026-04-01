@@ -1,9 +1,29 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards, UsePipes, ValidationPipe, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  UseInterceptors,
+} from '@nestjs/common';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { CacheService } from '../../common/cache/cache.service';
-import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { ExamService } from './exam.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateExamDto } from './dto/create-exam.dto';
 
 @ApiTags('Exams')
@@ -12,11 +32,10 @@ export class ExamController {
   constructor(
     private readonly examService: ExamService,
     private readonly cacheService: CacheService,
-  ) { }
+  ) {}
 
-
-
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('access-token')
   @Post()
   @ApiOperation({ summary: 'Create a new exam (Admin only)' })
@@ -28,20 +47,25 @@ export class ExamController {
     return result;
   }
 
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('access-token')
   @Patch(':id')
   @ApiOperation({ summary: 'Update an existing exam (Admin only)' })
   @ApiResponse({ status: 200, description: 'Exam updated' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async update(@Param('id', ParseIntPipe) id: number, @Body() updateData: CreateExamDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateData: CreateExamDto,
+  ) {
     const result = await this.examService.update(id, updateData);
     await this.examService.invalidateCache();
     await this.cacheService.del(`exam_details_${id}`);
     return result;
   }
 
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('access-token')
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete an exam (Admin only)' })
@@ -75,7 +99,9 @@ export class ExamController {
   }
 
   @Get(':id/test')
-  @ApiOperation({ summary: 'Get a random existing test for this exam (No side effects)' })
+  @ApiOperation({
+    summary: 'Get a random existing test for this exam (No side effects)',
+  })
   @ApiResponse({ status: 200, description: 'Existing test details' })
   getTest(@Param('id', ParseIntPipe) id: number) {
     return this.examService.getTest(id);

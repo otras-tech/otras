@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SubmitTestDto, StartTestDto } from './dto/result.dto';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -13,7 +19,7 @@ export class ResultService {
     @InjectQueue('result-calculation') private readonly resultQueue: Queue,
     private readonly prisma: PrismaService,
     private readonly resultProcessor: ResultProcessor,
-  ) { }
+  ) {}
 
   // ✅ Optimized: Using select and basic start tracking
   async startTest(userId: number, testId: number, tier?: number) {
@@ -58,8 +64,13 @@ export class ResultService {
 
       // 2. Handle resilience: Synchronous fallback for local development
       if (process.env.DISABLE_REDIS === 'true') {
-        this.logger.log(`Processing result sync for User: ${userId}, Result ID: ${finalResultId}`);
-        await this.resultProcessor.calculateAndSave({ ...dto, resultId: finalResultId });
+        this.logger.log(
+          `Processing result sync for User: ${userId}, Result ID: ${finalResultId}`,
+        );
+        await this.resultProcessor.calculateAndSave({
+          ...dto,
+          resultId: finalResultId,
+        });
         return {
           message: 'Result processed synchronously (Redis disabled).',
           resultId: finalResultId,
@@ -70,31 +81,37 @@ export class ResultService {
       await this.resultQueue.add(
         'processResult',
         { ...dto, resultId: finalResultId },
-        { 
-          attempts: 3, 
+        {
+          attempts: 3,
           backoff: { type: 'exponential', delay: 1000 },
-          removeOnComplete: true 
+          removeOnComplete: true,
         },
       );
 
-      this.logger.log(`Result submission queued for User: ${userId}, Result ID: ${finalResultId}`);
+      this.logger.log(
+        `Result submission queued for User: ${userId}, Result ID: ${finalResultId}`,
+      );
 
       return {
-        message: 'Your submission is being processed. Results will be available shortly.',
+        message:
+          'Your submission is being processed. Results will be available shortly.',
         resultId: finalResultId,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error processing result: ${error.message}`);
-      throw new InternalServerErrorException('Error processing test submission');
+      throw new InternalServerErrorException(
+        'Error processing test submission',
+      );
     }
   }
 
   // ✅ Optimized: Paginated and lean fetching
-  async getUserResults(userId: number, cursor?: number) {
+  async getUserResults(userId: number, cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     try {
       return await this.prisma.result.findMany({
         where: { userId, isDeleted: false },
-        take: 20,
+        take: safeTake,
         skip: cursor ? 1 : 0,
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: { createdAt: 'desc' },
@@ -126,4 +143,3 @@ export class ResultService {
     return result?.userId === userId;
   }
 }
-

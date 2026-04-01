@@ -10,4 +10,4 @@ import { MockTestModule } from '../mock-test/mock-test.module';
   controllers: [UserController],
   exports: [UserService],
 })
-export class UserModule { }
+export class UserModule {}

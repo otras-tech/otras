@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ReferralService } from './referral.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateReferralDto } from './dto/referral.dto';
@@ -13,7 +22,10 @@ export class ReferralController {
   @ApiResponse({ status: 201, description: 'Referral created' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
   createReferral(@Body() dto: CreateReferralDto) {
-    return this.referralService.createReferral(dto.referrerId, dto.refereeOtrId);
+    return this.referralService.createReferral(
+      dto.referrerId,
+      dto.refereeOtrId,
+    );
   }
 
   @Get('stats/:referrerId')

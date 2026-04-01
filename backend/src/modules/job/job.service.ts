@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class JobService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-  async create(data: any) {
+  async create(data: Prisma.JobCreateInput) {
     return this.prisma.job.create({ data });
   }
 
@@ -20,4 +21,3 @@ export class JobService {
     return this.prisma.job.findUnique({ where: { id } });
   }
 }
-

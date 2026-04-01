@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-  create(data: any) {
+  create(data: {
+    text: string;
+    options: string[];
+    answer: string;
+    explanation?: string;
+    subjectId: number;
+  }) {
     const { subjectId, ...rest } = data;
     return this.prisma.question.create({
       data: {
@@ -16,13 +23,13 @@ export class QuestionService {
   }
 
   findAll(query?: { examId?: number; subjectId?: number }) {
-    const where: any = {};
+    const where: Prisma.QuestionWhereInput = {};
     if (query?.subjectId) where.subjectId = query.subjectId;
     if (query?.examId) {
       where.tests = {
         some: {
-          examId: query.examId
-        }
+          examId: query.examId,
+        },
       };
     }
 
@@ -39,9 +46,18 @@ export class QuestionService {
     });
   }
 
-  update(id: number, data: any) {
+  update(
+    id: number,
+    data: {
+      text?: string;
+      options?: string[];
+      answer?: string;
+      explanation?: string;
+      subjectId?: number;
+    },
+  ) {
     const { subjectId, ...rest } = data;
-    const updateData: any = { ...rest };
+    const updateData: Prisma.QuestionUpdateInput = { ...rest };
     if (subjectId) {
       updateData.subject = { connect: { id: subjectId } };
     }
@@ -57,4 +73,3 @@ export class QuestionService {
     });
   }
 }
-

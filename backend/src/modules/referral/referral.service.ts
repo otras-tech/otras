@@ -25,15 +25,22 @@ export class ReferralService {
     ]);
 
     // Also find if this user was a referee and got credits for joining
-    const joinedViaReferral = referrer ? await this.prisma.referral.findFirst({
-      where: { refereeOtrId: referrer.otrId }
-    }) : null;
+    const joinedViaReferral = referrer
+      ? await this.prisma.referral.findFirst({
+          where: { refereeOtrId: referrer.otrId },
+        })
+      : null;
 
     const totalReferrals = referralsMade.length;
-    const successReferrals = referralsMade.filter(r => r.status === 'Qualified Referral').length;
-    
+    const successReferrals = referralsMade.filter(
+      (r) => r.status === 'Qualified Referral',
+    ).length;
+
     // Credits earned = (credits from friends you referred) + (credits you got for joining)
-    let creditsEarned = referralsMade.reduce((sum, r) => sum + (r.creditsEarned || 0), 0);
+    let creditsEarned = referralsMade.reduce(
+      (sum, r) => sum + (r.creditsEarned || 0),
+      0,
+    );
     if (joinedViaReferral) {
       creditsEarned += 10; // The joining bonus
     }
@@ -57,7 +64,7 @@ export class ReferralService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return referrals.map(r => ({
+    return referrals.map((r) => ({
       id: r.id,
       friendOtrId: r.refereeOtrId,
       signupDate: r.createdAt,
@@ -84,4 +91,3 @@ export class ReferralService {
     });
   }
 }
-

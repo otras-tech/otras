@@ -5,19 +5,22 @@ export class CreateApplicationDto {
   @ApiProperty({ example: 1, description: 'ID of the User applying' })
   @IsNumber()
   @IsNotEmpty()
-  userId: number;
+  userId!: number;
 
   @ApiProperty({ example: 1, description: 'ID of the Exam being applied for' })
   @IsNumber()
   @IsNotEmpty()
-  examId: number;
+  examId!: number;
 }
 
 export class UpdateApplicationStatusDto {
-  @ApiProperty({ example: 'Approved', description: 'New status for the application' })
+  @ApiProperty({
+    example: 'Approved',
+    description: 'New status for the application',
+  })
   @IsString()
   @IsNotEmpty()
-  status: string;
+  status!: string;
 
   @ApiPropertyOptional({ example: 'Success' })
   @IsOptional()

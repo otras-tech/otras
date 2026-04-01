@@ -5,29 +5,29 @@ export class AdminLoginDto {
   @ApiProperty({ example: 'admin@example.com' })
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: 'password123' })
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
-  password: string;
+  password!: string;
 }
 
 export class AdminRegisterDto {
   @ApiProperty({ example: 'admin@example.com' })
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: 'password123' })
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
-  password: string;
+  password!: string;
 
   @ApiProperty({ example: 'admin_user' })
   @IsString()
   @IsNotEmpty()
-  username: string;
+  username!: string;
 }

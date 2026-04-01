@@ -8,31 +8,46 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import {
+  AuthenticatedRequest,
+  HttpExceptionResponse,
+} from '../../common/types/types';
 
 // Fields to redact from error context for security
-const SENSITIVE_KEYS = new Set(['password', 'token', 'secret', 'authorization', 'cookie', 'tokenHash', 'refreshToken']);
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'cookie',
+  'tokenHash',
+  'refreshToken',
+]);
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    
+
     // Extract requestId for log correlation
-    const requestId = (request as any).id || request.headers['x-request-id'] || 'unknown';
+    const requestId =
+      (request as Request & { id?: string }).id ||
+      request.headers['x-request-id'] ||
+      'unknown';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: any = 'Internal server error';
+    let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const res = exception.getResponse();
-      message = typeof res === 'object' ? (res as any).message : res;
-      error = typeof res === 'object' ? (res as any).error : 'Error';
+      const res = exception.getResponse() as HttpExceptionResponse | string;
+      message = typeof res === 'object' ? (res.message ?? 'Error') : res;
+      error = typeof res === 'object' ? (res.error ?? 'Error') : 'Error';
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       // ✅ Handle Prisma specific errors
       status = HttpStatus.BAD_REQUEST;
@@ -69,14 +84,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       method: request.method,
       url: request.url,
       statusCode: status,
-      userId: (request as any).user?.id || (request as any).user?.sub,
+      userId:
+        (
+          request as AuthenticatedRequest & {
+            user?: { id?: number; sub?: number };
+          }
+        ).user?.id ||
+        (
+          request as AuthenticatedRequest & {
+            user?: { id?: number; sub?: number };
+          }
+        ).user?.sub,
     };
 
     if (status >= 500) {
       this.logger.error(
-        // Redact sensitive data from the stack trace context
         `[${requestId}] ${request.method} ${request.url} [${status}]`,
-        exception.stack || JSON.stringify(this.redactSensitiveData(exception)),
+        (exception instanceof Error ? exception.stack : undefined) ||
+          JSON.stringify(this.redactSensitiveData(exception)),
         JSON.stringify(logContext),
       );
     } else {
@@ -91,11 +116,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   /**
    * Recursively removes sensitive fields from an object before logging.
    */
-  private redactSensitiveData(obj: any): any {
+  private redactSensitiveData(obj: unknown): unknown {
     if (!obj || typeof obj !== 'object') return obj;
 
-    const result: any = Array.isArray(obj) ? [] : {};
-    for (const [key, value] of Object.entries(obj)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (SENSITIVE_KEYS.has(key.toLowerCase())) {
         result[key] = '[REDACTED]';
       } else if (typeof value === 'object' && value !== null) {

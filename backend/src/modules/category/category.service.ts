@@ -9,7 +9,9 @@ export class CategoryService {
 
   create(createCategoryDto: CreateCategoryDto) {
     return this.prisma.mockTestCategory.create({
-      data: createCategoryDto as any,
+      data: {
+        name: createCategoryDto.name,
+      },
     });
   }
 
@@ -26,7 +28,9 @@ export class CategoryService {
   update(id: number, updateCategoryDto: UpdateCategoryDto) {
     return this.prisma.mockTestCategory.update({
       where: { id },
-      data: updateCategoryDto as any,
+      data: {
+        name: updateCategoryDto.name,
+      },
     });
   }
 
@@ -36,4 +40,3 @@ export class CategoryService {
     });
   }
 }
-

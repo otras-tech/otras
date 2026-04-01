@@ -5,5 +5,5 @@ export class CreateSubjectDto {
   @ApiProperty({ example: 'Mathematics', description: 'Name of the subject' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 }

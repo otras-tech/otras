@@ -16,5 +16,4 @@ import { PrismaModule } from '../../database/prisma.module';
   controllers: [AdminController],
   exports: [AdminService],
 })
-export class AdminModule { }
-
+export class AdminModule {}

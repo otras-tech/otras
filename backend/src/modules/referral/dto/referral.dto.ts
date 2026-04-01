@@ -5,10 +5,13 @@ export class CreateReferralDto {
   @ApiProperty({ example: 1, description: 'ID of the user who is referring' })
   @IsNumber()
   @IsNotEmpty()
-  referrerId: number;
+  referrerId!: number;
 
-  @ApiProperty({ example: 'OTR123456', description: 'OTR ID of the user being referred' })
+  @ApiProperty({
+    example: 'OTR123456',
+    description: 'OTR ID of the user being referred',
+  })
   @IsString()
   @IsNotEmpty()
-  refereeOtrId: string;
+  refereeOtrId!: string;
 }

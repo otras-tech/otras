@@ -30,7 +30,9 @@ export class TokenCleanupService {
     // Acquire distributed lock so only one instance runs this cron
     const lockValue = await this.redisService.acquireLock(lockKey, lockTtl);
     if (!lockValue) {
-      this.logger.log('Token cleanup already running on another instance. Skipping.');
+      this.logger.log(
+        'Token cleanup already running on another instance. Skipping.',
+      );
       return;
     }
 
@@ -56,15 +58,22 @@ export class TokenCleanupService {
         });
 
         totalDeleted += result.count;
-        this.logger.log(`Batch deleted ${result.count} tokens (total: ${totalDeleted})`);
+        this.logger.log(
+          `Batch deleted ${result.count} tokens (total: ${totalDeleted})`,
+        );
 
         // If batch was smaller than limit, we're done
         if (expiredBatch.length < this.BATCH_SIZE) break;
       }
 
-      this.logger.log(`Cleanup complete. Total deleted: ${totalDeleted} expired tokens.`);
+      this.logger.log(
+        `Cleanup complete. Total deleted: ${totalDeleted} expired tokens.`,
+      );
     } catch (error) {
-      this.logger.error(`Error during token cleanup job (deleted ${totalDeleted} before failure):`, error);
+      this.logger.error(
+        `Error during token cleanup job (deleted ${totalDeleted} before failure):`,
+        error,
+      );
     } finally {
       await this.redisService.releaseLock(lockKey, lockValue);
     }

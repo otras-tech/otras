@@ -3,6 +3,7 @@ import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { OpenAiProvider } from '../providers/openai.provider';
 import { buildPrompt } from '../utils/prompt-builder';
+import { CareerAiJobData } from '../../../common/types/types';
 
 @Processor('career-ai')
 export class AiProcessor extends WorkerHost {
@@ -12,9 +13,13 @@ export class AiProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(
+    job: Job<CareerAiJobData>,
+  ): Promise<{ status: string; roadmap: unknown }> {
     const { data, language, roadmapId } = job.data;
-    this.logger.log(`Processing career-ai job ${job.id} for roadmap ${roadmapId}`);
+    this.logger.log(
+      `Processing career-ai job ${job.id} for roadmap ${roadmapId}`,
+    );
 
     try {
       // Logic from AiService
@@ -30,23 +35,31 @@ export class AiProcessor extends WorkerHost {
         }),
       });
 
-      let roadmap;
+      let roadmap: unknown;
       if (response.ok) {
         roadmap = await response.json();
       } else {
-        this.logger.warn(`AI Service call failed (status ${response.status}), falling back to OpenAI`);
+        this.logger.warn(
+          `AI Service call failed (status ${response.status}), falling back to OpenAI`,
+        );
         const prompt = buildPrompt(data, language);
-        const systemPrompt = "You are an institutional career advisor.";
-        roadmap = await this.openAiProvider.generateCompletion(systemPrompt, prompt);
+        const systemPrompt = 'You are an institutional career advisor.';
+        roadmap = await this.openAiProvider.generateCompletion(
+          systemPrompt,
+          prompt,
+        );
       }
 
       // Here we would typically update the Roadmap model in DB
       // Note: AiService didn't have a repository originally, I should probably add one or update the roadmap status here.
-      
+
       this.logger.log(`Career roadmap generated for ${roadmapId}`);
       return { status: 'completed', roadmap };
     } catch (error) {
-      this.logger.error(`Failed to process career-ai job ${job.id}`, error.stack);
+      this.logger.error(
+        `Failed to process career-ai job ${job.id}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }

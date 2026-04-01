@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'redis';
 
@@ -11,13 +15,14 @@ export class HealthService extends HealthIndicator {
 
   async checkRedis(): Promise<HealthIndicatorResult> {
     const isRedisDisabled = this.configService.get('DISABLE_REDIS') === 'true';
-    const redisUrl = this.configService.get('REDIS_URL') || 'redis://127.0.0.1:6379';
-    const client = createClient({ 
+    const redisUrl =
+      this.configService.get('REDIS_URL') || 'redis://127.0.0.1:6379';
+    const client = createClient({
       url: redisUrl,
       socket: {
         connectTimeout: 2000,
-        reconnectStrategy: false
-      }
+        reconnectStrategy: false,
+      },
     });
 
     try {
@@ -28,7 +33,7 @@ export class HealthService extends HealthIndicator {
       await client.ping();
       await client.quit();
       return this.getStatus('redis', true);
-    } catch (e) {
+    } catch (e: any) {
       // In development or if marked disabled, we don't want to fail the whole HC
       return this.getStatus('redis', isRedisDisabled, { message: e.message });
     } finally {

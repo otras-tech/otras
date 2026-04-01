@@ -44,6 +44,7 @@ model User {
   @@index([referralCode]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
   @@index([role])
+  @@index([role, isDeleted]) // ✅ Added for optimized RBAC + soft-delete filtering
 }
 
 model Job {
@@ -83,6 +84,7 @@ model Exam {
 
   @@index([name]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
+  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
 }
 
 model Subject {
@@ -126,6 +128,7 @@ model Test {
 
   @@index([examId]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
+  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
 }
 
 model PYP {
@@ -186,6 +189,8 @@ model Result {
   @@index([testId]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
   @@index([userId, createdAt]) // ✅ Added for scalability
+  @@index([testId, createdAt]) // ✅ Added for optimized test analytics
+  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
   // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
 }
 
@@ -209,6 +214,7 @@ model Application {
   @@index([examId]) // ✅ Added for scalability
   @@index([createdAt]) // ✅ Added for scalability
   @@index([userId, examId]) // ✅ Added for scalability
+  @@index([examId, status]) // ✅ Added for optimized application tracking
 }
 
 model MockTestCategory {
@@ -259,6 +265,8 @@ model MockTestAttempt {
   @@index([mockTestId]) // ✅ Added for scalability
   @@index([attemptedAt]) // ✅ Added for scalability
   @@index([otrId, attemptedAt]) // ✅ Added for scalability
+  @@index([mockTestId, attemptedAt]) // ✅ Added for optimized mock analytics
+  @@index([otrId, isDeleted, attemptedAt]) // ✅ Added for optimized soft-delete filtering
   // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
 }
 

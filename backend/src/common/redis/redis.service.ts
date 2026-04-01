@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
@@ -6,14 +11,17 @@ import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private client: Redis;
+  private client!: Redis;
   private isDisabled = false;
 
   // ─── In-Memory Lock Fallback ───────────────────────────────────────
   // Used when Redis is unavailable. Prevents race conditions in
   // single-instance dev/staging. NOT a replacement for Redis in production.
-  private readonly localLocks = new Map<string, { value: string; expiresAt: number }>();
-  private localLockCleanupInterval: ReturnType<typeof setInterval>;
+  private readonly localLocks = new Map<
+    string,
+    { value: string; expiresAt: number }
+  >();
+  private localLockCleanupInterval!: ReturnType<typeof setInterval>;
 
   constructor(private configService: ConfigService) {}
 
@@ -22,18 +30,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.isDisabled = disableRedisVal === 'true' || disableRedisVal === true;
 
     if (this.isDisabled) {
-      this.logger.warn('Redis is disabled via DISABLE_REDIS. Using in-memory lock fallback.');
+      this.logger.warn(
+        'Redis is disabled via DISABLE_REDIS. Using in-memory lock fallback.',
+      );
     } else {
-      const redisUrl = this.configService.get<string>('REDIS_URL') || 'redis://127.0.0.1:6379';
+      const redisUrl =
+        this.configService.get<string>('REDIS_URL') || 'redis://127.0.0.1:6379';
       this.client = new Redis(redisUrl, {
-        maxRetriesPerRequest: null,
+        maxRetriesPerRequest: 1, // ✅ Fail fast
+        connectTimeout: 5000, // ✅ 5s connection timeout to prevent hanging
+        commandTimeout: 5000, // 5s timeout to prevent hanging app on Redis issues
         retryStrategy: (times) => {
+          // ✅ Limit retries during bootstrap (exactly 3 attempts)
+          if (times > 3) return null;
           const delay = Math.min(times * 100, 3000);
           return delay;
         },
       });
 
-      this.client.on('connect', () => this.logger.log('Redis connected successfully'));
+      this.client.on('connect', () =>
+        this.logger.log('Redis connected successfully'),
+      );
       this.client.on('error', (err) => {
         this.logger.error('Redis connection error', err);
       });
@@ -87,7 +104,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         const result = await this.client.set(key, lockValue, 'PX', ttl, 'NX');
         return result === 'OK' ? lockValue : null;
       } catch (err) {
-        this.logger.error(`Redis acquireLock error for "${key}", falling back to in-memory`, err);
+        this.logger.error(
+          `Redis acquireLock error for "${key}", falling back to in-memory`,
+          err,
+        );
         // Fall through to in-memory
       }
     }
@@ -146,7 +166,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (this.isDisabled || !this.client) return;
     try {
       await this.client.zadd(key, score, member);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.warn(`Redis zAdd failed for key "${key}": ${err.message}`);
     }
   }
@@ -160,8 +180,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const rank = await this.client.zrevrank(key, member);
       return rank !== null ? rank + 1 : null;
-    } catch (err) {
-      this.logger.warn(`Redis zRevRank failed for key "${key}": ${err.message}`);
+    } catch (err: any) {
+      this.logger.warn(
+        `Redis zRevRank failed for key "${key}": ${err.message}`,
+      );
       return null;
     }
   }
@@ -173,7 +195,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (this.isDisabled || !this.client) return 0;
     try {
       return await this.client.zcard(key);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.warn(`Redis zCard failed for key "${key}": ${err.message}`);
       return 0;
     }

@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Injectable()
@@ -13,7 +18,7 @@ export class AdminAuthGuard extends JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (user && user.role === 'admin') {
+    if (user && user.role && user.role.toUpperCase() === 'ADMIN') {
       return true;
     }
 

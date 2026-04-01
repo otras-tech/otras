@@ -1,6 +1,16 @@
-import { Injectable, NotFoundException, Logger, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  InternalServerErrorException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { StartMockAttemptDto, SubmitMockAttemptDto, SubmitExamAttemptDto } from './dto/mock-test.dto';
+import {
+  StartMockAttemptDto,
+  SubmitMockAttemptDto,
+  SubmitExamAttemptDto,
+} from './dto/mock-test.dto';
 import { CacheService } from '../../common/cache/cache.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { Prisma } from '@prisma/client';
@@ -13,16 +23,19 @@ export class MockTestService {
     private prisma: PrismaService,
     private cacheService: CacheService,
     private redisService: RedisService,
-  ) { }
+  ) {}
 
   // ✅ Production: Cache-Aside pattern for findAll
   async findAll(categoryId?: number, cursor?: number) {
-    const cacheKey = CacheService.buildKey('mock_tests', { categoryId, cursor });
+    const cacheKey = CacheService.buildKey('mock_tests', {
+      categoryId,
+      cursor,
+    });
     if (!cacheKey) {
       return this.prisma.mockTest.findMany({
         where: { categoryId, isDeleted: false },
         take: 20,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
     }
 
@@ -32,7 +45,7 @@ export class MockTestService {
         this.logger.log(`Cache Hit: ${cacheKey}`);
         return cached;
       }
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`Redis error (findAll): ${err.message}`);
     }
 
@@ -66,7 +79,9 @@ export class MockTestService {
     try {
       const cached = await this.cacheService.get<any>(cacheKey);
       if (cached) return cached;
-    } catch (err) { /* ignore */ }
+    } catch (err) {
+      /* ignore */
+    }
 
     const mockTest = await this.prisma.mockTest.findUnique({
       where: { id, isDeleted: false },
@@ -126,11 +141,14 @@ export class MockTestService {
         if (dto.attemptId) {
           const existing = await tx.mockTestAttempt.findUnique({
             where: { id: dto.attemptId },
-            select: { otrId: true }
+            select: { otrId: true },
           });
 
           if (!existing) throw new NotFoundException('Attempt not found');
-          if (existing.otrId !== dto.otrId) throw new ForbiddenException('Cannot update another user\'s attempt');
+          if (existing.otrId !== dto.otrId)
+            throw new ForbiddenException(
+              "Cannot update another user's attempt",
+            );
 
           const result = await tx.mockTestAttempt.update({
             where: { id: dto.attemptId },
@@ -162,8 +180,12 @@ export class MockTestService {
         this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
         return result;
       });
-    } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
+    } catch (error: any) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      )
+        throw error;
       this.logger.error(`Submission error: ${error.message}`);
       throw new InternalServerErrorException('Error submitting attempt');
     }
@@ -178,7 +200,8 @@ export class MockTestService {
       ]);
 
       if (redisRank !== null) {
-        const percentile = redisTotal > 1 ? ((redisTotal - redisRank) / redisTotal) * 100 : 100;
+        const percentile =
+          redisTotal > 1 ? ((redisTotal - redisRank) / redisTotal) * 100 : 100;
         return {
           rank: redisRank,
           total: redisTotal,
@@ -195,7 +218,9 @@ export class MockTestService {
       });
 
       if (!userAttempt) {
-        const total = await this.prisma.mockTestAttempt.count({ where: { mockTestId, isDeleted: false } });
+        const total = await this.prisma.mockTestAttempt.count({
+          where: { mockTestId, isDeleted: false },
+        });
         return { msg: 'User has not attempted this test yet', total };
       }
 
@@ -213,7 +238,9 @@ export class MockTestService {
         },
       });
 
-      const total = await this.prisma.mockTestAttempt.count({ where: { mockTestId, isDeleted: false } });
+      const total = await this.prisma.mockTestAttempt.count({
+        where: { mockTestId, isDeleted: false },
+      });
       const rank = betterAttemptsCount + 1;
       const percentile = total > 1 ? ((total - rank) / total) * 100 : 100;
 
@@ -226,7 +253,7 @@ export class MockTestService {
         percentile: Math.round(percentile * 10) / 10,
         source: 'db',
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Rank error: ${error.message}`);
       throw new InternalServerErrorException('Error calculating rank');
     }
@@ -275,7 +302,7 @@ export class MockTestService {
         this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
         return result;
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Exam submission error: ${error.message}`);
       throw new InternalServerErrorException('Error processing exam attempt');
@@ -309,11 +336,20 @@ export class MockTestService {
     }
   }
 
-  private async resolveMockTestId(tx: Prisma.TransactionClient, id: number): Promise<number> {
-    const mockTest = await tx.mockTest.findUnique({ where: { id, isDeleted: false }, select: { id: true } });
+  private async resolveMockTestId(
+    tx: Prisma.TransactionClient,
+    id: number,
+  ): Promise<number> {
+    const mockTest = await tx.mockTest.findUnique({
+      where: { id, isDeleted: false },
+      select: { id: true },
+    });
     if (mockTest) return mockTest.id;
 
-    const test = await tx.test.findUnique({ where: { id, isDeleted: false }, select: { examId: true } });
+    const test = await tx.test.findUnique({
+      where: { id, isDeleted: false },
+      select: { examId: true },
+    });
     if (test) {
       const official = await this.getOrCreateOfficialMockTest(tx, test.examId);
       return official.id;
@@ -322,11 +358,20 @@ export class MockTestService {
     throw new NotFoundException('Target test resource not found');
   }
 
-  private async getOrCreateOfficialMockTest(tx: Prisma.TransactionClient, examId: number) {
+  private async getOrCreateOfficialMockTest(
+    tx: Prisma.TransactionClient,
+    examId: number,
+  ) {
     const categoryName = 'Official Assessment';
-    let category = await tx.mockTestCategory.findUnique({ where: { name: categoryName }, select: { id: true } });
+    let category = await tx.mockTestCategory.findUnique({
+      where: { name: categoryName },
+      select: { id: true },
+    });
     if (!category) {
-      category = await tx.mockTestCategory.create({ data: { name: categoryName }, select: { id: true } });
+      category = await tx.mockTestCategory.create({
+        data: { name: categoryName },
+        select: { id: true },
+      });
     }
 
     let mockTest = await tx.mockTest.findFirst({
@@ -335,7 +380,10 @@ export class MockTestService {
     });
 
     if (!mockTest) {
-      const exam = await tx.exam.findUnique({ where: { id: examId }, select: { name: true } });
+      const exam = await tx.exam.findUnique({
+        where: { id: examId },
+        select: { name: true },
+      });
       mockTest = await tx.mockTest.create({
         data: {
           title: `${exam?.name || 'Exam'} - Official Assessment`,
@@ -350,7 +398,11 @@ export class MockTestService {
     return mockTest;
   }
 
-  private async syncToLeaderboard(mockTestId: number, otrId: string, score: number) {
+  private async syncToLeaderboard(
+    mockTestId: number,
+    otrId: string,
+    score: number,
+  ) {
     const rankKey = `ranks:mockTest:${mockTestId}`;
     await this.redisService.zAdd(rankKey, score, otrId);
   }

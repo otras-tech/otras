@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SubjectBreakdown } from '../../common/types/types';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CareerReadinessService {
@@ -9,15 +11,17 @@ export class CareerReadinessService {
 
   async saveResult(data: {
     otrId: string;
-    testId: any;
-    answers: { questionId: any; selectedOption: string }[];
+    testId: number | string;
+    answers: { questionId: number | string; selectedOption: string }[];
   }) {
     const testId = Number(data.testId);
     if (isNaN(testId)) {
       throw new Error(`Invalid testId: ${data.testId}`);
     }
 
-    this.logger.log(`Saving career readiness result for user ${data.otrId}, test ${testId}`);
+    this.logger.log(
+      `Saving career readiness result for user ${data.otrId}, test ${testId}`,
+    );
 
     // Fetch the test with questions and subjects
     const test = await this.prisma.test.findUnique({
@@ -35,7 +39,7 @@ export class CareerReadinessService {
     }
 
     // Calculate subject-wise scores with +1 correct, -0.25 wrong
-    const subjectBreakdown: Record<string, { correct: number; wrong: number; unanswered: number; total: number; score: number }> = {};
+    const subjectBreakdown: SubjectBreakdown = {};
 
     let correctAnswers = 0;
     let wrongAnswers = 0;
@@ -43,7 +47,13 @@ export class CareerReadinessService {
     test.questions.forEach((q) => {
       const subjectName = q.subject?.name || 'General';
       if (!subjectBreakdown[subjectName]) {
-        subjectBreakdown[subjectName] = { correct: 0, wrong: 0, unanswered: 0, total: 0, score: 0 };
+        subjectBreakdown[subjectName] = {
+          correct: 0,
+          wrong: 0,
+          unanswered: 0,
+          total: 0,
+          score: 0,
+        };
       }
       subjectBreakdown[subjectName].total++;
 
@@ -69,7 +79,9 @@ export class CareerReadinessService {
 
     // Safer check-then-act approach to avoid Prisma upsert naming issues
     try {
-      this.logger.log(`Searching for existing score: otrId=${data.otrId}, testId=${testId}`);
+      this.logger.log(
+        `Searching for existing score: otrId=${data.otrId}, testId=${testId}`,
+      );
       const existing = await this.prisma.careerReadinessTestScore.findFirst({
         where: {
           otrId: data.otrId,
@@ -83,14 +95,16 @@ export class CareerReadinessService {
         correctAnswers,
         wrongAnswers,
         negativeMarks,
-        subjectBreakdown: subjectBreakdown as any,
+        subjectBreakdown: subjectBreakdown as unknown as Prisma.InputJsonValue,
       };
 
       if (existing) {
-        this.logger.log(`EXISTING RECORD FOUND (id=${(existing as any).id}). Updating...`);
+        this.logger.log(
+          `EXISTING RECORD FOUND (id=${existing.id}). Updating...`,
+        );
         return await this.prisma.careerReadinessTestScore.update({
-          where: { id: (existing as any).id } as any,
-          data: scoreData,
+          where: { id: existing.id },
+          data: scoreData as Prisma.CareerReadinessTestScoreUpdateInput,
         });
       } else {
         this.logger.log(`NO EXISTING RECORD FOUND. Creating new record...`);
@@ -99,12 +113,15 @@ export class CareerReadinessService {
             otrId: data.otrId,
             testId: testId,
             ...scoreData,
-          },
+          } as Prisma.CareerReadinessTestScoreUncheckedCreateInput,
         });
       }
     } catch (error) {
-      this.logger.error('CRITICAL ERROR in saveResult:', error.message);
-      this.logger.error('Error Stack:', error.stack);
+      this.logger.error(
+        'CRITICAL ERROR in saveResult:',
+        (error as Error).message,
+      );
+      this.logger.error('Error Stack:', (error as Error).stack);
       throw error;
     }
   }
@@ -117,4 +134,3 @@ export class CareerReadinessService {
     });
   }
 }
-

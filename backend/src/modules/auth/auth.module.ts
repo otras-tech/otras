@@ -14,8 +14,19 @@ import { TokenCleanupService } from './token-cleanup.service';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({}),
   ],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, TokenCleanupService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    TokenCleanupService,
+  ],
   controllers: [AuthController],
-  exports: [AuthService, PassportModule, JwtModule, JwtStrategy, JwtRefreshStrategy],
+  exports: [
+    AuthService,
+    PassportModule,
+    JwtModule,
+    JwtStrategy,
+    JwtRefreshStrategy,
+  ],
 })
-export class AuthModule { }
+export class AuthModule {}

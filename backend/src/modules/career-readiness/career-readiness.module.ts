@@ -9,4 +9,3 @@ import { PrismaModule } from '../../database/prisma.module';
   providers: [CareerReadinessService],
 })
 export class CareerReadinessModule {}
-

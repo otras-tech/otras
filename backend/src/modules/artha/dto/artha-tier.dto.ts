@@ -1,18 +1,24 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class StartTierDto {
   @ApiProperty({ example: 'OTR123456' })
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 }
 
 export class ArthaTierResultDto {
   @ApiProperty({ example: 'OTR123456' })
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @ApiPropertyOptional({ example: 'uuid-1234' })
   @IsOptional()
@@ -39,25 +45,25 @@ export class ArthaQuestionAttemptDto {
   @ApiProperty({ example: 'uuid-1234' })
   @IsString()
   @IsNotEmpty()
-  assessmentId: string;
+  assessmentId!: string;
 
   @ApiProperty({ example: 101 })
   @IsNumber()
   @IsNotEmpty()
-  questionId: number;
+  questionId!: number;
 
   @ApiProperty({ example: 'A' })
   @IsString()
   @IsNotEmpty()
-  selectedOption: string;
+  selectedOption!: string;
 
   @ApiProperty({ example: true })
   @IsBoolean()
   @IsNotEmpty()
-  isCorrect: boolean;
+  isCorrect!: boolean;
 
   @ApiProperty({ example: 45, description: 'Time taken in seconds' })
   @IsNumber()
   @IsNotEmpty()
-  timeTaken: number;
+  timeTaken!: number;
 }
