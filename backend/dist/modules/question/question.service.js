@@ -11,19 +11,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuestionService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const question_repository_1 = require("./repository/question.repository");
 let QuestionService = class QuestionService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    questionRepository;
+    constructor(questionRepository) {
+        this.questionRepository = questionRepository;
     }
     create(data) {
         const { subjectId, ...rest } = data;
-        return this.prisma.question.create({
-            data: {
-                ...rest,
-                subject: { connect: { id: subjectId } },
-            },
+        return this.questionRepository.create({
+            ...rest,
+            subject: { connect: { id: subjectId } },
         });
     }
     findAll(query) {
@@ -31,22 +29,15 @@ let QuestionService = class QuestionService {
         if (query?.subjectId)
             where.subjectId = query.subjectId;
         if (query?.examId) {
-            where.tests = {
-                some: {
-                    examId: query.examId,
-                },
-            };
+            where.tests = { some: { examId: query.examId } };
         }
-        return this.prisma.question.findMany({
-            where,
-            include: { subject: true },
-        });
+        return this.questionRepository.findAll(where);
     }
-    findOne(id) {
-        return this.prisma.question.findUnique({
-            where: { id },
-            include: { subject: true },
-        });
+    async findOne(id) {
+        const question = await this.questionRepository.findById(id);
+        if (!question)
+            throw new common_1.NotFoundException('Question not found');
+        return question;
     }
     update(id, data) {
         const { subjectId, ...rest } = data;
@@ -54,20 +45,15 @@ let QuestionService = class QuestionService {
         if (subjectId) {
             updateData.subject = { connect: { id: subjectId } };
         }
-        return this.prisma.question.update({
-            where: { id },
-            data: updateData,
-        });
+        return this.questionRepository.update(id, updateData);
     }
     remove(id) {
-        return this.prisma.question.delete({
-            where: { id },
-        });
+        return this.questionRepository.softDelete(id);
     }
 };
 exports.QuestionService = QuestionService;
 exports.QuestionService = QuestionService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [question_repository_1.QuestionRepository])
 ], QuestionService);
 //# sourceMappingURL=question.service.js.map

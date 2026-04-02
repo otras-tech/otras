@@ -5,50 +5,50 @@ export declare class SubscriptionController {
     constructor(subscriptionService: SubscriptionService);
     create(createSubscriptionDto: CreateSubscriptionDto): Promise<{
         isDeleted: boolean;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         price: number;
         features: string[];
         isRecommended: boolean;
     }>;
     findAll(): Promise<{
         isDeleted: boolean;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         price: number;
         features: string[];
         isRecommended: boolean;
     }[]>;
     findOne(id: number): Promise<{
         isDeleted: boolean;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         price: number;
         features: string[];
         isRecommended: boolean;
-    } | null>;
+    }>;
     update(id: number, data: Partial<CreateSubscriptionDto>): Promise<{
         isDeleted: boolean;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         price: number;
         features: string[];
         isRecommended: boolean;
     }>;
     remove(id: number): Promise<{
         isDeleted: boolean;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        title: string;
         price: number;
         features: string[];
         isRecommended: boolean;

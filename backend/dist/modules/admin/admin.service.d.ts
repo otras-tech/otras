@@ -1,17 +1,18 @@
-import { PrismaService } from '../../database/prisma.service';
+import { AdminRepository } from './repository/admin.repository';
 import { JwtService } from '@nestjs/jwt';
 import { AdminRegisterDto } from './dto/admin.dto';
 import { Admin } from '@prisma/client';
 export declare class AdminService {
-    private prisma;
-    private jwtService;
-    constructor(prisma: PrismaService, jwtService: JwtService);
+    private readonly repository;
+    private readonly jwtService;
+    constructor(repository: AdminRepository, jwtService: JwtService);
     register(data: AdminRegisterDto): Promise<{
         access_token: string;
         admin: Omit<{
             password: string;
-            email: string;
+            isDeleted: boolean;
             id: number;
+            email: string;
             createdAt: Date;
             updatedAt: Date;
             username: string;
@@ -21,8 +22,9 @@ export declare class AdminService {
         access_token: string;
         admin: Omit<{
             password: string;
-            email: string;
+            isDeleted: boolean;
             id: number;
+            email: string;
             createdAt: Date;
             updatedAt: Date;
             username: string;

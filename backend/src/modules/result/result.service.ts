@@ -2,10 +2,10 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
-  BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { ResultRepository } from './repository/result.repository';
 import { SubmitTestDto, StartTestDto } from './dto/result.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -17,74 +17,61 @@ export class ResultService {
 
   constructor(
     @InjectQueue('result-calculation') private readonly resultQueue: Queue,
-    private readonly prisma: PrismaService,
+    private readonly resultRepository: ResultRepository,
     private readonly resultProcessor: ResultProcessor,
   ) {}
 
-  // ✅ Optimized: Using select and basic start tracking
-  async startTest(userId: number, testId: number, tier?: number) {
+  /**
+   * Ownership enforced: user can only start tests for themselves.
+   */
+  async startTest(requesterId: number, userId: number, testId: number, tier?: number) {
+    if (requesterId !== userId) {
+      throw new ForbiddenException('Cannot start test for another user');
+    }
     try {
-      return await this.prisma.result.create({
-        data: {
-          userId,
-          testId,
-          tier,
-          startTime: new Date(),
-          score: 0,
-          subjectBreakdown: {},
-        },
-        select: { id: true, startTime: true },
-      });
-    } catch (error) {
+      return await this.resultRepository.createPlaceholder(userId, testId, tier);
+    } catch {
       throw new InternalServerErrorException('Failed to start test');
     }
   }
 
-  // ✅ Production: Offload to background queue (or sync if Redis disabled)
-  async calculateAndSave(dto: SubmitTestDto) {
+  /**
+   * Ownership enforced: user can only submit for themselves.
+   */
+  async calculateAndSave(requesterId: number, dto: SubmitTestDto) {
+    if (requesterId !== dto.userId) {
+      throw new ForbiddenException('Cannot submit test for another user');
+    }
+
     const { userId, testId, answers, tier, resultId } = dto;
 
     try {
-      // 1. Create a placeholder result if it doesn't exist (e.g. direct submission)
       let finalResultId = resultId;
       if (!finalResultId) {
-        const placeholder = await this.prisma.result.create({
-          data: {
-            userId,
-            testId,
-            tier,
-            score: 0,
-            subjectBreakdown: {},
-            startTime: new Date(),
-          },
-          select: { id: true },
-        });
+        const placeholder = await this.resultRepository.createPlaceholder(userId, testId, tier);
         finalResultId = placeholder.id;
       }
 
-      // 2. Handle resilience: Synchronous fallback for local development
       if (process.env.DISABLE_REDIS === 'true') {
         this.logger.log(
           `Processing result sync for User: ${userId}, Result ID: ${finalResultId}`,
         );
-        await this.resultProcessor.calculateAndSave({
-          ...dto,
-          resultId: finalResultId,
-        });
+        await this.resultProcessor.calculateAndSave({ ...dto, resultId: finalResultId });
         return {
           message: 'Result processed synchronously (Redis disabled).',
           resultId: finalResultId,
         };
       }
 
-      // 3. ⚠️ Heavy task moved to queue for background processing
       await this.resultQueue.add(
         'processResult',
         { ...dto, resultId: finalResultId },
         {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 1000 },
-          removeOnComplete: true,
+          jobId: `result_${finalResultId}`,
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 1000 },
         },
       );
 
@@ -98,48 +85,25 @@ export class ResultService {
         resultId: finalResultId,
       };
     } catch (error: any) {
+      if (error instanceof ForbiddenException) throw error;
       this.logger.error(`Error processing result: ${error.message}`);
-      throw new InternalServerErrorException(
-        'Error processing test submission',
-      );
+      throw new InternalServerErrorException('Error processing test submission');
     }
   }
 
-  // ✅ Optimized: Paginated and lean fetching
+  /**
+   * Ownership enforced: user can only view their own results
+   * (except when called internally from UserService).
+   */
   async getUserResults(userId: number, cursor?: number, take?: number) {
-    const safeTake = Math.min(take || 20, 100);
     try {
-      return await this.prisma.result.findMany({
-        where: { userId, isDeleted: false },
-        take: safeTake,
-        skip: cursor ? 1 : 0,
-        cursor: cursor ? { id: cursor } : undefined,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          score: true,
-          submitTime: true,
-          subjectBreakdown: true,
-          createdAt: true,
-          test: {
-            select: {
-              name: true,
-              _count: { select: { questions: true } },
-            },
-          },
-        },
-      });
-    } catch (error) {
+      return await this.resultRepository.findByUserId(userId, cursor, take);
+    } catch {
       throw new InternalServerErrorException('Could not fetch results');
     }
   }
 
-  // ✅ Production: Authorization Helper
   async checkOwnership(resultId: number, userId: number): Promise<boolean> {
-    const result = await this.prisma.result.findUnique({
-      where: { id: resultId },
-      select: { userId: true },
-    });
-    return result?.userId === userId;
+    return this.resultRepository.checkOwnership(resultId, userId);
   }
 }

@@ -12,27 +12,23 @@ var CareerReadinessService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CareerReadinessService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const career_readiness_repository_1 = require("./repository/career-readiness.repository");
 let CareerReadinessService = CareerReadinessService_1 = class CareerReadinessService {
-    prisma;
+    repository;
     logger = new common_1.Logger(CareerReadinessService_1.name);
-    constructor(prisma) {
-        this.prisma = prisma;
+    constructor(repository) {
+        this.repository = repository;
     }
-    async saveResult(data) {
+    async saveResult(requesterOtrId, data) {
+        if (requesterOtrId !== data.otrId) {
+            throw new common_1.ForbiddenException('Cannot submit career readiness result for another user');
+        }
         const testId = Number(data.testId);
         if (isNaN(testId)) {
             throw new Error(`Invalid testId: ${data.testId}`);
         }
         this.logger.log(`Saving career readiness result for user ${data.otrId}, test ${testId}`);
-        const test = await this.prisma.test.findUnique({
-            where: { id: testId },
-            include: {
-                questions: {
-                    include: { subject: true },
-                },
-            },
-        });
+        const test = await this.repository.findTestById(testId);
         if (!test) {
             this.logger.error(`Test ${testId} not found`);
             throw new common_1.NotFoundException(`Test with ID ${testId} not found`);
@@ -72,57 +68,36 @@ let CareerReadinessService = CareerReadinessService_1 = class CareerReadinessSer
         const totalMarks = test.questions.length;
         const negativeMarks = wrongAnswers * 0.25;
         const totalScore = correctAnswers - negativeMarks;
-        try {
-            this.logger.log(`Searching for existing score: otrId=${data.otrId}, testId=${testId}`);
-            const existing = await this.prisma.careerReadinessTestScore.findFirst({
-                where: {
-                    otrId: data.otrId,
-                    testId: testId,
-                },
-            });
-            const scoreData = {
-                totalScore,
-                totalMarks,
-                correctAnswers,
-                wrongAnswers,
-                negativeMarks,
-                subjectBreakdown: subjectBreakdown,
-            };
-            if (existing) {
-                this.logger.log(`EXISTING RECORD FOUND (id=${existing.id}). Updating...`);
-                return await this.prisma.careerReadinessTestScore.update({
-                    where: { id: existing.id },
-                    data: scoreData,
-                });
-            }
-            else {
-                this.logger.log(`NO EXISTING RECORD FOUND. Creating new record...`);
-                return await this.prisma.careerReadinessTestScore.create({
-                    data: {
-                        otrId: data.otrId,
-                        testId: testId,
-                        ...scoreData,
-                    },
-                });
-            }
+        const existing = await this.repository.findExistingScore(data.otrId, testId);
+        const scoreData = {
+            totalScore,
+            totalMarks,
+            correctAnswers,
+            wrongAnswers,
+            negativeMarks,
+            subjectBreakdown: subjectBreakdown,
+        };
+        if (existing) {
+            return await this.repository.updateScore(existing.id, scoreData);
         }
-        catch (error) {
-            this.logger.error('CRITICAL ERROR in saveResult:', error.message);
-            this.logger.error('Error Stack:', error.stack);
-            throw error;
+        else {
+            return await this.repository.createScore({
+                otrId: data.otrId,
+                testId: testId,
+                ...scoreData,
+            });
         }
     }
-    async getByOtrId(otrId) {
-        return this.prisma.careerReadinessTestScore.findFirst({
-            where: { otrId },
-            include: { test: true },
-            orderBy: { createdAt: 'desc' },
-        });
+    async getByOtrId(requesterOtrId, otrId) {
+        if (requesterOtrId !== otrId) {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        return this.repository.findByOtrId(otrId);
     }
 };
 exports.CareerReadinessService = CareerReadinessService;
 exports.CareerReadinessService = CareerReadinessService = CareerReadinessService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [career_readiness_repository_1.CareerReadinessRepository])
 ], CareerReadinessService);
 //# sourceMappingURL=career-readiness.service.js.map

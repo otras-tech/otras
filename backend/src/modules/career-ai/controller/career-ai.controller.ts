@@ -4,12 +4,16 @@ import {
   Body,
   UsePipes,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { CareerAIService, RoadmapResponse } from '../service/career-ai.service';
+import { CareerAIService } from '../service/career-ai.service';
 import { CreateRoadmapDto } from '../dto/create-roadmap.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('AI Career Guidance')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller('career-ai')
 export class CareerAiController {
   constructor(private service: CareerAIService) {}

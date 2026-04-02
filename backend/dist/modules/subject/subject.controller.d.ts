@@ -4,86 +4,71 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 export declare class SubjectController {
     private readonly subjectService;
     constructor(subjectService: SubjectService);
-    create(createSubjectDto: CreateSubjectDto): import(".prisma/client").Prisma.Prisma__SubjectClient<{
-        name: string;
+    create(createSubjectDto: CreateSubjectDto): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
-    findAll(): import(".prisma/client").Prisma.PrismaPromise<({
-        questions: {
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            text: string;
-            options: string[];
-            answer: string;
-            explanation: string | null;
-            subjectId: number;
-        }[];
+        name: string;
+    }>;
+    findAll(cursor?: number, take?: number): Promise<({
         exams: {
             isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            applicationStatus: string;
+            pattern: string | null;
             cutoff: number | null;
             syllabus: string | null;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
             shortDescription: string | null;
-            applicationStatus: string;
         }[];
     } & {
-        name: string;
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
     })[]>;
-    findOne(id: number): import(".prisma/client").Prisma.Prisma__SubjectClient<({
-        questions: {
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            text: string;
-            options: string[];
-            answer: string;
-            explanation: string | null;
-            subjectId: number;
-        }[];
+    findOne(id: number): Promise<{
         exams: {
             isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            applicationStatus: string;
+            pattern: string | null;
             cutoff: number | null;
             syllabus: string | null;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
             shortDescription: string | null;
-            applicationStatus: string;
         }[];
     } & {
-        name: string;
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-    }) | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
-    update(id: number, data: UpdateSubjectDto): import(".prisma/client").Prisma.Prisma__SubjectClient<{
         name: string;
+    }>;
+    update(id: number, data: UpdateSubjectDto): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
-    remove(id: number): import(".prisma/client").Prisma.Prisma__SubjectClient<{
         name: string;
+    }>;
+    remove(id: number): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+        name: string;
+    }>;
 }

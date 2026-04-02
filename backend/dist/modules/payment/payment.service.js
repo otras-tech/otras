@@ -45,30 +45,35 @@ var PaymentService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const payment_repository_1 = require("./repository/payment.repository");
 const config_1 = require("@nestjs/config");
 const crypto = __importStar(require("crypto"));
 const Razorpay = require('razorpay');
 let PaymentService = PaymentService_1 = class PaymentService {
-    prisma;
+    paymentRepository;
     configService;
     razorpay;
     logger = new common_1.Logger(PaymentService_1.name);
-    constructor(prisma, configService) {
-        this.prisma = prisma;
+    constructor(paymentRepository, configService) {
+        this.paymentRepository = paymentRepository;
         this.configService = configService;
         this.razorpay = new Razorpay({
             key_id: this.configService.get('RAZORPAY_KEY_ID'),
             key_secret: this.configService.get('RAZORPAY_KEY_SECRET'),
         });
     }
-    async createOrder(dto) {
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { id: dto.subscriptionId },
-        });
-        if (!subscription) {
-            throw new common_1.NotFoundException('Subscription not found');
+    async createOrder(requesterId, dto, idempotencyKey) {
+        if (idempotencyKey) {
+            const existing = await this.paymentRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing)
+                return { orderId: existing.razorpayOrderId, amount: existing.amount, currency: existing.currency, paymentId: existing.id, keyId: this.configService.get('RAZORPAY_KEY_ID') };
         }
+        if (requesterId !== dto.userId) {
+            throw new common_1.ForbiddenException('You can only create orders for yourself');
+        }
+        const subscription = await this.paymentRepository.findSubscriptionById(dto.subscriptionId);
+        if (!subscription)
+            throw new common_1.NotFoundException('Subscription not found');
         const amountInPaise = Math.round(subscription.price * 100);
         if (amountInPaise < 100) {
             throw new common_1.BadRequestException('Order amount is less than the minimum amount allowed (₹1)');
@@ -84,15 +89,14 @@ let PaymentService = PaymentService_1 = class PaymentService {
         catch (error) {
             throw new common_1.BadRequestException(error.error?.description || 'Failed to create Razorpay order');
         }
-        const payment = await this.prisma.payment.create({
-            data: {
-                userId: dto.userId,
-                subscriptionId: dto.subscriptionId,
-                razorpayOrderId: razorpayOrder.id,
-                amount: subscription.price,
-                currency: 'INR',
-                status: 'created',
-            },
+        const payment = await this.paymentRepository.createPayment({
+            user: { connect: { id: dto.userId } },
+            subscription: { connect: { id: dto.subscriptionId } },
+            razorpayOrderId: razorpayOrder.id,
+            amount: subscription.price,
+            currency: 'INR',
+            status: 'created',
+            idempotencyKey,
         });
         return {
             orderId: razorpayOrder.id,
@@ -102,7 +106,13 @@ let PaymentService = PaymentService_1 = class PaymentService {
             keyId: this.configService.get('RAZORPAY_KEY_ID'),
         };
     }
-    async verifyPayment(dto) {
+    async verifyPayment(dto, idempotencyKey) {
+        if (idempotencyKey) {
+            const existing = await this.paymentRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing && existing.status === 'paid')
+                return { message: 'Payment verified successfully (idempotent)', payment: existing };
+        }
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = dto;
         const body = dto.razorpayOrderId + '|' + dto.razorpayPaymentId;
         const expectedSignature = crypto
             .createHmac('sha256', this.configService.get('RAZORPAY_KEY_SECRET') || '')
@@ -110,72 +120,64 @@ let PaymentService = PaymentService_1 = class PaymentService {
             .digest('hex');
         this.logger.log(`Razorpay Debug: OrderId=${dto.razorpayOrderId}, PaymentId=${dto.razorpayPaymentId}`);
         const isValid = expectedSignature === dto.razorpaySignature;
-        const payment = await this.prisma.payment.findUnique({
-            where: { razorpayOrderId: dto.razorpayOrderId },
-        });
-        if (!payment) {
-            throw new common_1.NotFoundException('Payment record not found');
+        const status = isValid ? 'paid' : 'failed';
+        const updateResult = await this.paymentRepository.updateStatusAtomic(razorpayOrderId, status, 'created', { razorpayPaymentId, razorpaySignature, idempotencyKey });
+        if (updateResult.count === 0) {
+            const existing = await this.paymentRepository.findPaymentByOrderId(razorpayOrderId);
+            if (existing?.status === 'paid')
+                return { message: 'Payment verified successfully (concurrent)', payment: existing };
+            throw new common_1.BadRequestException('Payment already processed or not found');
         }
-        const updatedPayment = await this.prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-                razorpayPaymentId: dto.razorpayPaymentId,
-                razorpaySignature: dto.razorpaySignature,
-                status: isValid ? 'paid' : 'failed',
-            },
-            include: {
-                subscription: true,
-            },
-        });
-        if (!isValid) {
+        const updatedPayment = await this.paymentRepository.findPaymentByOrderId(razorpayOrderId);
+        if (!isValid)
             throw new common_1.BadRequestException('Payment verification failed');
-        }
-        return {
-            message: 'Payment verified successfully',
-            payment: updatedPayment,
-        };
+        return { message: 'Payment verified successfully', payment: updatedPayment };
     }
-    async payWithCredits(userId, subscriptionId) {
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { id: subscriptionId },
-        });
-        if (!subscription) {
-            throw new common_1.NotFoundException('Subscription not found');
+    async payWithCredits(requesterId, userId, subscriptionId, idempotencyKey) {
+        if (idempotencyKey) {
+            const existing = await this.paymentRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing && existing.status === 'paid')
+                return { message: 'Subscription activated using credits (idempotent)', payment: existing };
         }
-        const { price } = subscription;
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
+        if (requesterId !== userId) {
+            throw new common_1.ForbiddenException('You can only use your own credits');
         }
-        const referralsAsReferee = await this.prisma.referral.findMany({
-            where: { refereeOtrId: user.otrId },
-        });
-        let totalRefereeCredits = 0;
-        for (const r of referralsAsReferee) {
-            totalRefereeCredits += r.creditsEarned || 0;
-        }
-        if (totalRefereeCredits < price) {
-            throw new common_1.BadRequestException('Not enough credits to purchase this plan');
-        }
-        let remainingToDeduct = price;
-        const updates = [];
-        for (const r of referralsAsReferee) {
-            if (remainingToDeduct <= 0)
-                break;
-            if (r.creditsEarned > 0) {
-                const deduct = Math.min(r.creditsEarned, remainingToDeduct);
-                updates.push(this.prisma.referral.update({
-                    where: { id: r.id },
+        return await this.paymentRepository.$transaction(async (tx) => {
+            const subscription = await tx.subscription.findUnique({
+                where: { id: subscriptionId },
+            });
+            if (!subscription)
+                throw new common_1.NotFoundException('Subscription not found');
+            const { price } = subscription;
+            const user = await tx.user.findUnique({
+                where: { id: userId },
+                select: { id: true, otrId: true },
+            });
+            if (!user)
+                throw new common_1.NotFoundException('User not found');
+            const referrals = await tx.referral.findMany({
+                where: { refereeOtrId: user.otrId, creditsEarned: { gt: 0 } },
+                orderBy: { createdAt: 'asc' },
+            });
+            const totalCredits = referrals.reduce((sum, r) => sum + (r.creditsEarned || 0), 0);
+            if (totalCredits < price) {
+                throw new common_1.BadRequestException(`Insufficient credits. Required: ${price}, Available: ${totalCredits}`);
+            }
+            let remainingToDeduct = price;
+            for (const referral of referrals) {
+                if (remainingToDeduct <= 0)
+                    break;
+                const deduct = Math.min(referral.creditsEarned, remainingToDeduct);
+                const updateResult = await tx.referral.updateMany({
+                    where: { id: referral.id, creditsEarned: { gte: deduct } },
                     data: { creditsEarned: { decrement: deduct } },
-                }));
+                });
+                if (updateResult.count === 0) {
+                    throw new common_1.InternalServerErrorException('Concurrency error: Credits were modified by another request. Please retry.');
+                }
                 remainingToDeduct -= deduct;
             }
-        }
-        const transactionResult = await this.prisma.$transaction([
-            ...updates,
-            this.prisma.payment.create({
+            const newPayment = await tx.payment.create({
                 data: {
                     userId,
                     subscriptionId,
@@ -183,36 +185,31 @@ let PaymentService = PaymentService_1 = class PaymentService {
                     currency: 'INR',
                     paymentMethod: 'credits',
                     status: 'paid',
-                    razorpayOrderId: `credit_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                    razorpayOrderId: `credit_${user.otrId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                    idempotencyKey,
                 },
-            }),
-        ]);
-        const newPayment = transactionResult[transactionResult.length - 1];
-        const remainingCredits = totalRefereeCredits - price;
-        return {
-            message: 'Subscription activated using credits',
-            payment: newPayment,
-            remainingCredits: remainingCredits,
-        };
-    }
-    async getPaymentsByUser(userId) {
-        return this.prisma.payment.findMany({
-            where: { userId },
-            include: { subscription: true },
-            orderBy: { createdAt: 'desc' },
+            });
+            return {
+                message: 'Subscription activated using credits',
+                payment: newPayment,
+                remainingCredits: totalCredits - price,
+            };
         });
     }
-    async getAllPayments() {
-        return this.prisma.payment.findMany({
-            include: { user: true, subscription: true },
-            orderBy: { createdAt: 'desc' },
-        });
+    async getPaymentsByUser(requesterId, requesterRole, userId, cursor, take) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('You can only view your own payments');
+        }
+        return this.paymentRepository.findPaymentsByUserId(userId, cursor, take);
+    }
+    async getAllPayments(cursor, take) {
+        return this.paymentRepository.findAllPayments(cursor, take);
     }
 };
 exports.PaymentService = PaymentService;
 exports.PaymentService = PaymentService = PaymentService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [payment_repository_1.PaymentRepository,
         config_1.ConfigService])
 ], PaymentService);
 //# sourceMappingURL=payment.service.js.map

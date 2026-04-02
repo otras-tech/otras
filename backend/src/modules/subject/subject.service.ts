@@ -1,55 +1,41 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { SubjectRepository } from './repository/subject.repository';
+import { CreateSubjectDto } from './dto/create-subject.dto';
+import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
 export class SubjectService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly subjectRepository: SubjectRepository) {}
 
-  create(data: { name: string; examId?: number }) {
-    const { examId, ...rest } = data;
-    return this.prisma.subject.create({
-      data: {
-        ...rest,
-        ...(examId && {
-          exams: {
-            connect: { id: examId },
-          },
-        }),
-      },
-    });
+  create(data: CreateSubjectDto) {
+    const { examId, ...rest } = data as CreateSubjectDto & { examId?: number };
+    const createInput: any = { ...rest };
+    if (examId) {
+      createInput.exams = { connect: { id: examId } };
+    }
+    return this.subjectRepository.create(createInput);
   }
 
-  findAll() {
-    return this.prisma.subject.findMany({
-      include: { exams: true, questions: true },
-    });
+  findAll(cursor?: number, take?: number) {
+    return this.subjectRepository.findAll(cursor, take);
   }
 
-  findOne(id: number) {
-    return this.prisma.subject.findUnique({
-      where: { id },
-      include: { exams: true, questions: true },
-    });
+  async findOne(id: number) {
+    const subject = await this.subjectRepository.findById(id);
+    if (!subject) throw new NotFoundException('Subject not found');
+    return subject;
   }
 
-  update(id: number, data: { name?: string; examId?: number }) {
-    const { examId, ...rest } = data;
-    return this.prisma.subject.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(examId && {
-          exams: {
-            connect: { id: examId },
-          },
-        }),
-      },
-    });
+  update(id: number, data: UpdateSubjectDto) {
+    const { examId, ...rest } = data as UpdateSubjectDto & { examId?: number };
+    const updateInput: any = { ...rest };
+    if (examId) {
+      updateInput.exams = { connect: { id: examId } };
+    }
+    return this.subjectRepository.update(id, updateInput);
   }
 
   remove(id: number) {
-    return this.prisma.subject.delete({
-      where: { id },
-    });
+    return this.subjectRepository.softDelete(id);
   }
 }

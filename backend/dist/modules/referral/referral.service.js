@@ -11,33 +11,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReferralService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const referral_repository_1 = require("./repository/referral.repository");
 let ReferralService = class ReferralService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    referralRepository;
+    constructor(referralRepository) {
+        this.referralRepository = referralRepository;
     }
-    async createReferral(referrerId, refereeOtrId) {
-        return this.prisma.referral.create({
-            data: {
-                referrerId,
-                refereeOtrId,
-                status: 'Joined',
-            },
-        });
+    async createReferral(requesterId, referrerId, refereeOtrId) {
+        if (requesterId !== referrerId) {
+            throw new common_1.ForbiddenException('You can only create referrals for yourself');
+        }
+        return this.referralRepository.create(referrerId, refereeOtrId);
     }
-    async getReferralStats(referrerId) {
+    async getReferralStats(requesterId, requesterRole, referrerId) {
+        if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         const [referralsMade, referrer] = await Promise.all([
-            this.prisma.referral.findMany({ where: { referrerId } }),
-            this.prisma.user.findUnique({
-                where: { id: referrerId },
-                select: { credits: true, referralCode: true, otrId: true },
-            }),
+            this.referralRepository.findByReferrerId(referrerId),
+            this.referralRepository.findUserByIdWithCredits(referrerId),
         ]);
         const joinedViaReferral = referrer
-            ? await this.prisma.referral.findFirst({
-                where: { refereeOtrId: referrer.otrId },
-            })
+            ? await this.referralRepository.findFirstByRefereeOtrId(referrer.otrId)
             : null;
         const totalReferrals = referralsMade.length;
         const successReferrals = referralsMade.filter((r) => r.status === 'Qualified Referral').length;
@@ -46,7 +41,7 @@ let ReferralService = class ReferralService {
             creditsEarned += 10;
         }
         const mockTestsEarned = Math.floor(successReferrals / 10);
-        const result = {
+        return {
             totalReferrals,
             successReferrals,
             creditsEarned,
@@ -55,13 +50,12 @@ let ReferralService = class ReferralService {
             referralCode: referrer?.referralCode ?? '',
             referrals: referralsMade,
         };
-        return result;
     }
-    async getReferralHistory(referrerId) {
-        const referrals = await this.prisma.referral.findMany({
-            where: { referrerId },
-            orderBy: { createdAt: 'desc' },
-        });
+    async getReferralHistory(requesterId, requesterRole, referrerId) {
+        if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        const referrals = await this.referralRepository.findByReferreerIdOrdered(referrerId);
         return referrals.map((r) => ({
             id: r.id,
             friendOtrId: r.refereeOtrId,
@@ -70,26 +64,19 @@ let ReferralService = class ReferralService {
             creditsEarned: r.creditsEarned || 0,
         }));
     }
-    async getRewards(userId) {
-        return this.prisma.referralReward.findMany({
-            where: { userId },
-            include: { mockTest: true },
-        });
+    async getRewards(requesterId, requesterRole, userId) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        return this.referralRepository.findReferralRewardsByUserId(userId);
     }
     async getAllReferrals() {
-        return this.prisma.referral.findMany({
-            include: {
-                referrer: {
-                    select: { firstName: true, lastName: true, otrId: true },
-                },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+        return this.referralRepository.findAll();
     }
 };
 exports.ReferralService = ReferralService;
 exports.ReferralService = ReferralService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [referral_repository_1.ReferralRepository])
 ], ReferralService);
 //# sourceMappingURL=referral.service.js.map

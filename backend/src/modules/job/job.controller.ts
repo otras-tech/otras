@@ -8,6 +8,7 @@ import {
   UsePipes,
   ValidationPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { JobService } from './job.service';
 import {
@@ -15,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateJobDto } from './dto/create-job.dto';
 
@@ -39,10 +41,15 @@ export class JobController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all active job postings' })
+  @ApiOperation({ summary: 'Get all active job postings (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of jobs' })
-  findAll() {
-    return this.jobService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.jobService.findAll(cursor, take);
   }
 
   @Get(':id')

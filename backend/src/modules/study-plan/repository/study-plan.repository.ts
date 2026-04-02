@@ -13,7 +13,7 @@ export class StudyPlanRepository {
 
   async userExists(userId: number): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, isDeleted: false },
       select: { id: true },
     });
     return !!user;
@@ -67,10 +67,11 @@ export class StudyPlanRepository {
 
   async findByUserId(userId: number) {
     return this.prisma.studyPlan.findFirst({
-      where: { userId },
+      where: { userId, isDeleted: false },
       include: {
         days: {
-          include: { activities: true },
+          where: { isDeleted: false },
+          include: { activities: { where: { isDeleted: false } } },
           orderBy: { date: 'asc' },
         },
       },
@@ -79,11 +80,12 @@ export class StudyPlanRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.studyPlan.findUnique({
-      where: { id },
+    return this.prisma.studyPlan.findFirst({
+      where: { id, isDeleted: false },
       include: {
         days: {
-          include: { activities: true },
+          where: { isDeleted: false },
+          include: { activities: { where: { isDeleted: false } } },
           orderBy: { date: 'asc' },
         },
       },
@@ -91,8 +93,8 @@ export class StudyPlanRepository {
   }
 
   async findActivityWithDay(activityId: string) {
-    return this.prisma.studyActivity.findUnique({
-      where: { id: activityId },
+    return this.prisma.studyActivity.findFirst({
+      where: { id: activityId, isDeleted: false },
       include: { day: { select: { id: true, planId: true, date: true } } },
     });
   }
@@ -124,10 +126,16 @@ export class StudyPlanRepository {
   }
 
   async deleteByUserId(userId: number) {
-    return this.prisma.studyPlan.deleteMany({ where: { userId } });
+    return this.prisma.studyPlan.updateMany({
+      where: { userId },
+      data: { isDeleted: true },
+    });
   }
 
   async delete(id: string) {
-    return this.prisma.studyPlan.delete({ where: { id } });
+    return this.prisma.studyPlan.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
   }
 }

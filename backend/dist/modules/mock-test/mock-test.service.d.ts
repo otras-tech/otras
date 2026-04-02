@@ -1,27 +1,27 @@
-import { PrismaService } from '../../database/prisma.service';
+import { MockTestRepository } from './repository/mock-test.repository';
 import { StartMockAttemptDto, SubmitMockAttemptDto, SubmitExamAttemptDto } from './dto/mock-test.dto';
 import { CacheService } from '../../common/cache/cache.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { Prisma } from '@prisma/client';
 export declare class MockTestService {
-    private prisma;
-    private cacheService;
-    private redisService;
+    private readonly mockTestRepository;
+    private readonly cacheService;
+    private readonly redisService;
     private readonly logger;
-    constructor(prisma: PrismaService, cacheService: CacheService, redisService: RedisService);
-    findAll(categoryId?: number, cursor?: number): Promise<{}>;
+    constructor(mockTestRepository: MockTestRepository, cacheService: CacheService, redisService: RedisService);
+    findAll(categoryId?: number, cursor?: number, take?: number): Promise<{}>;
     findOne(id: number): Promise<any>;
-    startAttempt(dto: StartMockAttemptDto): Promise<{
+    startAttempt(requesterOtrId: string, dto: StartMockAttemptDto): Promise<{
         id: number;
         startTime: Date | null;
     }>;
-    submitAttempt(dto: SubmitMockAttemptDto): Promise<{
-        otrId: string;
+    submitAttempt(requesterOtrId: string, dto: SubmitMockAttemptDto): Promise<{
         id: number;
+        otrId: string;
         score: number;
         mockTestId: number;
     }>;
-    calculateRank(mockTestId: number, otrId: string): Promise<{
+    calculateRank(requesterOtrId: string, mockTestId: number, otrId: string): Promise<{
         rank: number;
         total: number;
         topPercentage: number;
@@ -36,20 +36,20 @@ export declare class MockTestService {
         percentile?: undefined;
         source?: undefined;
     }>;
-    submitExamAttempt(dto: SubmitExamAttemptDto): Promise<{
-        otrId: string;
+    submitExamAttempt(requesterOtrId: string, dto: SubmitExamAttemptDto): Promise<{
         id: number;
+        otrId: string;
         score: number;
         mockTestId: number;
     }>;
-    getUserMockAttempts(otrId: string, cursor?: number): Promise<{
+    getUserMockAttempts(requesterOtrId: string, otrId: string, cursor?: number): Promise<{
         mockTest: {
             title: string;
         };
         id: number;
         score: number;
-        subjectBreakdown: Prisma.JsonValue;
         totalMarks: number;
+        subjectBreakdown: Prisma.JsonValue;
         correctAnswers: number | null;
         attemptedAt: Date;
     }[]>;

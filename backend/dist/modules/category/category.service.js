@@ -11,44 +11,34 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoryService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const category_repository_1 = require("./repository/category.repository");
 let CategoryService = class CategoryService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    categoryRepository;
+    constructor(categoryRepository) {
+        this.categoryRepository = categoryRepository;
     }
     create(createCategoryDto) {
-        return this.prisma.mockTestCategory.create({
-            data: {
-                name: createCategoryDto.name,
-            },
-        });
+        return this.categoryRepository.create(createCategoryDto.name);
     }
     findAll() {
-        return this.prisma.mockTestCategory.findMany({ take: 100 });
+        return this.categoryRepository.findAll();
     }
-    findOne(id) {
-        return this.prisma.mockTestCategory.findUnique({
-            where: { id },
-        });
+    async findOne(id) {
+        const category = await this.categoryRepository.findById(id);
+        if (!category)
+            throw new common_1.NotFoundException('Category not found');
+        return category;
     }
     update(id, updateCategoryDto) {
-        return this.prisma.mockTestCategory.update({
-            where: { id },
-            data: {
-                name: updateCategoryDto.name,
-            },
-        });
+        return this.categoryRepository.update(id, updateCategoryDto.name);
     }
     remove(id) {
-        return this.prisma.mockTestCategory.delete({
-            where: { id },
-        });
+        return this.categoryRepository.softDelete(id);
     }
 };
 exports.CategoryService = CategoryService;
 exports.CategoryService = CategoryService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [category_repository_1.CategoryRepository])
 ], CategoryService);
 //# sourceMappingURL=category.service.js.map

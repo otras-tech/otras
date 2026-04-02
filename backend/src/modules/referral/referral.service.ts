@@ -1,34 +1,32 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import {
+  Injectable,
+  ForbiddenException,
+} from '@nestjs/common';
+import { ReferralRepository } from './repository/referral.repository';
 
 @Injectable()
 export class ReferralService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly referralRepository: ReferralRepository) {}
 
-  async createReferral(referrerId: number, refereeOtrId: string) {
-    return this.prisma.referral.create({
-      data: {
-        referrerId,
-        refereeOtrId,
-        status: 'Joined',
-      },
-    });
+  async createReferral(requesterId: number, referrerId: number, refereeOtrId: string) {
+    if (requesterId !== referrerId) {
+      throw new ForbiddenException('You can only create referrals for yourself');
+    }
+    return this.referralRepository.create(referrerId, refereeOtrId);
   }
 
-  async getReferralStats(referrerId: number) {
+  async getReferralStats(requesterId: number, requesterRole: string, referrerId: number) {
+    if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
     const [referralsMade, referrer] = await Promise.all([
-      this.prisma.referral.findMany({ where: { referrerId } }),
-      this.prisma.user.findUnique({
-        where: { id: referrerId },
-        select: { credits: true, referralCode: true, otrId: true },
-      }),
+      this.referralRepository.findByReferrerId(referrerId),
+      this.referralRepository.findUserByIdWithCredits(referrerId),
     ]);
 
-    // Also find if this user was a referee and got credits for joining
     const joinedViaReferral = referrer
-      ? await this.prisma.referral.findFirst({
-          where: { refereeOtrId: referrer.otrId },
-        })
+      ? await this.referralRepository.findFirstByRefereeOtrId(referrer.otrId)
       : null;
 
     const totalReferrals = referralsMade.length;
@@ -36,17 +34,16 @@ export class ReferralService {
       (r) => r.status === 'Qualified Referral',
     ).length;
 
-    // Credits earned = (credits from friends you referred) + (credits you got for joining)
     let creditsEarned = referralsMade.reduce(
       (sum, r) => sum + (r.creditsEarned || 0),
       0,
     );
     if (joinedViaReferral) {
-      creditsEarned += 10; // The joining bonus
+      creditsEarned += 10;
     }
     const mockTestsEarned = Math.floor(successReferrals / 10);
 
-    const result = {
+    return {
       totalReferrals,
       successReferrals,
       creditsEarned,
@@ -55,14 +52,14 @@ export class ReferralService {
       referralCode: referrer?.referralCode ?? '',
       referrals: referralsMade,
     };
-    return result;
   }
 
-  async getReferralHistory(referrerId: number) {
-    const referrals = await this.prisma.referral.findMany({
-      where: { referrerId },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getReferralHistory(requesterId: number, requesterRole: string, referrerId: number) {
+    if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const referrals = await this.referralRepository.findByReferreerIdOrdered(referrerId);
 
     return referrals.map((r) => ({
       id: r.id,
@@ -73,21 +70,14 @@ export class ReferralService {
     }));
   }
 
-  async getRewards(userId: number) {
-    return this.prisma.referralReward.findMany({
-      where: { userId },
-      include: { mockTest: true },
-    });
+  async getRewards(requesterId: number, requesterRole: string, userId: number) {
+    if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+    return this.referralRepository.findReferralRewardsByUserId(userId);
   }
 
   async getAllReferrals() {
-    return this.prisma.referral.findMany({
-      include: {
-        referrer: {
-          select: { firstName: true, lastName: true, otrId: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.referralRepository.findAll();
   }
 }

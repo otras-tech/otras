@@ -15,6 +15,7 @@ const bullmq_1 = require("@nestjs/bullmq");
 const prisma_module_1 = require("../../database/prisma.module");
 const config_1 = require("@nestjs/config");
 const ai_processor_1 = require("./processor/ai.processor");
+const ai_repository_1 = require("./repository/ai.repository");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
@@ -34,6 +35,7 @@ exports.AiModule = AiModule = __decorate([
         controllers: [ai_controller_1.AiController],
         providers: [
             ai_service_1.AiService,
+            ai_repository_1.AiRepository,
             openai_provider_1.OpenAiProvider,
             ai_processor_1.AiProcessor,
             ...(process.env.DISABLE_REDIS === 'true'
@@ -45,7 +47,7 @@ exports.AiModule = AiModule = __decorate([
                 ]
                 : []),
         ],
-        exports: [ai_service_1.AiService],
+        exports: [ai_service_1.AiService, ai_repository_1.AiRepository],
     })
 ], AiModule);
 //# sourceMappingURL=ai.module.js.map

@@ -10,15 +10,15 @@ exports.PaymentModule = void 0;
 const common_1 = require("@nestjs/common");
 const payment_service_1 = require("./payment.service");
 const payment_controller_1 = require("./payment.controller");
-const prisma_module_1 = require("../../database/prisma.module");
+const payment_repository_1 = require("./repository/payment.repository");
 const auth_module_1 = require("../auth/auth.module");
 let PaymentModule = class PaymentModule {
 };
 exports.PaymentModule = PaymentModule;
 exports.PaymentModule = PaymentModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule],
-        providers: [payment_service_1.PaymentService],
+        imports: [auth_module_1.AuthModule],
+        providers: [payment_service_1.PaymentService, payment_repository_1.PaymentRepository],
         controllers: [payment_controller_1.PaymentController],
     })
 ], PaymentModule);

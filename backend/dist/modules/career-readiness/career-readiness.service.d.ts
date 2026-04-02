@@ -1,10 +1,10 @@
-import { PrismaService } from '../../database/prisma.service';
+import { CareerReadinessRepository } from './repository/career-readiness.repository';
 import { Prisma } from '@prisma/client';
 export declare class CareerReadinessService {
-    private prisma;
+    private readonly repository;
     private readonly logger;
-    constructor(prisma: PrismaService);
-    saveResult(data: {
+    constructor(repository: CareerReadinessRepository);
+    saveResult(requesterOtrId: string, data: {
         otrId: string;
         testId: number | string;
         answers: {
@@ -12,38 +12,40 @@ export declare class CareerReadinessService {
             selectedOption: string;
         }[];
     }): Promise<{
-        otrId: string;
-        testId: number;
+        isDeleted: boolean;
         id: number;
+        otrId: string;
         createdAt: Date;
         updatedAt: Date;
-        subjectBreakdown: Prisma.JsonValue;
         totalMarks: number;
-        correctAnswers: number;
+        subjectBreakdown: Prisma.JsonValue;
         totalScore: number;
+        correctAnswers: number;
         wrongAnswers: number;
         negativeMarks: number;
+        testId: number;
     }>;
-    getByOtrId(otrId: string): Promise<({
+    getByOtrId(requesterOtrId: string, otrId: string): Promise<({
         test: {
             isDeleted: boolean;
-            name: string;
             id: number;
-            examId: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            examId: number;
         };
     } & {
-        otrId: string;
-        testId: number;
+        isDeleted: boolean;
         id: number;
+        otrId: string;
         createdAt: Date;
         updatedAt: Date;
-        subjectBreakdown: Prisma.JsonValue;
         totalMarks: number;
-        correctAnswers: number;
+        subjectBreakdown: Prisma.JsonValue;
         totalScore: number;
+        correctAnswers: number;
         wrongAnswers: number;
         negativeMarks: number;
+        testId: number;
     }) | null>;
 }

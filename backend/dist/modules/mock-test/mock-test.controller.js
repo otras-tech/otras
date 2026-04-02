@@ -20,7 +20,6 @@ const mock_test_dto_1 = require("./dto/mock-test.dto");
 const throttler_1 = require("@nestjs/throttler");
 const swagger_1 = require("@nestjs/swagger");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
-const common_2 = require("@nestjs/common");
 let MockTestController = class MockTestController {
     mockTestService;
     constructor(mockTestService) {
@@ -30,34 +29,19 @@ let MockTestController = class MockTestController {
         return this.mockTestService.findAll(categoryId, cursor);
     }
     async startAttempt(dto, user) {
-        if (user.otrId !== dto.otrId) {
-            throw new common_2.ForbiddenException('Cannot start attempt for another user');
-        }
-        return this.mockTestService.startAttempt(dto);
+        return this.mockTestService.startAttempt(user.otrId, dto);
     }
     async submitAttempt(dto, user) {
-        if (user.otrId !== dto.otrId) {
-            throw new common_2.ForbiddenException('Cannot submit for another user');
-        }
-        return this.mockTestService.submitAttempt(dto);
+        return this.mockTestService.submitAttempt(user.otrId, dto);
     }
     async submitExamAttempt(dto, user) {
-        if (user.otrId !== dto.otrId) {
-            throw new common_2.ForbiddenException('Cannot submit for another user');
-        }
-        return this.mockTestService.submitExamAttempt(dto);
+        return this.mockTestService.submitExamAttempt(user.otrId, dto);
     }
     async getRecentAttempt(otrId, user) {
-        if (user.otrId !== otrId) {
-            throw new common_2.ForbiddenException('Access denied');
-        }
-        return this.mockTestService.getUserMockAttempts(otrId);
+        return this.mockTestService.getUserMockAttempts(user.otrId, otrId);
     }
     async calculateRank(mockTestId, otrId, user) {
-        if (user.otrId !== otrId) {
-            throw new common_2.ForbiddenException('Access denied');
-        }
-        return this.mockTestService.calculateRank(mockTestId, otrId);
+        return this.mockTestService.calculateRank(user.otrId, mockTestId, otrId);
     }
     async findOne(id) {
         return this.mockTestService.findOne(id);

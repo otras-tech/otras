@@ -27,6 +27,14 @@ let ResultProcessor = ResultProcessor_1 = class ResultProcessor extends bullmq_1
     async calculateAndSave(data, jobId) {
         const { userId, testId, answers, tier, resultId } = data;
         this.logger.log(`Processing result for User: ${userId}, Test: ${testId}${jobId ? ` (Job: ${jobId})` : ' (Sync)'}`);
+        const existing = await this.prisma.result.findUnique({
+            where: { id: resultId },
+            select: { submitTime: true },
+        });
+        if (existing?.submitTime) {
+            this.logger.log(`Result ${resultId} already processed. Skipping.`);
+            return;
+        }
         try {
             const test = await this.prisma.test.findUnique({
                 where: { id: testId, isDeleted: false },

@@ -10,14 +10,13 @@ exports.PypModule = void 0;
 const common_1 = require("@nestjs/common");
 const pyp_service_1 = require("./pyp.service");
 const pyp_controller_1 = require("./pyp.controller");
-const prisma_module_1 = require("../../database/prisma.module");
+const pyp_repository_1 = require("./repository/pyp.repository");
 let PypModule = class PypModule {
 };
 exports.PypModule = PypModule;
 exports.PypModule = PypModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
-        providers: [pyp_service_1.PypService],
+        providers: [pyp_service_1.PypService, pyp_repository_1.PypRepository],
         controllers: [pyp_controller_1.PypController],
     })
 ], PypModule);

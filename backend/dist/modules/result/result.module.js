@@ -10,6 +10,7 @@ exports.ResultModule = void 0;
 const common_1 = require("@nestjs/common");
 const result_service_1 = require("./result.service");
 const result_controller_1 = require("./result.controller");
+const result_repository_1 = require("./repository/result.repository");
 const user_module_1 = require("../user/user.module");
 const bullmq_1 = require("@nestjs/bullmq");
 const result_processor_1 = require("./result.processor");
@@ -31,6 +32,7 @@ exports.ResultModule = ResultModule = __decorate([
         ],
         providers: [
             result_service_1.ResultService,
+            result_repository_1.ResultRepository,
             result_processor_1.ResultProcessor,
             ...(process.env.DISABLE_REDIS === 'true'
                 ? [

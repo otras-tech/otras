@@ -3,138 +3,128 @@ import { CreateApplicationDto, UpdateApplicationStatusDto } from './dto/applicat
 export declare class ApplicationController {
     private readonly applicationService;
     constructor(applicationService: ApplicationService);
-    create(dto: CreateApplicationDto): Promise<{
+    create(dto: CreateApplicationDto, req: any): Promise<{
         userId: number;
         isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
-        applicationStatus: string;
         status: string;
+        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
+        examId: number;
     }>;
     findByOtrId(otrId: string): Promise<({
         exam: {
             isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            applicationStatus: string;
+            pattern: string | null;
             cutoff: number | null;
             syllabus: string | null;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
             shortDescription: string | null;
-            applicationStatus: string;
         };
     } & {
         userId: number;
         isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
-        applicationStatus: string;
         status: string;
+        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
+        examId: number;
     })[]>;
-    findByUser(userId: number): Promise<({
+    findByUser(userId: number, req: any): Promise<({
         exam: {
-            isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            cutoff: number | null;
-            syllabus: string | null;
-            eligibility: string | null;
-            longDescription: string | null;
-            noOfQuestions: number | null;
-            shortDescription: string | null;
+            name: string;
             applicationStatus: string;
         };
     } & {
         userId: number;
         isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
-        applicationStatus: string;
         status: string;
+        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
+        examId: number;
     })[]>;
     findAll(): Promise<({
         user: {
             password: string;
             role: string;
             isDeleted: boolean;
-            email: string;
+            id: number;
             firstName: string;
             lastName: string;
-            otrId: string;
+            email: string;
             age: number | null;
             category: string | null;
+            otrId: string;
             highestDegree: string | null;
             careerPreference: string | null;
             domicile: string | null;
             pincode: string | null;
-            referralCode: string;
-            id: number;
             createdAt: Date;
             updatedAt: Date;
             credits: number;
+            referralCode: string;
             preferredLanguage: string;
         };
         exam: {
             isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            applicationStatus: string;
+            pattern: string | null;
             cutoff: number | null;
             syllabus: string | null;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
             shortDescription: string | null;
-            applicationStatus: string;
         };
     } & {
         userId: number;
         isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
-        applicationStatus: string;
         status: string;
+        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
+        examId: number;
     })[]>;
-    updateStatus(id: number, statusData: UpdateApplicationStatusDto): Promise<{
+    updateStatus(id: number, statusData: UpdateApplicationStatusDto, req: any): Promise<{
         userId: number;
         isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
-        applicationStatus: string;
         status: string;
+        applicationStatus: string;
         admitCardStatus: string;
         examKeyStatus: string;
         resultStatus: string;
+        examId: number;
     }>;
 }

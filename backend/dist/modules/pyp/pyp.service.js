@@ -11,25 +11,21 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PypService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const pyp_repository_1 = require("./repository/pyp.repository");
 let PypService = class PypService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    pypRepository;
+    constructor(pypRepository) {
+        this.pypRepository = pypRepository;
     }
     async create(data) {
         const { examId, ...rest } = data;
-        return this.prisma.pYP.create({
-            data: {
-                ...rest,
-                exam: { connect: { id: examId } },
-            },
+        return this.pypRepository.create({
+            ...rest,
+            exam: { connect: { id: examId } },
         });
     }
     async findAll() {
-        return this.prisma.pYP.findMany({
-            include: { exam: true },
-        });
+        return this.pypRepository.findAll();
     }
     async update(id, data) {
         const { examId, ...rest } = data;
@@ -37,15 +33,15 @@ let PypService = class PypService {
         if (examId) {
             updateData.exam = { connect: { id: examId } };
         }
-        return this.prisma.pYP.update({ where: { id }, data: updateData });
+        return this.pypRepository.update(id, updateData);
     }
     async remove(id) {
-        return this.prisma.pYP.delete({ where: { id } });
+        return this.pypRepository.softDelete(id);
     }
 };
 exports.PypService = PypService;
 exports.PypService = PypService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [pyp_repository_1.PypRepository])
 ], PypService);
 //# sourceMappingURL=pyp.service.js.map

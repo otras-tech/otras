@@ -15,7 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const payment_service_1 = require("./payment.service");
+const throttler_1 = require("@nestjs/throttler");
 const swagger_1 = require("@nestjs/swagger");
 const create_order_dto_1 = require("./dto/create-order.dto");
 let PaymentController = class PaymentController {
@@ -23,21 +26,20 @@ let PaymentController = class PaymentController {
     constructor(paymentService) {
         this.paymentService = paymentService;
     }
-    createOrder(req, createOrderDto) {
-        createOrderDto.userId = req.user.id;
-        return this.paymentService.createOrder(createOrderDto);
+    createOrder(req, createOrderDto, idempotencyKey) {
+        return this.paymentService.createOrder(req.user.id, createOrderDto, idempotencyKey);
     }
-    verifyPayment(verifyPaymentDto) {
-        return this.paymentService.verifyPayment(verifyPaymentDto);
+    verifyPayment(verifyPaymentDto, idempotencyKey) {
+        return this.paymentService.verifyPayment(verifyPaymentDto, idempotencyKey);
     }
-    payWithCredits(req, dto) {
-        return this.paymentService.payWithCredits(req.user.id, dto.subscriptionId);
+    payWithCredits(req, dto, idempotencyKey) {
+        return this.paymentService.payWithCredits(req.user.id, req.user.id, dto.subscriptionId, idempotencyKey);
     }
-    getPaymentsByUser(userId) {
-        return this.paymentService.getPaymentsByUser(+userId);
+    getPaymentsByUser(userId, req, cursor, take) {
+        return this.paymentService.getPaymentsByUser(req.user.id, req.user.role, userId, cursor, take);
     }
-    getAllPayments() {
-        return this.paymentService.getAllPayments();
+    getAllPayments(cursor, take) {
+        return this.paymentService.getAllPayments(cursor, take);
     }
 };
 exports.PaymentController = PaymentController;
@@ -45,58 +47,75 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Post)('create-order'),
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }),
     (0, swagger_1.ApiOperation)({ summary: 'Create a Razorpay order for a subscription' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Order created' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - can only create orders for yourself' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Headers)('x-idempotency-key')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_order_dto_1.CreateOrderDto]),
+    __metadata("design:paramtypes", [Object, create_order_dto_1.CreateOrderDto, String]),
     __metadata("design:returntype", void 0)
 ], PaymentController.prototype, "createOrder", null);
 __decorate([
     (0, common_1.Post)('verify'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
     (0, swagger_1.ApiOperation)({ summary: 'Verify a Razorpay payment signature' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Payment verified and subscription activated',
-    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Payment verified and subscription activated' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Headers)('x-idempotency-key')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_order_dto_1.VerifyPaymentDto]),
+    __metadata("design:paramtypes", [create_order_dto_1.VerifyPaymentDto, String]),
     __metadata("design:returntype", void 0)
 ], PaymentController.prototype, "verifyPayment", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Post)('pay-with-credits'),
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
     (0, swagger_1.ApiOperation)({ summary: 'Pay for a subscription using user credits' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Payment successful with credits' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - can only use your own credits' }),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Headers)('x-idempotency-key')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object, Object, String]),
     __metadata("design:returntype", void 0)
 ], PaymentController.prototype, "payWithCredits", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Get)('user/:userId'),
-    __param(0, (0, common_1.Param)('userId')),
+    (0, swagger_1.ApiOperation)({ summary: 'Get payment history for a specific user (Self or Admin)' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - access denied' }),
+    __param(0, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Query)('cursor', new common_1.ParseIntPipe({ optional: true }))),
+    __param(3, (0, common_1.Query)('take', new common_1.ParseIntPipe({ optional: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, Object, Number, Number]),
     __metadata("design:returntype", void 0)
 ], PaymentController.prototype, "getPaymentsByUser", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all payments (Admin only)' }),
+    __param(0, (0, common_1.Query)('cursor', new common_1.ParseIntPipe({ optional: true }))),
+    __param(1, (0, common_1.Query)('take', new common_1.ParseIntPipe({ optional: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], PaymentController.prototype, "getAllPayments", null);
 exports.PaymentController = PaymentController = __decorate([
     (0, swagger_1.ApiTags)('Payments'),
     (0, common_1.Controller)('payments'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
     __metadata("design:paramtypes", [payment_service_1.PaymentService])
 ], PaymentController);
 //# sourceMappingURL=payment.controller.js.map

@@ -44,24 +44,22 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const admin_repository_1 = require("./repository/admin.repository");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 let AdminService = class AdminService {
-    prisma;
+    repository;
     jwtService;
-    constructor(prisma, jwtService) {
-        this.prisma = prisma;
+    constructor(repository, jwtService) {
+        this.repository = repository;
         this.jwtService = jwtService;
     }
     async register(data) {
         const hashedPassword = await bcrypt.hash(data.password, 10);
         try {
-            const admin = await this.prisma.admin.create({
-                data: {
-                    ...data,
-                    password: hashedPassword,
-                },
+            const admin = await this.repository.create({
+                ...data,
+                password: hashedPassword,
             });
             return this.login(admin);
         }
@@ -80,7 +78,7 @@ let AdminService = class AdminService {
         };
     }
     async validateAdmin(email, pass) {
-        const admin = await this.prisma.admin.findUnique({ where: { email } });
+        const admin = await this.repository.findByEmail(email);
         if (admin && (await bcrypt.compare(pass, admin.password))) {
             const { password, ...result } = admin;
             return result;
@@ -91,7 +89,7 @@ let AdminService = class AdminService {
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [admin_repository_1.AdminRepository,
         jwt_1.JwtService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

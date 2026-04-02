@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MockTestService } from './mock-test.service';
 import { MockTestController } from './mock-test.controller';
-import { PrismaModule } from '../../database/prisma.module';
+import { MockTestRepository } from './repository/mock-test.repository';
 
 @Module({
-  imports: [PrismaModule],
   controllers: [MockTestController],
-  providers: [MockTestService],
+  providers: [MockTestService, MockTestRepository],
   exports: [MockTestService],
 })
 export class MockTestModule {}

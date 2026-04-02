@@ -10,13 +10,17 @@ exports.JobModule = void 0;
 const common_1 = require("@nestjs/common");
 const job_service_1 = require("./job.service");
 const job_controller_1 = require("./job.controller");
+const job_repository_1 = require("./repository/job.repository");
+const prisma_module_1 = require("../../database/prisma.module");
 let JobModule = class JobModule {
 };
 exports.JobModule = JobModule;
 exports.JobModule = JobModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         controllers: [job_controller_1.JobController],
-        providers: [job_service_1.JobService],
+        providers: [job_service_1.JobService, job_repository_1.JobRepository],
+        exports: [job_service_1.JobService],
     })
 ], JobModule);
 //# sourceMappingURL=job.module.js.map

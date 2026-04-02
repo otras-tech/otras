@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   UseGuards,
   ParseIntPipe,
   UsePipes,
@@ -18,6 +19,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
@@ -38,10 +40,15 @@ export class SubjectController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all subjects' })
+  @ApiOperation({ summary: 'Get all subjects (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of subjects' })
-  findAll() {
-    return this.subjectService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.subjectService.findAll(cursor, take);
   }
 
   @Get(':id')

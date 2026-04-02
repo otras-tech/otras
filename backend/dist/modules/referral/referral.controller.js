@@ -15,6 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReferralController = void 0;
 const common_1 = require("@nestjs/common");
 const referral_service_1 = require("./referral.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const swagger_1 = require("@nestjs/swagger");
 const referral_dto_1 = require("./dto/referral.dto");
 let ReferralController = class ReferralController {
@@ -22,17 +25,17 @@ let ReferralController = class ReferralController {
     constructor(referralService) {
         this.referralService = referralService;
     }
-    createReferral(dto) {
-        return this.referralService.createReferral(dto.referrerId, dto.refereeOtrId);
+    createReferral(dto, req) {
+        return this.referralService.createReferral(req.user.id, dto.referrerId, dto.refereeOtrId);
     }
-    getReferralStats(referrerId) {
-        return this.referralService.getReferralStats(referrerId);
+    getReferralStats(referrerId, req) {
+        return this.referralService.getReferralStats(req.user.id, req.user.role, referrerId);
     }
-    getReferralHistory(referrerId) {
-        return this.referralService.getReferralHistory(referrerId);
+    getReferralHistory(referrerId, req) {
+        return this.referralService.getReferralHistory(req.user.id, req.user.role, referrerId);
     }
-    getRewards(userId) {
-        return this.referralService.getRewards(userId);
+    getRewards(userId, req) {
+        return this.referralService.getRewards(req.user.id, req.user.role, userId);
     }
     getAllReferrals() {
         return this.referralService.getAllReferrals();
@@ -43,47 +46,58 @@ __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new referral link between users' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Referral created' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - can only create referrals for yourself' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [referral_dto_1.CreateReferralDto]),
+    __metadata("design:paramtypes", [referral_dto_1.CreateReferralDto, Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "createReferral", null);
 __decorate([
     (0, common_1.Get)('stats/:referrerId'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get summary stats of referrals for a user' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get summary stats of referrals for a user (Self or Admin)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Referral statistics' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - access denied' }),
     __param(0, (0, common_1.Param)('referrerId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getReferralStats", null);
 __decorate([
     (0, common_1.Get)('history/:referrerId'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get detailed referral history for a user' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get detailed referral history for a user (Self or Admin)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of referrals made' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - access denied' }),
     __param(0, (0, common_1.Param)('referrerId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getReferralHistory", null);
 __decorate([
     (0, common_1.Get)('rewards/:userId'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get pending/earned referral rewards for a user' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get pending/earned referral rewards for a user (Self or Admin)' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - access denied' }),
     __param(0, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getRewards", null);
 __decorate([
     (0, common_1.Get)('admin/all'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all referrals in the system (Admin)' }),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all referrals in the system (Admin only)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getAllReferrals", null);
 exports.ReferralController = ReferralController = __decorate([
     (0, swagger_1.ApiTags)('Referrals'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('referrals'),
     __metadata("design:paramtypes", [referral_service_1.ReferralService])
 ], ReferralController);

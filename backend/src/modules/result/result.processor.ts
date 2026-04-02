@@ -23,6 +23,16 @@ export class ResultProcessor extends WorkerHost {
       `Processing result for User: ${userId}, Test: ${testId}${jobId ? ` (Job: ${jobId})` : ' (Sync)'}`,
     );
 
+    const existing = await this.prisma.result.findUnique({
+      where: { id: resultId },
+      select: { submitTime: true },
+    });
+
+    if (existing?.submitTime) {
+      this.logger.log(`Result ${resultId} already processed. Skipping.`);
+      return;
+    }
+
     try {
       // 1. Fetch test with minimal fields
       const test = await this.prisma.test.findUnique({

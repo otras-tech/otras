@@ -6,61 +6,61 @@ export declare class TestController {
     constructor(testService: TestService);
     create(createTestDto: CreateTestDto): Promise<{
         exam: {
-            name: string;
             id: number;
+            name: string;
         };
-        name: string;
         id: number;
         createdAt: Date;
         _count: {
             questions: number;
         };
+        name: string;
     }>;
-    findAll(): import(".prisma/client").Prisma.PrismaPromise<{
+    findAll(cursor?: number, take?: number): Promise<{
         exam: {
-            name: string;
             id: number;
+            name: string;
         };
-        name: string;
         id: number;
         createdAt: Date;
         _count: {
             questions: number;
         };
+        name: string;
     }[]>;
-    findOne(id: number): import(".prisma/client").Prisma.Prisma__TestClient<{
+    findOne(id: number): Promise<{
         exam: {
-            name: string;
             id: number;
+            name: string;
             noOfQuestions: number | null;
         };
-        name: string;
         id: number;
         createdAt: Date;
+        name: string;
         questions: {
             subject: {
-                name: string;
                 id: number;
+                name: string;
             };
             id: number;
             text: string;
             options: string[];
         }[];
-    } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
-    update(id: string, updateTestDto: UpdateTestDto): Promise<{
-        isDeleted: boolean;
-        name: string;
-        id: number;
-        examId: number;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
-    remove(id: string): Promise<{
+    update(id: number, updateTestDto: UpdateTestDto): Promise<{
         isDeleted: boolean;
-        name: string;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        examId: number;
+    }>;
+    remove(id: number): Promise<{
+        isDeleted: boolean;
+        id: number;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        examId: number;
     }>;
 }

@@ -25,35 +25,23 @@ let UserController = class UserController {
     constructor(userService) {
         this.userService = userService;
     }
-    async findAll() {
-        return this.userService.findAll();
+    async findAll(cursor, take) {
+        return this.userService.findAll(cursor, take);
     }
     async findOne(id, req) {
-        if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
         return this.userService.findById(id);
     }
     async getDashboardData(id, req) {
-        if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
-        return this.userService.getDashboardData(id);
+        return this.userService.getDashboardData(req.user.id, req.user.role, id);
     }
     async update(id, data, req) {
-        if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
-        return this.userService.update(id, data);
+        return this.userService.update(req.user.id, req.user.role, id, data);
     }
-    async remove(id) {
-        return this.userService.remove(id);
+    async remove(id, req) {
+        return this.userService.remove(req.user.role, id);
     }
     async getTierStatus(id, req) {
-        if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
-        return this.userService.getTierStatus(id);
+        return this.userService.getTierStatus(req.user.id, req.user.role, id);
     }
 };
 exports.UserController = UserController;
@@ -62,14 +50,17 @@ __decorate([
     (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Find all users (Admin only)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of all users' }),
+    __param(0, (0, common_1.Query)('cursor', new common_1.ParseIntPipe({ optional: true }))),
+    __param(1, (0, common_1.Query)('take', new common_1.ParseIntPipe({ optional: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get user by ID (Self or Admin only)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'User record' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - Access denied' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'User not found' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
@@ -79,10 +70,9 @@ __decorate([
 ], UserController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/dashboard'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Get unified dashboard data (Results + Mock Attempts)',
-    }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get unified dashboard data (Results + Mock Attempts)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Aggregated dashboard statistics' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - Access denied' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -92,7 +82,8 @@ __decorate([
 __decorate([
     (0, common_1.Patch)(':id'),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
-    (0, swagger_1.ApiOperation)({ summary: 'Update your profile' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Update your profile (Self or Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - Access denied' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
@@ -103,14 +94,17 @@ __decorate([
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: 'Delete a user (Admin only)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Soft delete a user (Admin only)' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "remove", null);
 __decorate([
     (0, common_1.Get)(':id/tier-status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get tier status for a user (Self or Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - Access denied' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),

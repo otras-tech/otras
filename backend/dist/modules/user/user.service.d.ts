@@ -1,150 +1,150 @@
-import { PrismaService } from '../../database/prisma.service';
+import { UserRepository } from './repository/user.repository';
 import { RegisterDto } from '../auth/dto/auth.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResultService } from '../result/result.service';
 import { MockTestService } from '../mock-test/mock-test.service';
 export declare class UserService {
-    private prisma;
-    private resultService;
-    private mockTestService;
-    constructor(prisma: PrismaService, resultService: ResultService, mockTestService: MockTestService);
+    private readonly userRepository;
+    private readonly resultService;
+    private readonly mockTestService;
+    constructor(userRepository: UserRepository, resultService: ResultService, mockTestService: MockTestService);
     create(data: RegisterDto): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
-    } | null>;
+    } | undefined>;
     findByEmail(email: string): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     } | null>;
     findByOtrId(otrId: string): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     } | null>;
     findById(id: number): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     } | null>;
-    findAll(): Promise<{
+    findAll(cursor?: number, take?: number): Promise<{
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
+        email: string;
         otrId: string;
-        id: number;
         createdAt: Date;
     }[]>;
-    update(id: number, data: UpdateUserDto): Promise<{
+    update(requesterId: number, requesterRole: string, targetId: number, data: UpdateUserDto): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     }>;
-    remove(id: number): Promise<{
+    remove(requesterRole: string, id: number): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     }>;
-    getDashboardData(id: number): Promise<{
+    getDashboardData(requesterId: number, requesterRole: string, id: number): Promise<{
         user: {
             firstName: string;
             lastName: string;
@@ -160,11 +160,6 @@ export declare class UserService {
             quantScore: number;
             verbalScore: number;
         };
-        mockTests: {
-            score: number;
-            createdAt: Date;
-            subjectBreakdown: Record<string, unknown> | null;
-        }[];
         recentResults: {
             id: string;
             score: number;
@@ -175,18 +170,17 @@ export declare class UserService {
             };
         }[];
     }>;
-    private generateOtrId;
     getArthaProfile(userId: string): Promise<{
         userId: string;
         id: string;
+        readinessIndex: number;
+        percentile: number;
         logicalScore: number;
         quantScore: number;
         verbalScore: number;
-        percentile: number;
         tier1Progress: number;
         tier2Progress: number;
         tier3Progress: number;
-        readinessIndex: number;
         feedback: {
             id: string;
             createdAt: Date;
@@ -195,7 +189,7 @@ export declare class UserService {
             preparationAdvice: string | null;
         } | null;
     } | null>;
-    getTierStatus(userId: number): Promise<{
+    getTierStatus(requesterId: number, requesterRole: string, id: number): Promise<{
         tier1: {
             unlocked: boolean;
             completed: boolean;
@@ -215,4 +209,5 @@ export declare class UserService {
         hasActiveSubscription: boolean;
         hasExpiredSubscription: boolean;
     }>;
+    private generateOtrId;
 }

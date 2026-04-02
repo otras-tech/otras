@@ -49,23 +49,23 @@ const redis_service_1 = require("../../common/redis/redis.service");
 const user_service_1 = require("../user/user.service");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
-const prisma_service_1 = require("../../database/prisma.service");
+const auth_repository_1 = require("./repository/auth.repository");
 const bcrypt = __importStar(require("bcrypt"));
 const uuid_1 = require("uuid");
 let AuthService = AuthService_1 = class AuthService {
     userService;
     jwtService;
     configService;
-    prisma;
+    repository;
     redisService;
     logger = new common_1.Logger(AuthService_1.name);
     BCRYPT_ROUNDS = 12;
     MAX_SESSIONS = 5;
-    constructor(userService, jwtService, configService, prisma, redisService) {
+    constructor(userService, jwtService, configService, repository, redisService) {
         this.userService = userService;
         this.jwtService = jwtService;
         this.configService = configService;
-        this.prisma = prisma;
+        this.repository = repository;
         this.redisService = redisService;
     }
     async validateUser(loginId, pass) {
@@ -98,15 +98,11 @@ let AuthService = AuthService_1 = class AuthService {
         };
     }
     async logout(userId, jti) {
-        await this.prisma.refreshToken.deleteMany({
-            where: { id: jti, userId },
-        });
+        await this.repository.deleteTokenByJti(jti, userId);
         return { success: true };
     }
     async logoutAll(userId) {
-        await this.prisma.refreshToken.deleteMany({
-            where: { userId },
-        });
+        await this.repository.deleteTokensByUserId(userId);
         return { success: true };
     }
     async refreshTokens(userId, rt, jti) {
@@ -114,35 +110,31 @@ let AuthService = AuthService_1 = class AuthService {
         const lockTtl = 10000;
         const lockValue = await this.redisService.acquireLock(lockKey, lockTtl);
         if (!lockValue) {
-            this.logger.warn(`Refresh token request already in progress for user ${userId}, jti ${jti}`);
-            throw new common_1.HttpException('Too Many Requests - Rotation in progress', common_1.HttpStatus.TOO_MANY_REQUESTS);
+            this.logger.warn(`Refresh token rotation in progress for user ${userId}, jti ${jti}`);
+            throw new common_1.HttpException('Too Many Requests', common_1.HttpStatus.TOO_MANY_REQUESTS);
         }
         try {
-            const tokenRecord = await this.prisma.refreshToken.findUnique({
-                where: { id: jti },
-            });
+            const tokenRecord = await this.repository.findTokenById(jti);
             if (!tokenRecord || tokenRecord.userId !== userId) {
-                this.logger.warn(`Potential token theft or invalid JTI for user ${userId}`);
+                this.logger.warn(`Invalid JTI for user ${userId}`);
                 throw new common_1.ForbiddenException('Access Denied');
             }
             if (new Date() > tokenRecord.expiresAt) {
-                await this.prisma.refreshToken
-                    .delete({ where: { id: jti } })
-                    .catch(() => { });
+                await this.repository.deleteToken(jti);
                 throw new common_1.UnauthorizedException('Refresh token expired');
             }
             const rtMatches = await bcrypt.compare(rt, tokenRecord.tokenHash);
             if (!rtMatches) {
                 this.logger.error(`Token reuse detected for user ${userId}. Revoking all sessions.`);
                 await this.logoutAll(userId);
-                throw new common_1.ForbiddenException('Access Denied - Security Breach Detected');
+                throw new common_1.ForbiddenException('Security Breach Detected');
             }
             const user = await this.userService.findById(userId);
             if (!user || user.isDeleted) {
-                throw new common_1.ForbiddenException('User no longer exists or is deactivated');
+                throw new common_1.ForbiddenException('User deactivated');
             }
-            return await this.prisma.$transaction(async (tx) => {
-                await tx.refreshToken.delete({ where: { id: jti } });
+            return await this.repository.runTransaction(async (tx) => {
+                await this.repository.deleteToken(jti, tx);
                 return this.getTokens(user.id, user.email, user.role, tx);
             });
         }
@@ -151,7 +143,6 @@ let AuthService = AuthService_1 = class AuthService {
         }
     }
     async getTokens(userId, email, role, tx) {
-        const prisma = tx || this.prisma;
         const jti = (0, uuid_1.v4)();
         const [at, rt] = await Promise.all([
             this.jwtService.signAsync({ sub: userId, email, role }, {
@@ -163,31 +154,23 @@ let AuthService = AuthService_1 = class AuthService {
                 expiresIn: '7d',
             }),
         ]);
-        const sessionCount = await prisma.refreshToken.count({ where: { userId } });
+        const sessionCount = await this.repository.countTokensByUserId(userId, tx);
         if (sessionCount >= this.MAX_SESSIONS) {
-            const oldestSession = await prisma.refreshToken.findFirst({
-                where: { userId },
-                orderBy: { createdAt: 'asc' },
-            });
+            const oldestSession = await this.repository.findOldestSession(userId, tx);
             if (oldestSession) {
-                await prisma.refreshToken.delete({ where: { id: oldestSession.id } });
+                await this.repository.deleteToken(oldestSession.id, tx);
             }
         }
         const tokenHash = await bcrypt.hash(rt, this.BCRYPT_ROUNDS);
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
-        await prisma.refreshToken.create({
-            data: {
-                id: jti,
-                userId,
-                tokenHash,
-                expiresAt,
-            },
-        });
-        return {
-            access_token: at,
-            refresh_token: rt,
-        };
+        await this.repository.createRefreshToken({
+            id: jti,
+            userId,
+            tokenHash,
+            expiresAt,
+        }, tx);
+        return { access_token: at, refresh_token: rt };
     }
 };
 exports.AuthService = AuthService;
@@ -196,7 +179,7 @@ exports.AuthService = AuthService = AuthService_1 = __decorate([
     __metadata("design:paramtypes", [user_service_1.UserService,
         jwt_1.JwtService,
         config_1.ConfigService,
-        prisma_service_1.PrismaService,
+        auth_repository_1.AuthRepository,
         redis_service_1.RedisService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

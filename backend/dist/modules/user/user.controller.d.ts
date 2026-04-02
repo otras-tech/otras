@@ -3,35 +3,35 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export declare class UserController {
     private readonly userService;
     constructor(userService: UserService);
-    findAll(): Promise<{
+    findAll(cursor?: number, take?: number): Promise<{
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
+        email: string;
         otrId: string;
-        id: number;
         createdAt: Date;
     }[]>;
     findOne(id: number, req: any): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     } | null>;
     getDashboardData(id: number, req: any): Promise<{
@@ -50,11 +50,6 @@ export declare class UserController {
             quantScore: number;
             verbalScore: number;
         };
-        mockTests: {
-            score: number;
-            createdAt: Date;
-            subjectBreakdown: Record<string, unknown> | null;
-        }[];
         recentResults: {
             id: string;
             score: number;
@@ -69,42 +64,42 @@ export declare class UserController {
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     }>;
-    remove(id: number): Promise<{
+    remove(id: number, req: any): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
-        email: string;
+        id: number;
         firstName: string;
         lastName: string;
-        otrId: string;
+        email: string;
         age: number | null;
         category: string | null;
+        otrId: string;
         highestDegree: string | null;
         careerPreference: string | null;
         domicile: string | null;
         pincode: string | null;
-        referralCode: string;
-        id: number;
         createdAt: Date;
         updatedAt: Date;
         credits: number;
+        referralCode: string;
         preferredLanguage: string;
     }>;
     getTierStatus(id: number, req: any): Promise<{

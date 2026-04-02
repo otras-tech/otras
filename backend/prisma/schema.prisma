@@ -26,7 +26,7 @@ model User {
   credits               Int                        @default(0)
   referralCode          String                     @unique
   preferredLanguage     String                     @default("en")
-  isDeleted             Boolean                    @default(false) // ✅ Added for scalability
+  isDeleted             Boolean                    @default(false)
   role                  String                     @default("USER")
   refreshTokens         RefreshToken[]
   applications          Application[]
@@ -39,12 +39,12 @@ model User {
   results               Result[]
   studyPlans            StudyPlan[]
 
-  @@index([email]) // ✅ Added for scalability
-  @@index([otrId]) // ✅ Added for scalability
-  @@index([referralCode]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([email])
+  @@index([otrId])
+  @@index([referralCode])
+  @@index([createdAt])
   @@index([role])
-  @@index([role, isDeleted]) // ✅ Added for optimized RBAC + soft-delete filtering
+  @@index([role, isDeleted])
 }
 
 model Job {
@@ -55,10 +55,10 @@ model Job {
   status      String   @default("Open")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
-  isDeleted   Boolean  @default(false) // ✅ Added for scalability
+  isDeleted   Boolean  @default(false)
 
-  @@index([status]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Exam {
@@ -74,7 +74,7 @@ model Exam {
   pattern           String?
   shortDescription  String?
   applicationStatus String        @default("Application Success")
-  isDeleted         Boolean       @default(false) // ✅ Added for scalability
+  isDeleted         Boolean       @default(false)
   applications      Application[]
   mockTests         MockTest[]
   pyps              PYP[]
@@ -82,36 +82,40 @@ model Exam {
   tests             Test[]
   subjects          Subject[]     @relation("ExamToSubject")
 
-  @@index([name]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
+  @@index([name])
+  @@index([createdAt])
+  @@index([isDeleted, createdAt])
 }
 
 model Subject {
   id        Int        @id @default(autoincrement())
   name      String     @unique
-  createdAt DateTime   @default(now()) // ✅ Added for scalability
-  updatedAt DateTime   @default(now()) @updatedAt // ✅ Added for scalability
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  isDeleted Boolean    @default(false)
   questions Question[]
   exams     Exam[]     @relation("ExamToSubject")
 
-  @@index([name]) // ✅ Added for scalability
+  @@index([name])
+  @@index([isDeleted])
 }
 
 model Question {
-  id        Int      @id @default(autoincrement())
-  text      String
-  options   String[]
-  answer    String
+  id          Int      @id @default(autoincrement())
+  text        String
+  options     String[]
+  answer      String
   explanation String?
-  subjectId Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // ✅ Added for scalability
-  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  tests     Test[]   @relation("QuestionToTest")
+  subjectId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isDeleted   Boolean  @default(false)
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  tests       Test[]   @relation("QuestionToTest")
 
-  @@index([subjectId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([subjectId])
+  @@index([createdAt])
+  @@index([subjectId, isDeleted])
 }
 
 model Test {
@@ -119,16 +123,16 @@ model Test {
   name                  String
   examId                Int
   createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @default(now()) @updatedAt // ✅ Added for scalability
-  isDeleted             Boolean                    @default(false) // ✅ Added for scalability
+  updatedAt             DateTime                   @default(now()) @updatedAt
+  isDeleted             Boolean                    @default(false)
   careerReadinessScores CareerReadinessTestScore[]
   results               Result[]
   exam                  Exam                       @relation(fields: [examId], references: [id], onDelete: Cascade)
   questions             Question[]                 @relation("QuestionToTest")
 
-  @@index([examId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
+  @@index([examId])
+  @@index([createdAt])
+  @@index([isDeleted, createdAt])
 }
 
 model PYP {
@@ -137,11 +141,13 @@ model PYP {
   fileUrl   String
   examId    Int
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // ✅ Added for scalability
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
   exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
 
-  @@index([examId]) // ✅ Added for scalability
-  @@index([year]) // ✅ Added for scalability
+  @@index([examId])
+  @@index([year])
+  @@index([isDeleted, examId])
 }
 
 model Subscription {
@@ -151,11 +157,11 @@ model Subscription {
   features      String[]
   isRecommended Boolean   @default(false)
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt // ✅ Added for scalability
-  isDeleted     Boolean   @default(false) // ✅ Added for scalability
+  updatedAt     DateTime  @default(now()) @updatedAt
+  isDeleted     Boolean   @default(false)
   payments      Payment[]
 
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([createdAt])
 }
 
 model Admin {
@@ -164,10 +170,11 @@ model Admin {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt DateTime @default(now()) @updatedAt
+  isDeleted Boolean  @default(false)
 
-  @@index([username]) // ✅ Added for scalability
-  @@index([email]) // ✅ Added for scalability
+  @@index([username])
+  @@index([email])
 }
 
 model Result {
@@ -175,23 +182,22 @@ model Result {
   userId           Int
   testId           Int
   score            Float
-  subjectBreakdown Json // ⚠️ Consider normalization if frequent filtering is required
+  subjectBreakdown Json
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt // ✅ Added for scalability
-  isDeleted        Boolean   @default(false) // ✅ Added for scalability
+  updatedAt        DateTime  @updatedAt
+  isDeleted        Boolean   @default(false)
   tier             Int?
   startTime        DateTime?
   submitTime       DateTime?
   test             Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
   user             User      @relation(fields: [userId], references: [id])
 
-  @@index([userId]) // ✅ Added for scalability
-  @@index([testId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  @@index([userId, createdAt]) // ✅ Added for scalability
-  @@index([testId, createdAt]) // ✅ Added for optimized test analytics
-  @@index([isDeleted, createdAt]) // ✅ Added for optimized soft-delete filtering
-  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+  @@index([userId])
+  @@index([testId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([testId, createdAt])
+  @@index([isDeleted, createdAt])
 }
 
 model Application {
@@ -205,22 +211,25 @@ model Application {
   resultStatus      String   @default("Pending")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
-  isDeleted         Boolean  @default(false) // ✅ Added for scalability
+  isDeleted         Boolean  @default(false)
   exam              Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   user              User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, examId])
-  @@index([userId]) // ✅ Added for scalability
-  @@index([examId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  @@index([userId, examId]) // ✅ Added for scalability
-  @@index([examId, status]) // ✅ Added for optimized application tracking
+  @@index([userId])
+  @@index([examId])
+  @@index([createdAt])
+  @@index([userId, examId])
+  @@index([examId, status])
 }
 
 model MockTestCategory {
   id        Int        @id @default(autoincrement())
   name      String     @unique
+  isDeleted Boolean    @default(false)
   mockTests MockTest[]
+
+  @@index([isDeleted])
 }
 
 model MockTest {
@@ -234,15 +243,15 @@ model MockTest {
   examId          Int?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now()) @updatedAt
-  isDeleted       Boolean           @default(false) // ✅ Added for scalability
+  isDeleted       Boolean           @default(false)
   category        MockTestCategory  @relation(fields: [categoryId], references: [id])
   exam            Exam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
   attempts        MockTestAttempt[]
   referralRewards ReferralReward[]
 
-  @@index([examId]) // ✅ Added for scalability
-  @@index([categoryId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([examId])
+  @@index([categoryId])
+  @@index([createdAt])
 }
 
 model MockTestAttempt {
@@ -252,22 +261,21 @@ model MockTestAttempt {
   score            Float
   totalMarks       Float
   correctAnswers   Int?
-  subjectBreakdown Json? // ⚠️ Consider normalization if frequent filtering is required
+  subjectBreakdown Json?
   attemptedAt      DateTime  @default(now())
   startTime        DateTime?
   submitTime       DateTime?
-  updatedAt        DateTime  @updatedAt // ✅ Added for scalability
-  isDeleted        Boolean   @default(false) // ✅ Added for scalability
+  updatedAt        DateTime  @updatedAt
+  isDeleted        Boolean   @default(false)
   mockTest         MockTest  @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
   user             User      @relation(fields: [otrId], references: [otrId])
 
-  @@index([otrId]) // ✅ Added for scalability
-  @@index([mockTestId]) // ✅ Added for scalability
-  @@index([attemptedAt]) // ✅ Added for scalability
-  @@index([otrId, attemptedAt]) // ✅ Added for scalability
-  @@index([mockTestId, attemptedAt]) // ✅ Added for optimized mock analytics
-  @@index([otrId, isDeleted, attemptedAt]) // ✅ Added for optimized soft-delete filtering
-  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+  @@index([otrId])
+  @@index([mockTestId])
+  @@index([attemptedAt])
+  @@index([otrId, attemptedAt])
+  @@index([mockTestId, attemptedAt])
+  @@index([otrId, isDeleted, attemptedAt])
 }
 
 model CareerReadinessTestScore {
@@ -279,17 +287,19 @@ model CareerReadinessTestScore {
   correctAnswers   Int
   wrongAnswers     Int
   negativeMarks    Float
-  subjectBreakdown Json // ⚠️ Consider normalization if frequent filtering is required
+  subjectBreakdown Json
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt // ✅ Added for scalability
+  updatedAt        DateTime @updatedAt
+  isDeleted        Boolean  @default(false)
   user             User     @relation(fields: [otrId], references: [otrId])
   test             Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   @@unique([otrId, testId], name: "otrId_testId")
-  @@index([otrId]) // ✅ Added for scalability
-  @@index([testId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  @@index([otrId, testId]) // ✅ Added for scalability (Composite for query patterns)
+  @@index([otrId])
+  @@index([testId])
+  @@index([createdAt])
+  @@index([otrId, testId])
+  @@index([isDeleted, createdAt])
 }
 
 model Payment {
@@ -302,17 +312,19 @@ model Payment {
   amount            Float
   currency          String       @default("INR")
   status            String       @default("created")
+  idempotencyKey    String?      @unique
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @default(now()) @updatedAt
-  isDeleted         Boolean      @default(false) // ✅ Added for scalability
+  isDeleted         Boolean      @default(false)
   paymentMethod     String       @default("razorpay")
   subscription      Subscription @relation(fields: [subscriptionId], references: [id])
   user              User         @relation(fields: [userId], references: [id])
 
-  @@index([userId]) // ✅ Added for scalability
-  @@index([subscriptionId]) // ✅ Added for scalability
-  @@index([razorpayOrderId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([razorpayOrderId])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model Referral {
@@ -323,12 +335,15 @@ model Referral {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
   creditsEarned Int      @default(0)
+  isDeleted     Boolean  @default(false)
   referrer      User     @relation("ReferrerRelation", fields: [referrerId], references: [id])
 
   @@unique([referrerId, refereeOtrId])
-  @@index([referrerId]) // ✅ Added for scalability
-  @@index([refereeOtrId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([referrerId])
+  @@index([refereeOtrId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([referrerId, isDeleted])
 }
 
 model ReferralReward {
@@ -337,12 +352,14 @@ model ReferralReward {
   mockTestId Int
   isRedeemed Boolean  @default(false)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt  DateTime @default(now()) @updatedAt
+  isDeleted  Boolean  @default(false)
   mockTest   MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
 
-  @@index([userId]) // ✅ Added for scalability
-  @@index([mockTestId]) // ✅ Added for scalability
+  @@index([userId])
+  @@index([mockTestId])
+  @@index([isDeleted])
 }
 
 model StudyPlan {
@@ -360,13 +377,15 @@ model StudyPlan {
   revisionStrategy    String
   preferredStudyTimes String
   createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt           DateTime       @default(now()) @updatedAt
+  isDeleted           Boolean        @default(false)
   exam                Exam?          @relation(fields: [examId], references: [id], onDelete: Cascade)
   user                User           @relation(fields: [userId], references: [id])
   days                StudyPlanDay[]
 
-  @@index([userId]) // ✅ Added for scalability
-  @@index([examId]) // ✅ Added for scalability
+  @@index([userId])
+  @@index([examId])
+  @@index([isDeleted, createdAt])
 }
 
 model StudyPlanDay {
@@ -374,12 +393,14 @@ model StudyPlanDay {
   day        String
   planId     String
   date       DateTime?
-  createdAt  DateTime        @default(now()) // ✅ Added for scalability
-  updatedAt  DateTime        @default(now()) @updatedAt // ✅ Added for scalability
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @default(now()) @updatedAt
+  isDeleted  Boolean         @default(false)
   activities StudyActivity[]
   plan       StudyPlan       @relation(fields: [planId], references: [id])
 
-  @@index([planId]) // ✅ Added for scalability
+  @@index([planId])
+  @@index([isDeleted])
 }
 
 model StudyActivity {
@@ -390,11 +411,13 @@ model StudyActivity {
   completed   Boolean      @default(false)
   missed      Boolean      @default(false)
   dayId       String
-  createdAt   DateTime     @default(now()) // ✅ Added for scalability
-  updatedAt   DateTime     @default(now()) @updatedAt // ✅ Added for scalability
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
+  isDeleted   Boolean      @default(false)
   day         StudyPlanDay @relation(fields: [dayId], references: [id])
 
-  @@index([dayId]) // ✅ Added for scalability
+  @@index([dayId])
+  @@index([isDeleted])
 }
 
 model ArthaProfile {
@@ -409,12 +432,14 @@ model ArthaProfile {
   tier2Progress  Float
   tier3Progress  Float
   createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt      DateTime              @default(now()) @updatedAt
+  isDeleted      Boolean               @default(false)
   readinessIndex Float                 @default(0)
   assessments    ArthaAssessment[]
   feedback       IntelligenceFeedback?
 
-  @@index([userId]) // ✅ Added for scalability
+  @@index([userId])
+  @@index([isDeleted])
 }
 
 model ArthaAssessment {
@@ -425,7 +450,7 @@ model ArthaAssessment {
   logicalScore   Float?
   quantScore     Float?
   verbalScore    Float?
-  subjectScores  Json? // ⚠️ Consider normalization if frequent filtering is required
+  subjectScores  Json?
   accuracy       Float?
   speed          Float?
   consistency    Float?
@@ -433,18 +458,20 @@ model ArthaAssessment {
   startTime      DateTime?
   submitTime     DateTime?
   createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt      DateTime               @default(now()) @updatedAt
   readinessIndex Float?
   score          Float?
   totalMarks     Int?
   status         String                 @default("COMPLETED")
   jobId          String?
+  isDeleted      Boolean                @default(false)
   profile        ArthaProfile           @relation(fields: [profileId], references: [id])
   attempts       ArthaQuestionAttempt[]
 
-  @@index([profileId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
-  // ⚠️ High Growth Table: Consider table partitioning (by date or userId)
+  @@index([profileId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([profileId, isDeleted, createdAt])
 }
 
 model ArthaQuestionAttempt {
@@ -455,11 +482,13 @@ model ArthaQuestionAttempt {
   isCorrect      Boolean
   timeTaken      Int
   attemptedAt    DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt      DateTime        @default(now()) @updatedAt
+  isDeleted      Boolean         @default(false)
   assessment     ArthaAssessment @relation(fields: [assessmentId], references: [id])
 
-  @@index([assessmentId]) // ✅ Added for scalability
-  @@index([questionId]) // ✅ Added for scalability
+  @@index([assessmentId])
+  @@index([questionId])
+  @@index([isDeleted])
 }
 
 model IntelligenceFeedback {
@@ -468,7 +497,8 @@ model IntelligenceFeedback {
   logicalFoundation  String?
   subjectDepth       String?
   createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt          DateTime     @default(now()) @updatedAt
+  isDeleted          Boolean      @default(false)
   readinessInsight   String?
   accuracyInsight    String?
   consistencyInsight String?
@@ -479,6 +509,8 @@ model IntelligenceFeedback {
   weakAreas          String?
   examSuggestions    String?
   ArthaProfile       ArthaProfile @relation(fields: [profileId], references: [id])
+
+  @@index([isDeleted])
 }
 
 model ArthaRecentReport {
@@ -493,13 +525,15 @@ model ArthaRecentReport {
   readinessIndex   Float?
   percentile       Float?
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt // ✅ Added for scalability
-  subjectBreakdown Json? // ⚠️ Consider normalization if frequent filtering is required
+  updatedAt        DateTime @updatedAt
+  isDeleted        Boolean  @default(false)
+  subjectBreakdown Json?
   user             User     @relation(fields: [otrId], references: [otrId])
 
   @@unique([otrId, tier])
-  @@index([otrId]) // ✅ Added for scalability
-  @@index([createdAt]) // ✅ Added for scalability
+  @@index([otrId])
+  @@index([createdAt])
+  @@index([isDeleted, createdAt])
 }
 
 model IntelligenceProfile {
@@ -513,10 +547,12 @@ model IntelligenceProfile {
   confidenceIndex Int
   aspirations     String
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt       DateTime @default(now()) @updatedAt
+  isDeleted       Boolean  @default(false)
   roadmap         Roadmap?
 
-  @@index([userId]) // ✅ Added for scalability
+  @@index([userId])
+  @@index([isDeleted])
 }
 
 model Roadmap {
@@ -529,25 +565,24 @@ model Roadmap {
   status              String                @default("COMPLETED")
   jobId               String?
   createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @default(now()) @updatedAt // ✅ Added for scalability
+  updatedAt           DateTime            @default(now()) @updatedAt
+  isDeleted           Boolean             @default(false)
   IntelligenceProfile IntelligenceProfile @relation(fields: [profileId], references: [id])
+
+  @@index([isDeleted])
+  @@index([status])
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid()) // jti
+  id        String   @id @default(uuid())
   userId    Int
   tokenHash String
   expiresAt DateTime
   createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([isDeleted])
 }
-
-// 🚀 SCALABILITY RECOMMENDATIONS (500K-1M USERS)
-// 1. PAGINATION: Use cursor-based pagination (using ID or createdAt) for large lists to avoid performance degradation.
-// 2. CACHING: Use Redis to cache frequently accessed data like Exams, MockTests, and User Sessions.
-// 3. ASYNC PROCESSING: Use BullMQ or RabbitMQ for heavy database writes: Result creation, Analytics, and Payment processing.
-// 4. DATABASE: Use Read Replicas (Prisma supports this via multi-datasource or middleware) to offload read queries.
-// 5. PARTITIONING: Implement table partitioning in PostgreSQL for high-growth tables (Result, MockTestAttempt, ArthaAssessment).

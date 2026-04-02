@@ -1,27 +1,32 @@
+import { CategoryRepository } from './repository/category.repository';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { PrismaService } from '../../database/prisma.service';
 export declare class CategoryService {
-    private prisma;
-    constructor(prisma: PrismaService);
-    create(createCategoryDto: CreateCategoryDto): import(".prisma/client").Prisma.Prisma__MockTestCategoryClient<{
-        name: string;
+    private readonly categoryRepository;
+    constructor(categoryRepository: CategoryRepository);
+    create(createCategoryDto: CreateCategoryDto): Promise<{
+        isDeleted: boolean;
         id: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
-    findAll(): import(".prisma/client").Prisma.PrismaPromise<{
         name: string;
+    }>;
+    findAll(): Promise<{
+        isDeleted: boolean;
         id: number;
+        name: string;
     }[]>;
-    findOne(id: number): import(".prisma/client").Prisma.Prisma__MockTestCategoryClient<{
-        name: string;
+    findOne(id: number): Promise<{
+        isDeleted: boolean;
         id: number;
-    } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
-    update(id: number, updateCategoryDto: UpdateCategoryDto): import(".prisma/client").Prisma.Prisma__MockTestCategoryClient<{
         name: string;
+    }>;
+    update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<{
+        isDeleted: boolean;
         id: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
-    remove(id: number): import(".prisma/client").Prisma.Prisma__MockTestCategoryClient<{
         name: string;
+    }>;
+    remove(id: number): Promise<{
+        isDeleted: boolean;
         id: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+        name: string;
+    }>;
 }

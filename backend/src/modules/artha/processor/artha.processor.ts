@@ -49,6 +49,12 @@ export class ArthaProcessor extends WorkerHost {
     tier: number,
     inputData: Record<string, unknown>,
   ) {
+    const assessment = await this.repository.findAssessmentById(assessmentId);
+    if (assessment?.status === 'COMPLETED') {
+      this.logger.log(`Assessment ${assessmentId} already completed. Skipping.`);
+      return;
+    }
+
     // Update status to PROCESSING
     await this.repository.completeAssessment(assessmentId, {
       status: 'PROCESSING',

@@ -1,40 +1,42 @@
-import { PrismaService } from '../../database/prisma.service';
+import { PypRepository } from './repository/pyp.repository';
 export declare class PypService {
-    private prisma;
-    constructor(prisma: PrismaService);
+    private readonly pypRepository;
+    constructor(pypRepository: PypRepository);
     create(data: {
         year: number;
         fileUrl: string;
         examId: number;
     }): Promise<{
+        isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
+        examId: number;
         year: number;
         fileUrl: string;
     }>;
     findAll(): Promise<({
         exam: {
             isDeleted: boolean;
-            pattern: string | null;
-            name: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            applicationStatus: string;
+            pattern: string | null;
             cutoff: number | null;
             syllabus: string | null;
             eligibility: string | null;
             longDescription: string | null;
             noOfQuestions: number | null;
             shortDescription: string | null;
-            applicationStatus: string;
         };
     } & {
+        isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
+        examId: number;
         year: number;
         fileUrl: string;
     })[]>;
@@ -43,18 +45,20 @@ export declare class PypService {
         fileUrl?: string;
         examId?: number;
     }): Promise<{
+        isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
+        examId: number;
         year: number;
         fileUrl: string;
     }>;
     remove(id: number): Promise<{
+        isDeleted: boolean;
         id: number;
-        examId: number;
         createdAt: Date;
         updatedAt: Date;
+        examId: number;
         year: number;
         fileUrl: string;
     }>;

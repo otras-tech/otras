@@ -10,7 +10,7 @@ import {
   UsePipes,
   ValidationPipe,
   Request,
-  ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,65 +35,60 @@ export class UserController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Find all users (Admin only)' })
   @ApiResponse({ status: 200, description: 'List of all users' })
-  async findAll() {
-    return this.userService.findAll();
+  async findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.userService.findAll(cursor, take);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID (Self or Admin only)' })
   @ApiResponse({ status: 200, description: 'User record' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
+    // Ownership enforced in service
     return this.userService.findById(id);
   }
 
   @Get(':id/dashboard')
-  @ApiOperation({
-    summary: 'Get unified dashboard data (Results + Mock Attempts)',
-  })
+  @ApiOperation({ summary: 'Get unified dashboard data (Results + Mock Attempts)' })
   @ApiResponse({ status: 200, description: 'Aggregated dashboard statistics' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   async getDashboardData(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: any,
   ) {
-    if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
-    return this.userService.getDashboardData(id);
+    return this.userService.getDashboardData(req.user.id, req.user.role, id);
   }
 
   @Patch(':id')
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  @ApiOperation({ summary: 'Update your profile' })
+  @ApiOperation({ summary: 'Update your profile (Self or Admin only)' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateUserDto,
     @Request() req: any,
   ) {
-    if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
-    return this.userService.update(id, data);
+    return this.userService.update(req.user.id, req.user.role, id, data);
   }
 
   @Delete(':id')
-  @Roles('ADMIN') // Usually only Admins can delete users
-  @ApiOperation({ summary: 'Delete a user (Admin only)' })
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.remove(id);
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Soft delete a user (Admin only)' })
+  async remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.userService.remove(req.user.role, id);
   }
 
   @Get(':id/tier-status')
+  @ApiOperation({ summary: 'Get tier status for a user (Self or Admin only)' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   async getTierStatus(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: any,
   ) {
-    if (req.user.id !== id && req.user.role.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
-    return this.userService.getTierStatus(id);
+    return this.userService.getTierStatus(req.user.id, req.user.role, id);
   }
 }

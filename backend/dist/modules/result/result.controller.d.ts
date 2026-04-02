@@ -13,10 +13,10 @@ export declare class ResultController {
     }>;
     getUserResults(userId: number, req: any, cursor?: number): Promise<{
         test: {
-            name: string;
             _count: {
                 questions: number;
             };
+            name: string;
         };
         id: number;
         createdAt: Date;

@@ -66,10 +66,7 @@ export class MockTestController {
     @Body() dto: StartMockAttemptDto,
     @CurrentUser() user: RequestUser,
   ) {
-    if (user.otrId !== dto.otrId) {
-      throw new ForbiddenException('Cannot start attempt for another user');
-    }
-    return this.mockTestService.startAttempt(dto);
+    return this.mockTestService.startAttempt(user.otrId!, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -82,10 +79,7 @@ export class MockTestController {
     @Body() dto: SubmitMockAttemptDto,
     @CurrentUser() user: RequestUser,
   ) {
-    if (user.otrId !== dto.otrId) {
-      throw new ForbiddenException('Cannot submit for another user');
-    }
-    return this.mockTestService.submitAttempt(dto);
+    return this.mockTestService.submitAttempt(user.otrId!, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -98,10 +92,7 @@ export class MockTestController {
     @Body() dto: SubmitExamAttemptDto,
     @CurrentUser() user: RequestUser,
   ) {
-    if (user.otrId !== dto.otrId) {
-      throw new ForbiddenException('Cannot submit for another user');
-    }
-    return this.mockTestService.submitExamAttempt(dto);
+    return this.mockTestService.submitExamAttempt(user.otrId!, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -112,10 +103,7 @@ export class MockTestController {
     @Param('otrId') otrId: string,
     @CurrentUser() user: RequestUser,
   ) {
-    if (user.otrId !== otrId) {
-      throw new ForbiddenException('Access denied');
-    }
-    return this.mockTestService.getUserMockAttempts(otrId);
+    return this.mockTestService.getUserMockAttempts(user.otrId!, otrId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -127,10 +115,7 @@ export class MockTestController {
     @Param('otrId') otrId: string,
     @CurrentUser() user: RequestUser,
   ) {
-    if (user.otrId !== otrId) {
-      throw new ForbiddenException('Access denied');
-    }
-    return this.mockTestService.calculateRank(mockTestId, otrId);
+    return this.mockTestService.calculateRank(user.otrId!, mockTestId, otrId);
   }
 
   @Get(':id')

@@ -4,33 +4,12 @@ import {
   InternalServerErrorException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StudyPlanRepository } from '../repository/study-plan.repository';
 import { ReschedulerService } from './rescheduler.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
-
-interface StudyActivity {
-  id: string;
-  timeSlot: string;
-  description: string;
-  focusArea: string | null;
-  completed: boolean;
-  missed: boolean;
-  dayId: string;
-}
-
-interface StudyPlanDay {
-  id: string;
-  day: string;
-  date: Date | null;
-  activities: StudyActivity[];
-}
-
-interface StudyPlan {
-  id: string;
-  days: StudyPlanDay[];
-}
 
 @Injectable()
 export class StudyPlanService {
@@ -42,13 +21,15 @@ export class StudyPlanService {
     private readonly configService: ConfigService,
   ) {}
 
-  async generate(dto: CreateStudyPlanDto) {
+  async generate(requesterId: number, requesterRole: string, dto: CreateStudyPlanDto) {
+    if (requesterId !== dto.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Cannot generate study plan for another user');
+    }
+
     try {
       this.logger.log(`Study Plan: Generating plan for ${dto.targetExam}`);
 
-      this.logger.log(`Checking existence for User ID: ${dto.userId}`);
       const userExists = await this.repository.userExists(dto.userId);
-      this.logger.log(`User exists: ${userExists}`);
       if (!userExists) {
         throw new NotFoundException(`User with ID ${dto.userId} not found.`);
       }
@@ -95,8 +76,8 @@ export class StudyPlanService {
         );
       }
     } catch (error) {
+      if (error instanceof ForbiddenException || error instanceof NotFoundException || error instanceof InternalServerErrorException) throw error;
       this.logger.error('FATAL: StudyPlan Service Error:', error);
-      if (error instanceof InternalServerErrorException) throw error;
       throw new BadRequestException(
         `Backend Error: ${(error as Error).message}`,
       );
@@ -104,9 +85,15 @@ export class StudyPlanService {
   }
 
   async save(
+    requesterId: number,
+    requesterRole: string,
     dto: CreateStudyPlanDto,
     aiData: Record<string, unknown> & { days?: unknown[] },
   ) {
+    if (requesterId !== dto.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Cannot save study plan for another user');
+    }
+
     const processedData = this.assignSequentialDates(aiData);
     const days = (processedData.days as Record<string, unknown>[]) || [];
 
@@ -125,9 +112,6 @@ export class StudyPlanService {
     startDate.setDate(today.getDate() + 1);
     startDate.setHours(0, 0, 0, 0);
 
-    this.logger.log(`TODAY: ${today.toISOString()}`);
-    this.logger.log(`START DATE (TOMORROW): ${startDate.toISOString()}`);
-
     const updatedDays = (aiData.days as Record<string, unknown>[]).map(
       (dayPlan, index) => {
         const currentDate = new Date(startDate);
@@ -136,11 +120,6 @@ export class StudyPlanService {
         const dayName = currentDate.toLocaleDateString('en-US', {
           weekday: 'short',
         });
-
-        this.logger.log(
-          `GENERATED DATE for Day ${index + 1}: ${currentDate.toISOString()}`,
-        );
-        this.logger.log(`DAY NAME for Day ${index + 1}: ${dayName}`);
 
         return {
           ...dayPlan,
@@ -156,28 +135,45 @@ export class StudyPlanService {
     };
   }
 
-  async findByUserId(userId: number) {
+  async findByUserId(requesterId: number, requesterRole: string, userId: number) {
+    if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
     const plan = await this.repository.findByUserId(userId);
-    // Process missed tasks for the active plan
     if (plan) {
       await this.processMissedTasks(plan.id);
     }
-    return this.repository.findByUserId(userId); // Re-fetch after processing
+    return this.repository.findByUserId(userId);
   }
 
-  async findOne(id: string) {
+  async findOne(requesterId: number, requesterRole: string, id: string) {
+    const plan = await this.repository.findById(id);
+    if (!plan) throw new NotFoundException('Plan not found');
+
+    if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
     await this.processMissedTasks(id);
     return this.repository.findById(id);
   }
 
   async updateActivityStatus(
+    requesterId: number,
+    requesterRole: string,
     activityId: string,
     userId: number,
     status: { completed?: boolean; missed?: boolean },
   ) {
+    if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
     this.logger.log(
-      `Study Plan: Updating activity ${activityId} status (completed: ${status.completed}, missed: ${status.missed}) for user ${userId}`,
+      `Study Plan: Updating activity ${activityId} (completed: ${status.completed}, missed: ${status.missed})`,
     );
+
     let activity;
     try {
       activity = await this.repository.updateActivityStatus(activityId, {
@@ -186,45 +182,30 @@ export class StudyPlanService {
       });
     } catch (e) {
       const err = e as Error & { code?: string };
-      this.logger.error(
-        `Failed to update activity ${activityId}: ${err.message}`,
-      );
       if (err.code === 'P2025') {
-        throw new NotFoundException(
-          `Activity with ID ${activityId} not found.`,
-        );
+        throw new NotFoundException(`Activity with ID ${activityId} not found.`);
       }
-      throw new InternalServerErrorException(
-        `Failed to update activity: ${err.message}`,
-      );
-    }
-
-    if (status.completed) {
-      this.logger.log(`Study Plan: Task completed - ${activity.description}`);
+      throw new InternalServerErrorException(`Failed to update activity: ${err.message}`);
     }
 
     if (status.missed) {
-      const activityWithDay =
-        await this.repository.findActivityWithDay(activityId);
+      const activityWithDay = await this.repository.findActivityWithDay(activityId);
       if (activityWithDay) {
+        const day = (activityWithDay as any).day;
         await this.rescheduler.storeMissedTask(userId, {
           activityId: activityWithDay.id,
           description: activityWithDay.description,
           timeSlot: activityWithDay.timeSlot,
-          date: activityWithDay.day?.date?.toISOString() ?? '',
+          date: day?.date?.toISOString() ?? '',
         });
-        const planId = activityWithDay.day?.planId;
+        const planId = day?.planId;
         if (planId) {
           const plan = await this.repository.findById(planId);
-          if (plan && plan.days && plan.days.length > 0) {
-            const lastDay = plan.days[plan.days.length - 1];
-            await this.repository.relocateActivity(
-              activityWithDay.id,
-              lastDay.id,
-            );
-            this.logger.log(
-              `MANUAL RESCHEDULER: Relocated activity ${activityId} to last day [${lastDay.id}]`,
-            );
+          const days = (plan as any)?.days;
+          if (plan && days && days.length > 0) {
+            const lastDay = days[days.length - 1];
+            await this.repository.relocateActivity(activityWithDay.id, lastDay.id);
+            this.logger.log(`Rescheduled: Relocated missed activity ${activityId} to last day`);
           }
         }
       }
@@ -234,81 +215,57 @@ export class StudyPlanService {
 
   async processMissedTasks(planId: string) {
     const plan = await this.repository.findById(planId);
-    if (!plan || !plan.days || plan.days.length === 0) return 0;
+    if (!plan || !(plan as any).days || (plan as any).days.length === 0) return 0;
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    this.logger.log(
-      `AUTO-SCHEDULER: Checking missed tasks for plan ${planId}. Today: ${today.toLocaleDateString()}`,
-    );
-
-    const lastDay = plan.days[plan.days.length - 1];
+    const days = (plan as any).days;
+    const lastDay = days[days.length - 1];
     let movedCount = 0;
 
-    for (const day of plan.days) {
+    for (const day of days) {
       if (!day.date) continue;
-
       const dayDate = new Date(day.date);
       dayDate.setHours(0, 0, 0, 0);
 
       if (dayDate < today) {
         for (const activity of day.activities) {
-          // If not completed and not already on the last day, move it
           if (!activity.completed && activity.dayId !== lastDay.id) {
-            this.logger.log(
-              `RELOCATING MISSED TASK: [${activity.id}] "${activity.description}" from ${dayDate.toLocaleDateString()} to FINAL DAY of schedule.`,
-            );
             await this.repository.relocateActivity(activity.id, lastDay.id);
             movedCount++;
           }
         }
       }
     }
-
-    if (movedCount > 0) {
-      this.logger.log(
-        `AUTO-SCHEDULER: Relocated ${movedCount} tasks for plan ${planId}.`,
-      );
-    }
-
     return movedCount;
   }
 
-  async moveToNextDay(planId: string) {
-    const movedCount = await this.processMissedTasks(planId);
-    return { message: 'Missed tasks processed', movedCount };
-  }
-
-  async moveMissedTasks(planId: string) {
+  async simulateDayPassed(requesterId: number, requesterRole: string, planId: string) {
     const plan = await this.repository.findById(planId);
     if (!plan) throw new NotFoundException('Plan not found');
 
-    // Simulate time passing by shifting dates back
-    for (const day of plan.days) {
+    if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const days = (plan as any).days;
+    for (const day of days) {
       if (!day.date) continue;
-      const originalDate = new Date(day.date);
-      const newDate = new Date(originalDate.getTime() - 24 * 60 * 60 * 1000);
+      const newDate = new Date(new Date(day.date).getTime() - 24 * 60 * 60 * 1000);
       await this.repository.updateDayDate(day.id, newDate);
     }
 
     const movedCount = await this.processMissedTasks(planId);
-    return {
-      message:
-        'Simulation successful: Dates shifted and missed tasks relocated.',
-      movedCount,
-    };
+    return { message: 'Simulation successful: Missed tasks relocated.', movedCount };
   }
 
-  async simulateDayPassed(planId: string) {
-    return this.moveMissedTasks(planId);
-  }
+  async delete(requesterId: number, requesterRole: string, id: string) {
+    const plan = await this.repository.findById(id);
+    if (!plan) throw new NotFoundException('Plan not found');
 
-  private async viewPlan(id: string) {
-    return this.repository.findById(id);
-  }
-
-  async delete(id: string) {
+    if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
     return this.repository.delete(id);
   }
 }

@@ -16,6 +16,7 @@ const passport_1 = require("@nestjs/passport");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
 const token_cleanup_service_1 = require("./token-cleanup.service");
+const auth_repository_1 = require("./repository/auth.repository");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -28,6 +29,7 @@ exports.AuthModule = AuthModule = __decorate([
         ],
         providers: [
             auth_service_1.AuthService,
+            auth_repository_1.AuthRepository,
             jwt_strategy_1.JwtStrategy,
             jwt_refresh_strategy_1.JwtRefreshStrategy,
             token_cleanup_service_1.TokenCleanupService,

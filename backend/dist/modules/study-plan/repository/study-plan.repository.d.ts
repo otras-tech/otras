@@ -9,17 +9,19 @@ export declare class StudyPlanRepository {
     createPlanWithSchedule(dto: CreateStudyPlanDto, days: any[]): Promise<{
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -29,16 +31,17 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
@@ -47,17 +50,19 @@ export declare class StudyPlanRepository {
     findByUserId(userId: number): Promise<({
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -67,16 +72,17 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
@@ -85,17 +91,19 @@ export declare class StudyPlanRepository {
     findById(id: string): Promise<({
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -105,16 +113,17 @@ export declare class StudyPlanRepository {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
@@ -127,11 +136,12 @@ export declare class StudyPlanRepository {
             planId: string;
         };
     } & {
-        description: string;
+        isDeleted: boolean;
         id: string;
-        completed: boolean;
         createdAt: Date;
         updatedAt: Date;
+        description: string;
+        completed: boolean;
         timeSlot: string;
         focusArea: string | null;
         missed: boolean;
@@ -144,28 +154,31 @@ export declare class StudyPlanRepository {
             planId: string;
         };
     } & {
-        description: string;
+        isDeleted: boolean;
         id: string;
-        completed: boolean;
         createdAt: Date;
         updatedAt: Date;
+        description: string;
+        completed: boolean;
         timeSlot: string;
         focusArea: string | null;
         missed: boolean;
         dayId: string;
     }>;
     relocateActivity(activityId: string, targetDayId: string): Promise<{
-        description: string;
+        isDeleted: boolean;
         id: string;
-        completed: boolean;
         createdAt: Date;
         updatedAt: Date;
+        description: string;
+        completed: boolean;
         timeSlot: string;
         focusArea: string | null;
         missed: boolean;
         dayId: string;
     }>;
     updateDayDate(dayId: string, newDate: Date): Promise<{
+        isDeleted: boolean;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -176,16 +189,17 @@ export declare class StudyPlanRepository {
     deleteByUserId(userId: number): Promise<Prisma.BatchPayload>;
     delete(id: string): Promise<{
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;

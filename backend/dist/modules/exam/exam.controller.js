@@ -126,6 +126,9 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ExamController.prototype, "findOne", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'USER'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Get)(':id/test'),
     (0, swagger_1.ApiOperation)({
         summary: 'Get a random existing test for this exam (No side effects)',
@@ -137,6 +140,9 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ExamController.prototype, "getTest", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Post)(':id/test'),
     (0, swagger_1.ApiOperation)({ summary: 'Generate a new test for this exam (Side effects)' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'New test generated' }),

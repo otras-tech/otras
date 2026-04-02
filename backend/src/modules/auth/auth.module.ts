@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { TokenCleanupService } from './token-cleanup.service';
+import { AuthRepository } from './repository/auth.repository';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TokenCleanupService } from './token-cleanup.service';
   ],
   providers: [
     AuthService,
+    AuthRepository,
     JwtStrategy,
     JwtRefreshStrategy,
     TokenCleanupService,

@@ -44,16 +44,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const user_repository_1 = require("./repository/user.repository");
 const result_service_1 = require("../result/result.service");
 const mock_test_service_1 = require("../mock-test/mock-test.service");
 const bcrypt = __importStar(require("bcrypt"));
 let UserService = class UserService {
-    prisma;
+    userRepository;
     resultService;
     mockTestService;
-    constructor(prisma, resultService, mockTestService) {
-        this.prisma = prisma;
+    constructor(userRepository, resultService, mockTestService) {
+        this.userRepository = userRepository;
         this.resultService = resultService;
         this.mockTestService = mockTestService;
     }
@@ -63,47 +63,26 @@ let UserService = class UserService {
             userData.pincode = userData.pincode.toString();
         }
         const hashedPassword = await bcrypt.hash(userData.password, 12);
-        const otrId = this.generateOtrId(userData.domicile || '', userData.pincode || '');
-        try {
-            const tempCode = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            const newUser = await this.prisma.user.create({
-                data: {
-                    ...userData,
-                    password: hashedPassword,
-                    otrId,
-                    referralCode: tempCode,
-                },
-            });
-            let currentReferralCode = null;
-            let batchAttempts = 0;
-            while (!currentReferralCode && batchAttempts < 5) {
-                const batch = Array.from({ length: 10 }, () => 'REF' + Math.floor(100000 + Math.random() * 900000));
-                const collisions = await this.prisma.user.findMany({
-                    where: { referralCode: { in: batch } },
-                    select: { referralCode: true }
-                });
-                const collisionSet = new Set(collisions.map(c => c.referralCode));
-                const available = batch.find(code => !collisionSet.has(code));
-                if (available) {
-                    currentReferralCode = available;
-                }
-                batchAttempts++;
-            }
-            const finalReferralCode = currentReferralCode || 'REF' + Date.now().toString().slice(-6);
-            await this.prisma.user.update({
-                where: { id: newUser.id },
-                data: { referralCode: finalReferralCode },
-            });
-            if (referralCode) {
-                const referrer = await this.prisma.user.findUnique({
-                    where: { referralCode },
-                });
-                if (referrer && referrer.id !== newUser.id) {
-                    const existingReferral = await this.prisma.referral.findFirst({
-                        where: { refereeOtrId: newUser.otrId },
+        let attempts = 0;
+        const maxAttempts = 3;
+        while (attempts < maxAttempts) {
+            try {
+                const otrId = this.generateOtrId(userData.domicile || '', userData.pincode || '');
+                const tempCode = `REF${Math.floor(100000 + Math.random() * 900000)}`;
+                return await this.userRepository.$transaction(async (tx) => {
+                    const newUser = await tx.user.create({
+                        data: {
+                            ...userData,
+                            password: hashedPassword,
+                            otrId,
+                            referralCode: tempCode,
+                        },
                     });
-                    if (!existingReferral) {
-                        await this.prisma.$transaction(async (tx) => {
+                    if (referralCode) {
+                        const referrer = await tx.user.findUnique({
+                            where: { referralCode, isDeleted: false },
+                        });
+                        if (referrer && referrer.id !== newUser.id) {
                             await tx.user.update({
                                 where: { id: referrer.id },
                                 data: { credits: { increment: 10 } },
@@ -120,107 +99,85 @@ let UserService = class UserService {
                                     status: 'Joined',
                                 },
                             });
-                        });
+                        }
                     }
+                    return newUser;
+                });
+            }
+            catch (error) {
+                if (error.code === 'P2002') {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        throw new common_1.ConflictException('Registration failed due to unique identifier collision. Please try again.');
+                    }
+                    continue;
                 }
+                throw error;
             }
-            return await this.prisma.user.findUnique({ where: { id: newUser.id } });
-        }
-        catch (error) {
-            if (error.code === 'P2002') {
-                throw new common_1.ConflictException('Email or Referral Code constraint failed');
-            }
-            throw error;
         }
     }
     async findByEmail(email) {
-        return this.prisma.user.findUnique({ where: { email } });
+        return this.userRepository.findByEmail(email);
     }
     async findByOtrId(otrId) {
-        return this.prisma.user.findUnique({ where: { otrId } });
+        return this.userRepository.findByOtrId(otrId);
     }
     async findById(id) {
-        const user = await this.prisma.user.findUnique({ where: { id } });
-        return user || null;
+        return this.userRepository.findById(id);
     }
-    async findAll() {
-        return this.prisma.user.findMany({
-            take: 100,
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                otrId: true,
-                role: true,
-                isDeleted: true,
-                createdAt: true,
-            },
-        });
+    async findAll(cursor, take) {
+        return this.userRepository.findAll(cursor, take);
     }
-    async update(id, data) {
+    async update(requesterId, requesterRole, targetId, data) {
+        if (requesterId !== targetId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('You can only update your own profile');
+        }
         const { password, ...updateData } = data;
         const finalData = { ...updateData };
         if (password) {
             finalData.password = await bcrypt.hash(password, 10);
         }
-        return this.prisma.user.update({
-            where: { id },
-            data: finalData,
-        });
+        return this.userRepository.update(targetId, finalData);
     }
-    async remove(id) {
-        return this.prisma.user.delete({ where: { id } });
-    }
-    async getDashboardData(id) {
-        const user = await this.findById(id);
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
+    async remove(requesterRole, id) {
+        if (requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Only admins can delete users');
         }
+        return this.userRepository.softDelete(id);
+    }
+    async getDashboardData(requesterId, requesterRole, id) {
+        if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        const user = await this.userRepository.findByIdActive(id);
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
         const [results, mockAttempts, arthaProfile] = await Promise.all([
-            this.resultService.getUserResults(id),
-            this.mockTestService.getUserMockAttempts(user.otrId),
-            this.getArthaProfile(id.toString()),
+            this.resultService.getUserResults(id, undefined, 10),
+            this.mockTestService.getUserMockAttempts(user.otrId, user.otrId, undefined),
+            this.userRepository.getArthaProfile(id.toString()),
         ]);
         const mergedAttempts = [
-            ...results.map((r) => {
-                const testData = r.test;
-                const totalQs = testData?._count?.questions || 1;
-                return {
-                    id: `res_${r.id}`,
-                    score: r.score,
-                    percentage: Math.min(Math.round((r.score / totalQs) * 100), 100),
-                    createdAt: r.createdAt,
-                    testName: testData?.name || 'Artha Assessment',
-                    type: 'artha',
-                    subjectBreakdown: r.subjectBreakdown,
-                };
-            }),
+            ...results.map((r) => ({
+                id: `res_${r.id}`,
+                score: r.score,
+                percentage: Math.min(Math.round((r.score / (r.test?._count?.questions || 1)) * 100), 100),
+                createdAt: r.createdAt,
+                testName: r.test?.name || 'Artha Assessment',
+                type: 'artha',
+                subjectBreakdown: r.subjectBreakdown,
+            })),
             ...mockAttempts.map((m) => ({
                 id: `mock_${m.id}`,
                 score: m.score,
-                percentage: m.totalMarks > 0
-                    ? m.correctAnswers != null
-                        ? Math.min(Math.round((m.correctAnswers / m.totalMarks) * 100), 100)
-                        : Math.max(0, Math.min(Math.round((m.score / m.totalMarks) * 100), 100))
-                    : 0,
+                percentage: m.totalMarks > 0 ? Math.round((m.score / m.totalMarks) * 100) : 0,
                 createdAt: m.attemptedAt,
                 testName: m.mockTest?.title || 'Official Mock Test',
                 type: 'mock',
                 subjectBreakdown: m.subjectBreakdown,
             })),
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        let readinessIndex = 0;
-        if (arthaProfile && arthaProfile.readinessIndex > 0) {
-            readinessIndex = Math.round(arthaProfile.readinessIndex);
-        }
-        else if (arthaProfile && arthaProfile.percentile > 0) {
-            readinessIndex = Math.round(arthaProfile.percentile);
-        }
-        else {
-            const latestAttempt = mergedAttempts[0];
-            readinessIndex = latestAttempt ? latestAttempt.percentage : 0;
-        }
+        const readinessIndex = arthaProfile?.readinessIndex || mergedAttempts[0]?.percentage || 0;
         return {
             user: {
                 firstName: user.firstName,
@@ -229,7 +186,7 @@ let UserService = class UserService {
                 email: user.email,
             },
             stats: {
-                readinessIndex,
+                readinessIndex: Math.round(readinessIndex),
                 testsCompleted: mergedAttempts.length,
                 recentTend: mergedAttempts
                     .slice(0, 7)
@@ -240,18 +197,50 @@ let UserService = class UserService {
                 quantScore: arthaProfile?.quantScore || 0,
                 verbalScore: arthaProfile?.verbalScore || 0,
             },
-            mockTests: mergedAttempts.map((a) => ({
-                score: a.percentage,
-                createdAt: a.createdAt,
-                subjectBreakdown: a.subjectBreakdown,
-            })),
-            recentResults: mergedAttempts.slice(0, 3).map((a) => ({
+            recentResults: mergedAttempts.slice(0, 5).map((a) => ({
                 id: a.id,
-                score: a.score,
+                score: Number(a.score.toFixed(1)),
                 percentage: a.percentage,
                 createdAt: a.createdAt,
                 test: { name: a.testName },
             })),
+        };
+    }
+    async getArthaProfile(userId) {
+        return this.userRepository.getArthaProfile(userId);
+    }
+    async getTierStatus(requesterId, requesterRole, id) {
+        if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        const oneYearAgo = new Date();
+        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+        const [profile, activePayment, anyPastPayment] = await Promise.all([
+            this.userRepository.getArthaProfile(id.toString()),
+            this.userRepository.getActivePayment(id, oneYearAgo),
+            this.userRepository.getAnyPastPayment(id),
+        ]);
+        const hasActiveSubscription = !!activePayment;
+        const hasExpiredSubscription = !hasActiveSubscription && !!anyPastPayment;
+        const t1Prog = profile?.tier1Progress || 0;
+        const t2Prog = profile?.tier2Progress || 0;
+        const t3Prog = profile?.tier3Progress || 0;
+        return {
+            tier1: { unlocked: true, completed: t1Prog === 100 },
+            tier2: {
+                unlocked: t1Prog === 100,
+                completed: t2Prog === 100,
+                subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
+                subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
+            },
+            tier3: {
+                unlocked: t2Prog === 100,
+                completed: t3Prog === 100,
+                subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
+                subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
+            },
+            hasActiveSubscription,
+            hasExpiredSubscription,
         };
     }
     generateOtrId(state, pincode) {
@@ -315,88 +304,11 @@ let UserService = class UserService {
             .padStart(3, '0');
         return `${stateCode}${year}${randomAlphabets}${randomNumbers}`;
     }
-    async getArthaProfile(userId) {
-        return this.prisma.arthaProfile.findFirst({
-            where: { userId },
-            select: {
-                id: true,
-                userId: true,
-                logicalScore: true,
-                quantScore: true,
-                verbalScore: true,
-                percentile: true,
-                readinessIndex: true,
-                tier1Progress: true,
-                tier2Progress: true,
-                tier3Progress: true,
-                feedback: {
-                    select: {
-                        id: true,
-                        logicalFoundation: true,
-                        readinessInsight: true,
-                        preparationAdvice: true,
-                        createdAt: true,
-                    },
-                },
-            },
-        });
-    }
-    async getTierStatus(userId) {
-        const oneYearAgo = new Date();
-        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-        const [profile, activePayment, anyPastPayment] = await Promise.all([
-            this.prisma.arthaProfile.findFirst({
-                where: { userId: userId.toString() },
-            }),
-            this.prisma.payment.findFirst({
-                where: {
-                    userId,
-                    status: 'paid',
-                    createdAt: { gte: oneYearAgo },
-                },
-                orderBy: { createdAt: 'desc' },
-                select: { id: true },
-            }),
-            this.prisma.payment.findFirst({
-                where: {
-                    userId,
-                    status: 'paid',
-                },
-                orderBy: { createdAt: 'desc' },
-                select: { id: true },
-            }),
-        ]);
-        const hasActiveSubscription = !!activePayment;
-        const hasExpiredSubscription = !hasActiveSubscription && !!anyPastPayment;
-        const t1Prog = profile?.tier1Progress || 0;
-        const t2Prog = profile?.tier2Progress || 0;
-        const t3Prog = profile?.tier3Progress || 0;
-        return {
-            tier1: {
-                unlocked: true,
-                completed: t1Prog === 100,
-            },
-            tier2: {
-                unlocked: t1Prog === 100,
-                completed: t2Prog === 100,
-                subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
-                subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
-            },
-            tier3: {
-                unlocked: t2Prog === 100,
-                completed: t3Prog === 100,
-                subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
-                subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
-            },
-            hasActiveSubscription,
-            hasExpiredSubscription,
-        };
-    }
 };
 exports.UserService = UserService;
 exports.UserService = UserService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [user_repository_1.UserRepository,
         result_service_1.ResultService,
         mock_test_service_1.MockTestService])
 ], UserService);

@@ -17,39 +17,45 @@ const common_1 = require("@nestjs/common");
 const ai_request_dto_1 = require("./dto/ai-request.dto");
 const ai_service_1 = require("./ai.service");
 const swagger_1 = require("@nestjs/swagger");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
 let AiController = class AiController {
     aiService;
     constructor(aiService) {
         this.aiService = aiService;
     }
-    async generateRoadmap(dto) {
-        return this.aiService.generate(dto);
+    async generateRoadmap(dto, req) {
+        return this.aiService.generate(req.user.otrId, req.user.role, dto);
     }
-    async getStatus(id) {
-        return this.aiService.getStatus(id);
+    async getStatus(id, req) {
+        return this.aiService.getStatus(req.user.otrId, req.user.role, id);
     }
 };
 exports.AiController = AiController;
 __decorate([
     (0, common_1.Post)('roadmap'),
     (0, swagger_1.ApiOperation)({ summary: 'Generate a personalized AI-driven study roadmap' }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Roadmap generated successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Roadmap generation started' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [ai_request_dto_1.AiRequestDto]),
+    __metadata("design:paramtypes", [ai_request_dto_1.AiRequestDto, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "generateRoadmap", null);
 __decorate([
     (0, common_1.Get)('status/:id'),
     (0, swagger_1.ApiOperation)({ summary: 'Check status of a roadmap generation' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "getStatus", null);
 exports.AiController = AiController = __decorate([
     (0, swagger_1.ApiTags)('AI Engine'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('ai'),
     __metadata("design:paramtypes", [ai_service_1.AiService])
 ], AiController);

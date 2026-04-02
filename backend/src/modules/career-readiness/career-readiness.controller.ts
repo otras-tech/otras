@@ -1,47 +1,51 @@
 import {
   Controller,
-  Post,
   Get,
+  Post,
   Body,
   Param,
   UsePipes,
   ValidationPipe,
-  Logger,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { CareerReadinessService } from './career-readiness.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { SubmitCareerReadinessDto } from './dto/career-readiness.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('Career Readiness')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('career-readiness')
 export class CareerReadinessController {
-  private readonly logger = new Logger(CareerReadinessController.name);
-  constructor(
-    private readonly careerReadinessService: CareerReadinessService,
-  ) {}
+  constructor(private readonly careerReadinessService: CareerReadinessService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Submit answers for a career readiness assessment' })
-  @ApiResponse({ status: 201, description: 'Results calculated and saved' })
+  @Post('save')
+  @ApiOperation({ summary: 'Save results for a career readiness assessment' })
+  @ApiResponse({ status: 201, description: 'Result saved' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async saveResult(@Body() body: SubmitCareerReadinessDto) {
-    this.logger.log(`Received submission request: ${JSON.stringify(body)}`);
-    try {
-      const result = await this.careerReadinessService.saveResult(body);
-      this.logger.log('Successfully saved result');
-      return result;
-    } catch (error: any) {
-      this.logger.error('Error in saveResult', error.stack);
-      throw error;
-    }
+  saveResult(
+    @Body()
+    data: {
+      otrId: string;
+      testId: number | string;
+      answers: { questionId: number | string; selectedOption: string }[];
+    },
+    @Request() req: any,
+  ) {
+    return this.careerReadinessService.saveResult(req.user.otrId, data);
   }
 
-  @Get(':otrId')
-  @ApiOperation({
-    summary: 'Get career readiness assessment history by OTR ID',
-  })
-  @ApiResponse({ status: 200, description: 'List of assessment scores' })
-  async getByOtrId(@Param('otrId') otrId: string) {
-    return this.careerReadinessService.getByOtrId(otrId);
+  @Get('result/:otrId')
+  @ApiOperation({ summary: 'Get latest career readiness result for a user' })
+  @ApiResponse({ status: 200, description: 'User result' })
+  getByOtrId(@Param('otrId') otrId: string, @Request() req: any) {
+    return this.careerReadinessService.getByOtrId(req.user.otrId, otrId);
   }
 }

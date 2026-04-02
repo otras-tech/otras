@@ -28,8 +28,8 @@ let JobController = class JobController {
     create(createJobDto) {
         return this.jobService.create(createJobDto);
     }
-    findAll() {
-        return this.jobService.findAll();
+    findAll(cursor, take) {
+        return this.jobService.findAll(cursor, take);
     }
     findOne(id) {
         return this.jobService.findOne(id);
@@ -51,10 +51,14 @@ __decorate([
 ], JobController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all active job postings' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all active job postings (Paginated)' }),
+    (0, swagger_1.ApiQuery)({ name: 'cursor', required: false, type: Number }),
+    (0, swagger_1.ApiQuery)({ name: 'take', required: false, type: Number }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of jobs' }),
+    __param(0, (0, common_1.Query)('cursor', new common_1.ParseIntPipe({ optional: true }))),
+    __param(1, (0, common_1.Query)('take', new common_1.ParseIntPipe({ optional: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], JobController.prototype, "findAll", null);
 __decorate([

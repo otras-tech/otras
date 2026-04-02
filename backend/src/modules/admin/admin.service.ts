@@ -3,7 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { AdminRepository } from './repository/admin.repository';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AdminRegisterDto } from './dto/admin.dto';
@@ -12,18 +12,16 @@ import { Admin } from '@prisma/client';
 @Injectable()
 export class AdminService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly repository: AdminRepository,
+    private readonly jwtService: JwtService,
   ) {}
 
   async register(data: AdminRegisterDto) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     try {
-      const admin = await this.prisma.admin.create({
-        data: {
-          ...data,
-          password: hashedPassword,
-        },
+      const admin = await this.repository.create({
+        ...data,
+        password: hashedPassword,
       });
       return this.login(admin);
     } catch (error) {
@@ -46,7 +44,7 @@ export class AdminService {
     email: string,
     pass: string,
   ): Promise<Omit<Admin, 'password'> | null> {
-    const admin = await this.prisma.admin.findUnique({ where: { email } });
+    const admin = await this.repository.findByEmail(email);
     if (admin && (await bcrypt.compare(pass, admin.password))) {
       const { password, ...result } = admin;
       return result;

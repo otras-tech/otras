@@ -1,27 +1,27 @@
-import { PrismaService } from '../../database/prisma.service';
+import { ResultRepository } from './repository/result.repository';
 import { SubmitTestDto } from './dto/result.dto';
 import { Queue } from 'bullmq';
 import { ResultProcessor } from './result.processor';
 export declare class ResultService {
     private readonly resultQueue;
-    private readonly prisma;
+    private readonly resultRepository;
     private readonly resultProcessor;
     private readonly logger;
-    constructor(resultQueue: Queue, prisma: PrismaService, resultProcessor: ResultProcessor);
-    startTest(userId: number, testId: number, tier?: number): Promise<{
+    constructor(resultQueue: Queue, resultRepository: ResultRepository, resultProcessor: ResultProcessor);
+    startTest(requesterId: number, userId: number, testId: number, tier?: number): Promise<{
         id: number;
         startTime: Date | null;
     }>;
-    calculateAndSave(dto: SubmitTestDto): Promise<{
+    calculateAndSave(requesterId: number, dto: SubmitTestDto): Promise<{
         message: string;
         resultId: number;
     }>;
     getUserResults(userId: number, cursor?: number, take?: number): Promise<{
         test: {
-            name: string;
             _count: {
                 questions: number;
             };
+            name: string;
         };
         id: number;
         createdAt: Date;

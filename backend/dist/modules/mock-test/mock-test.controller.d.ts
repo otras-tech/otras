@@ -10,14 +10,14 @@ export declare class MockTestController {
         startTime: Date | null;
     }>;
     submitAttempt(dto: SubmitMockAttemptDto, user: RequestUser): Promise<{
-        otrId: string;
         id: number;
+        otrId: string;
         score: number;
         mockTestId: number;
     }>;
     submitExamAttempt(dto: SubmitExamAttemptDto, user: RequestUser): Promise<{
-        otrId: string;
         id: number;
+        otrId: string;
         score: number;
         mockTestId: number;
     }>;
@@ -27,8 +27,8 @@ export declare class MockTestController {
         };
         id: number;
         score: number;
-        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         totalMarks: number;
+        subjectBreakdown: import("@prisma/client/runtime/library").JsonValue;
         correctAnswers: number | null;
         attemptedAt: Date;
     }[]>;

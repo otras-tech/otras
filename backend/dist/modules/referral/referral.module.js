@@ -10,13 +10,14 @@ exports.ReferralModule = void 0;
 const common_1 = require("@nestjs/common");
 const referral_service_1 = require("./referral.service");
 const referral_controller_1 = require("./referral.controller");
+const referral_repository_1 = require("./repository/referral.repository");
 let ReferralModule = class ReferralModule {
 };
 exports.ReferralModule = ReferralModule;
 exports.ReferralModule = ReferralModule = __decorate([
     (0, common_1.Module)({
         controllers: [referral_controller_1.ReferralController],
-        providers: [referral_service_1.ReferralService],
+        providers: [referral_service_1.ReferralService, referral_repository_1.ReferralRepository],
     })
 ], ReferralModule);
 //# sourceMappingURL=referral.module.js.map

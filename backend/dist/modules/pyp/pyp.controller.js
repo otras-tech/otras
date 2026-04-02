@@ -17,6 +17,9 @@ const common_1 = require("@nestjs/common");
 const pyp_service_1 = require("./pyp.service");
 const swagger_1 = require("@nestjs/swagger");
 const pyp_dto_1 = require("./dto/pyp.dto");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 let PypController = class PypController {
     pypService;
     constructor(pypService) {
@@ -38,6 +41,8 @@ let PypController = class PypController {
 exports.PypController = PypController;
 __decorate([
     (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new PYP entry' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'PYP entry created' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -56,6 +61,8 @@ __decorate([
 ], PypController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a PYP entry' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'PYP entry updated' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -67,6 +74,8 @@ __decorate([
 ], PypController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a PYP entry' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'PYP entry deleted' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -77,6 +86,7 @@ __decorate([
 exports.PypController = PypController = __decorate([
     (0, swagger_1.ApiTags)('Previous Year Papers (PYP)'),
     (0, common_1.Controller)('pyps'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [pyp_service_1.PypService])
 ], PypController);
 //# sourceMappingURL=pyp.controller.js.map

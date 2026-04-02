@@ -11,66 +11,46 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicationService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const application_repository_1 = require("./repository/application.repository");
 let ApplicationService = class ApplicationService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    applicationRepository;
+    constructor(applicationRepository) {
+        this.applicationRepository = applicationRepository;
     }
-    async create(userId, examId) {
-        return this.prisma.application.upsert({
-            where: {
-                userId_examId: {
-                    userId,
-                    examId,
-                },
-            },
-            update: {},
-            create: {
-                userId,
-                examId,
-            },
-        });
+    async create(requesterId, requesterRole, userId, examId) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('You can only apply for yourself');
+        }
+        return this.applicationRepository.upsert(userId, examId);
     }
-    async findByUser(userId) {
-        return this.prisma.application.findMany({
-            where: { userId },
-            include: {
-                exam: true,
-            },
-        });
+    async findByUser(requesterId, requesterRole, userId) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        return this.applicationRepository.findByUserId(userId);
     }
     async findByOtrId(otrId) {
-        const user = await this.prisma.user.findUnique({
-            where: { otrId },
-        });
-        if (!user)
+        const result = await this.applicationRepository.findByOtrId(otrId);
+        if (result === null)
             return [];
-        return this.prisma.application.findMany({
-            where: { userId: user.id },
-            include: {
-                exam: true,
-            },
-        });
+        return result;
     }
     async findAll() {
-        return this.prisma.application.findMany({
-            include: {
-                user: true,
-                exam: true,
-            },
-        });
+        return this.applicationRepository.findAll();
     }
-    async updateStatus(id, statusData) {
-        return this.prisma.application.update({
-            where: { id },
-            data: statusData,
-        });
+    async updateStatus(requesterRole, id, statusData) {
+        if (requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Only admins can update application status');
+        }
+        const existing = await this.applicationRepository.findById(id);
+        if (!existing)
+            throw new common_1.NotFoundException('Application not found');
+        return this.applicationRepository.updateStatus(id, statusData);
     }
 };
 exports.ApplicationService = ApplicationService;
 exports.ApplicationService = ApplicationService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [application_repository_1.ApplicationRepository])
 ], ApplicationService);
 //# sourceMappingURL=application.service.js.map

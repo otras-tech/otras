@@ -11,28 +11,35 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const job_repository_1 = require("./repository/job.repository");
 let JobService = class JobService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    repository;
+    constructor(repository) {
+        this.repository = repository;
     }
     async create(data) {
-        return this.prisma.job.create({ data });
+        return this.repository.create(data);
     }
-    async findAll() {
-        return this.prisma.job.findMany({
-            where: { status: 'Open' },
-            orderBy: { deadline: 'asc' },
-        });
+    async findAll(cursor, take) {
+        const safeTake = Math.min(take || 20, 100);
+        return this.repository.findAll(cursor, safeTake);
     }
     async findOne(id) {
-        return this.prisma.job.findUnique({ where: { id } });
+        const job = await this.repository.findById(id);
+        if (!job)
+            throw new common_1.NotFoundException(`Job with ID ${id} not found`);
+        return job;
+    }
+    async update(id, data) {
+        return this.repository.update(id, data);
+    }
+    async remove(id) {
+        return this.repository.softDelete(id);
     }
 };
 exports.JobService = JobService;
 exports.JobService = JobService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [job_repository_1.JobRepository])
 ], JobService);
 //# sourceMappingURL=job.service.js.map

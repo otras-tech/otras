@@ -1,10 +1,10 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AiRequestDto } from './dto/ai-request.dto';
 import { buildPrompt } from './utils/prompt-builder';
 import { OpenAiProvider } from './providers/openai.provider';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { PrismaService } from '../../database/prisma.service';
+import { AiRepository } from './repository/ai.repository';
 import { ConfigService } from '@nestjs/config';
 
 interface SimulatedRoadmap {
@@ -21,11 +21,15 @@ export class AiService {
   constructor(
     private readonly openAiProvider: OpenAiProvider,
     @InjectQueue('career-ai') private aiQueue: Queue,
-    private prisma: PrismaService,
-    private configService: ConfigService,
+    private readonly repository: AiRepository,
+    private readonly configService: ConfigService,
   ) {}
 
-  async generate(dto: AiRequestDto) {
+  async generate(requesterOtrId: string, requesterRole: string, dto: AiRequestDto) {
+    if (requesterOtrId !== dto.userId && requesterRole !== 'ADMIN') {
+      throw new ForbiddenException('Cannot generate roadmap for another user');
+    }
+
     const { language, ...data } = dto;
 
     if (!['en', 'hi', 'te'].includes(language)) {
@@ -43,28 +47,24 @@ export class AiService {
       aspirations: dto.aspirations || 'None provided',
     };
 
-    const prof = await this.prisma.intelligenceProfile.create({
-      data: {
-        userId: richData.userId,
-        logicalScore: Number(richData.logicalScore),
-        quantScore: Number(richData.quantScore),
-        verbalScore: Number(richData.verbalScore),
-        interests: richData.interests,
-        learningPattern: richData.learningPattern,
-        confidenceIndex: Number(richData.confidenceScore),
-        aspirations: richData.aspirations,
-      },
+    const prof = await this.repository.createProfile({
+      userId: richData.userId,
+      logicalScore: Number(richData.logicalScore),
+      quantScore: Number(richData.quantScore),
+      verbalScore: Number(richData.verbalScore),
+      interests: richData.interests,
+      learningPattern: richData.learningPattern,
+      confidenceIndex: Number(richData.confidenceScore),
+      aspirations: richData.aspirations,
     });
 
-    const roadmap = await this.prisma.roadmap.create({
-      data: {
-        profileId: prof.id,
-        summary: 'Processing career study plan...',
-        recommendations: [],
-        phase1: 'Queued',
-        phase2: 'Queued',
-        status: 'PENDING',
-      },
+    const roadmap = await this.repository.createRoadmap({
+      profileId: prof.id,
+      summary: 'Processing career study plan...',
+      recommendations: [],
+      phase1: 'Queued',
+      phase2: 'Queued',
+      status: 'PENDING',
     });
 
     if (this.configService.get('DISABLE_REDIS') === 'true') {
@@ -89,22 +89,16 @@ export class AiService {
             ? simulatedResponse.recommendations
             : [];
 
-          await this.prisma.roadmap.update({
-            where: { id: roadmap.id },
-            data: {
-              summary,
-              recommendations,
-              phase1: simulatedResponse.phase1 ?? 'Completed',
-              phase2: simulatedResponse.phase2 ?? 'Completed',
-              status: 'COMPLETED',
-            },
+          await this.repository.updateRoadmap(roadmap.id, {
+            summary,
+            recommendations,
+            phase1: simulatedResponse.phase1 ?? 'Completed',
+            phase2: simulatedResponse.phase2 ?? 'Completed',
+            status: 'COMPLETED',
           });
         } catch (err) {
           this.logger.error('Local AiService execution failed:', err);
-          await this.prisma.roadmap.update({
-            where: { id: roadmap.id },
-            data: { status: 'FAILED' },
-          });
+          await this.repository.updateRoadmap(roadmap.id, { status: 'FAILED' });
         }
       });
     } else {
@@ -113,10 +107,7 @@ export class AiService {
         language,
         roadmapId: roadmap.id,
       });
-      await this.prisma.roadmap.update({
-        where: { id: roadmap.id },
-        data: { jobId: job.id },
-      });
+      await this.repository.updateRoadmap(roadmap.id, { jobId: job.id });
     }
 
     return {
@@ -128,12 +119,14 @@ export class AiService {
     };
   }
 
-  async getStatus(roadmapId: string) {
-    const roadmap = await this.prisma.roadmap.findUnique({
-      where: { id: roadmapId },
-      include: { IntelligenceProfile: true },
-    });
-    if (!roadmap) return { success: false, status: 'NOT_FOUND' };
+  async getStatus(requesterOtrId: string, requesterRole: string, roadmapId: string) {
+    const roadmap = await this.repository.findRoadmapById(roadmapId);
+    if (!roadmap) throw new NotFoundException('Roadmap not found');
+
+    if (roadmap.IntelligenceProfile.userId !== requesterOtrId && requesterRole !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+
     return {
       success: true,
       status: roadmap.status,

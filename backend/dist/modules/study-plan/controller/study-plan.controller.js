@@ -17,6 +17,8 @@ exports.StudyPlanController = void 0;
 const common_1 = require("@nestjs/common");
 const study_plan_service_1 = require("../service/study-plan.service");
 const create_study_plan_dto_1 = require("../dto/create-study-plan.dto");
+const jwt_auth_guard_1 = require("../../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../../common/guards/roles.guard");
 const swagger_1 = require("@nestjs/swagger");
 class UpdateActivityStatusDto {
     completed;
@@ -36,30 +38,26 @@ let StudyPlanController = StudyPlanController_1 = class StudyPlanController {
     constructor(studyPlanService) {
         this.studyPlanService = studyPlanService;
     }
-    generate(dto) {
-        return this.studyPlanService.generate(dto);
+    generate(dto, req) {
+        return this.studyPlanService.generate(req.user.id, req.user.role, dto);
     }
-    save(body) {
-        return this.studyPlanService.save(body.dto, body.aiData);
+    save(body, req) {
+        return this.studyPlanService.save(req.user.id, req.user.role, body.dto, body.aiData);
     }
-    findByUserId(userId) {
-        return this.studyPlanService.findByUserId(userId);
+    findByUserId(userId, req) {
+        return this.studyPlanService.findByUserId(req.user.id, req.user.role, userId);
     }
-    findOne(id) {
-        return this.studyPlanService.findOne(id);
+    findOne(id, req) {
+        return this.studyPlanService.findOne(req.user.id, req.user.role, id);
     }
-    updateActivityStatus(activityId, userId, data) {
-        return this.studyPlanService.updateActivityStatus(activityId, userId, data);
+    updateActivityStatus(activityId, userId, data, req) {
+        return this.studyPlanService.updateActivityStatus(req.user.id, req.user.role, activityId, userId, data);
     }
-    async simulateDayPassed(id) {
-        return this.studyPlanService.simulateDayPassed(id);
+    async simulateDayPassed(id, req) {
+        return this.studyPlanService.simulateDayPassed(req.user.id, req.user.role, id);
     }
-    async simulateDateChange(id) {
-        this.logger.log(`Simulate date change triggered for: ${id}`);
-        return this.studyPlanService.moveMissedTasks(id);
-    }
-    async delete(id) {
-        return this.studyPlanService.delete(id);
+    async delete(id, req) {
+        return this.studyPlanService.delete(req.user.id, req.user.role, id);
     }
 };
 exports.StudyPlanController = StudyPlanController;
@@ -69,8 +67,9 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 201, description: 'AI generated plan summary' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_study_plan_dto_1.CreateStudyPlanDto]),
+    __metadata("design:paramtypes", [create_study_plan_dto_1.CreateStudyPlanDto, Object]),
     __metadata("design:returntype", void 0)
 ], StudyPlanController.prototype, "generate", null);
 __decorate([
@@ -78,8 +77,9 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Save the generated study plan to database' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Plan saved successfully' }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], StudyPlanController.prototype, "save", null);
 __decorate([
@@ -87,8 +87,9 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Get all study plans for a user' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of plans' }),
     __param(0, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], StudyPlanController.prototype, "findByUserId", null);
 __decorate([
@@ -96,8 +97,9 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Get study plan by ID' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Plan details' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], StudyPlanController.prototype, "findOne", null);
 __decorate([
@@ -106,32 +108,33 @@ __decorate([
     __param(0, (0, common_1.Param)('activityId')),
     __param(1, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
     __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number, UpdateActivityStatusDto]),
+    __metadata("design:paramtypes", [String, Number, UpdateActivityStatusDto, Object]),
     __metadata("design:returntype", void 0)
 ], StudyPlanController.prototype, "updateActivityStatus", null);
 __decorate([
     (0, common_1.Post)(':id/simulate-day-passed'),
+    (0, swagger_1.ApiOperation)({ summary: 'Simulate time passage for automated rescheduling testing' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], StudyPlanController.prototype, "simulateDayPassed", null);
 __decorate([
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], StudyPlanController.prototype, "simulateDateChange", null);
-__decorate([
     (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Hard-delete (soft-delete coming soon) a study plan' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], StudyPlanController.prototype, "delete", null);
 exports.StudyPlanController = StudyPlanController = StudyPlanController_1 = __decorate([
     (0, swagger_1.ApiTags)('Study Plans'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('study-plan'),
     __metadata("design:paramtypes", [study_plan_service_1.StudyPlanService])
 ], StudyPlanController);

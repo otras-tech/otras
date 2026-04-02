@@ -1,25 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PypRepository } from './repository/pyp.repository';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PypService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly pypRepository: PypRepository) {}
 
   async create(data: { year: number; fileUrl: string; examId: number }) {
     const { examId, ...rest } = data;
-    return this.prisma.pYP.create({
-      data: {
-        ...rest,
-        exam: { connect: { id: examId } },
-      },
+    return this.pypRepository.create({
+      ...rest,
+      exam: { connect: { id: examId } },
     });
   }
 
   async findAll() {
-    return this.prisma.pYP.findMany({
-      include: { exam: true },
-    });
+    return this.pypRepository.findAll();
   }
 
   async update(
@@ -31,10 +27,10 @@ export class PypService {
     if (examId) {
       updateData.exam = { connect: { id: examId } };
     }
-    return this.prisma.pYP.update({ where: { id }, data: updateData });
+    return this.pypRepository.update(id, updateData);
   }
 
   async remove(id: number) {
-    return this.prisma.pYP.delete({ where: { id } });
+    return this.pypRepository.softDelete(id);
   }
 }

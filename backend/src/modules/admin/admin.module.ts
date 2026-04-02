@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
+import { AdminRepository } from './repository/admin.repository';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../database/prisma.module';
 
@@ -12,7 +13,7 @@ import { PrismaModule } from '../../database/prisma.module';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [AdminService],
+  providers: [AdminService, AdminRepository],
   controllers: [AdminController],
   exports: [AdminService],
 })

@@ -1,17 +1,18 @@
-import { PrismaService } from '../../database/prisma.service';
+import { ReferralRepository } from './repository/referral.repository';
 export declare class ReferralService {
-    private prisma;
-    constructor(prisma: PrismaService);
-    createReferral(referrerId: number, refereeOtrId: string): Promise<{
+    private readonly referralRepository;
+    constructor(referralRepository: ReferralRepository);
+    createReferral(requesterId: number, referrerId: number, refereeOtrId: string): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        referrerId: number;
-        refereeOtrId: string;
         status: string;
+        refereeOtrId: string;
         creditsEarned: number;
+        referrerId: number;
     }>;
-    getReferralStats(referrerId: number): Promise<{
+    getReferralStats(requesterId: number, requesterRole: string, referrerId: number): Promise<{
         totalReferrals: number;
         successReferrals: number;
         creditsEarned: number;
@@ -19,38 +20,40 @@ export declare class ReferralService {
         availableCredits: number;
         referralCode: string;
         referrals: {
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
-            referrerId: number;
-            refereeOtrId: string;
             status: string;
+            refereeOtrId: string;
             creditsEarned: number;
+            referrerId: number;
         }[];
     }>;
-    getReferralHistory(referrerId: number): Promise<{
+    getReferralHistory(requesterId: number, requesterRole: string, referrerId: number): Promise<{
         id: number;
         friendOtrId: string;
         signupDate: Date;
         status: string;
         creditsEarned: number;
     }[]>;
-    getRewards(userId: number): Promise<({
+    getRewards(requesterId: number, requesterRole: string, userId: number): Promise<({
         mockTest: {
             isDeleted: boolean;
-            title: string;
             id: number;
-            examId: number | null;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number;
+            examId: number | null;
+            title: string;
             duration: number;
             sectionType: string;
             isProctored: boolean;
             isAdaptive: boolean;
+            categoryId: number;
         };
     } & {
         userId: number;
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -64,12 +67,13 @@ export declare class ReferralService {
             otrId: string;
         };
     } & {
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
-        referrerId: number;
-        refereeOtrId: string;
         status: string;
+        refereeOtrId: string;
         creditsEarned: number;
+        referrerId: number;
     })[]>;
 }

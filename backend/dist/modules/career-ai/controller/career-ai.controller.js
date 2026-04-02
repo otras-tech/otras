@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const career_ai_service_1 = require("../service/career-ai.service");
 const create_roadmap_dto_1 = require("../dto/create-roadmap.dto");
 const swagger_1 = require("@nestjs/swagger");
+const jwt_auth_guard_1 = require("../../auth/guards/jwt-auth.guard");
 let CareerAiController = class CareerAiController {
     service;
     constructor(service) {
@@ -42,6 +43,8 @@ __decorate([
 ], CareerAiController.prototype, "generateRoadmap", null);
 exports.CareerAiController = CareerAiController = __decorate([
     (0, swagger_1.ApiTags)('AI Career Guidance'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('career-ai'),
     __metadata("design:paramtypes", [career_ai_service_1.CareerAIService])
 ], CareerAiController);

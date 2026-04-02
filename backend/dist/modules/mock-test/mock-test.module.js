@@ -10,15 +10,14 @@ exports.MockTestModule = void 0;
 const common_1 = require("@nestjs/common");
 const mock_test_service_1 = require("./mock-test.service");
 const mock_test_controller_1 = require("./mock-test.controller");
-const prisma_module_1 = require("../../database/prisma.module");
+const mock_test_repository_1 = require("./repository/mock-test.repository");
 let MockTestModule = class MockTestModule {
 };
 exports.MockTestModule = MockTestModule;
 exports.MockTestModule = MockTestModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
         controllers: [mock_test_controller_1.MockTestController],
-        providers: [mock_test_service_1.MockTestService],
+        providers: [mock_test_service_1.MockTestService, mock_test_repository_1.MockTestRepository],
         exports: [mock_test_service_1.MockTestService],
     })
 ], MockTestModule);

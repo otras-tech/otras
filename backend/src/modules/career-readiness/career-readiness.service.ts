@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, NotFoundException, Logger, ForbiddenException } from '@nestjs/common';
+import { CareerReadinessRepository } from './repository/career-readiness.repository';
 import { SubjectBreakdown } from '../../common/types/types';
 import { Prisma } from '@prisma/client';
 
@@ -7,40 +7,31 @@ import { Prisma } from '@prisma/client';
 export class CareerReadinessService {
   private readonly logger = new Logger(CareerReadinessService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly repository: CareerReadinessRepository) {}
 
-  async saveResult(data: {
+  async saveResult(requesterOtrId: string, data: {
     otrId: string;
     testId: number | string;
     answers: { questionId: number | string; selectedOption: string }[];
   }) {
+    if (requesterOtrId !== data.otrId) {
+      throw new ForbiddenException('Cannot submit career readiness result for another user');
+    }
+
     const testId = Number(data.testId);
     if (isNaN(testId)) {
       throw new Error(`Invalid testId: ${data.testId}`);
     }
 
-    this.logger.log(
-      `Saving career readiness result for user ${data.otrId}, test ${testId}`,
-    );
+    this.logger.log(`Saving career readiness result for user ${data.otrId}, test ${testId}`);
 
-    // Fetch the test with questions and subjects
-    const test = await this.prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        questions: {
-          include: { subject: true },
-        },
-      },
-    });
-
+    const test = await this.repository.findTestById(testId);
     if (!test) {
       this.logger.error(`Test ${testId} not found`);
       throw new NotFoundException(`Test with ID ${testId} not found`);
     }
 
-    // Calculate subject-wise scores with +1 correct, -0.25 wrong
     const subjectBreakdown: SubjectBreakdown = {};
-
     let correctAnswers = 0;
     let wrongAnswers = 0;
 
@@ -77,60 +68,32 @@ export class CareerReadinessService {
     const negativeMarks = wrongAnswers * 0.25;
     const totalScore = correctAnswers - negativeMarks;
 
-    // Safer check-then-act approach to avoid Prisma upsert naming issues
-    try {
-      this.logger.log(
-        `Searching for existing score: otrId=${data.otrId}, testId=${testId}`,
-      );
-      const existing = await this.prisma.careerReadinessTestScore.findFirst({
-        where: {
-          otrId: data.otrId,
-          testId: testId,
-        },
+    const existing = await this.repository.findExistingScore(data.otrId, testId);
+
+    const scoreData: any = {
+      totalScore,
+      totalMarks,
+      correctAnswers,
+      wrongAnswers,
+      negativeMarks,
+      subjectBreakdown: subjectBreakdown as unknown as Prisma.InputJsonValue,
+    };
+
+    if (existing) {
+      return await this.repository.updateScore(existing.id, scoreData);
+    } else {
+      return await this.repository.createScore({
+        otrId: data.otrId,
+        testId: testId,
+        ...scoreData,
       });
-
-      const scoreData = {
-        totalScore,
-        totalMarks,
-        correctAnswers,
-        wrongAnswers,
-        negativeMarks,
-        subjectBreakdown: subjectBreakdown as unknown as Prisma.InputJsonValue,
-      };
-
-      if (existing) {
-        this.logger.log(
-          `EXISTING RECORD FOUND (id=${existing.id}). Updating...`,
-        );
-        return await this.prisma.careerReadinessTestScore.update({
-          where: { id: existing.id },
-          data: scoreData as Prisma.CareerReadinessTestScoreUpdateInput,
-        });
-      } else {
-        this.logger.log(`NO EXISTING RECORD FOUND. Creating new record...`);
-        return await this.prisma.careerReadinessTestScore.create({
-          data: {
-            otrId: data.otrId,
-            testId: testId,
-            ...scoreData,
-          } as Prisma.CareerReadinessTestScoreUncheckedCreateInput,
-        });
-      }
-    } catch (error) {
-      this.logger.error(
-        'CRITICAL ERROR in saveResult:',
-        (error as Error).message,
-      );
-      this.logger.error('Error Stack:', (error as Error).stack);
-      throw error;
     }
   }
 
-  async getByOtrId(otrId: string) {
-    return this.prisma.careerReadinessTestScore.findFirst({
-      where: { otrId },
-      include: { test: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getByOtrId(requesterOtrId: string, otrId: string) {
+    if (requesterOtrId !== otrId) {
+      throw new ForbiddenException('Access denied');
+    }
+    return this.repository.findByOtrId(otrId);
   }
 }

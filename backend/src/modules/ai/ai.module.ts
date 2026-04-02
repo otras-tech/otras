@@ -6,6 +6,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '../../database/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { AiProcessor } from './processor/ai.processor';
+import { AiRepository } from './repository/ai.repository';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AiProcessor } from './processor/ai.processor';
   controllers: [AiController],
   providers: [
     AiService,
+    AiRepository,
     OpenAiProvider,
     AiProcessor,
     ...(process.env.DISABLE_REDIS === 'true'
@@ -33,6 +35,6 @@ import { AiProcessor } from './processor/ai.processor';
         ]
       : []),
   ],
-  exports: [AiService],
+  exports: [AiService, AiRepository],
 })
 export class AiModule {}

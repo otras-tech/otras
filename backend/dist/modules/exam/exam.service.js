@@ -11,13 +11,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExamService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const exam_repository_1 = require("./repository/exam.repository");
 const cache_service_1 = require("../../common/cache/cache.service");
 let ExamService = class ExamService {
-    prisma;
+    examRepository;
     cacheService;
-    constructor(prisma, cacheService) {
-        this.prisma = prisma;
+    constructor(examRepository, cacheService) {
+        this.examRepository = examRepository;
         this.cacheService = cacheService;
     }
     async invalidateCache() {
@@ -26,181 +26,86 @@ let ExamService = class ExamService {
     async create(data) {
         const { subjectIds, ...examData } = data;
         const targetSubjects = subjectIds || [];
-        const exam = await this.prisma.exam.create({
-            data: {
-                ...examData,
-                subjects: {
-                    connect: targetSubjects.map((id) => ({ id })),
-                },
-            },
-            include: { subjects: true },
+        const exam = await this.examRepository.create({
+            ...examData,
+            subjects: { connect: targetSubjects.map((id) => ({ id })) },
         });
         await this.invalidateCache();
         return exam;
     }
     async update(id, updateData) {
         const { subjectIds, ...data } = updateData;
-        const targetSubjects = subjectIds;
-        if (targetSubjects) {
-            const exam = await this.prisma.exam.update({
-                where: { id },
-                data: {
-                    ...data,
-                    subjects: {
-                        set: [],
-                        connect: targetSubjects.map((id) => ({ id })),
-                    },
-                },
-                include: { subjects: true },
-            });
-            await this.invalidateCache();
-            return exam;
+        const updateInput = { ...data };
+        if (subjectIds) {
+            updateInput.subjects = {
+                set: [],
+                connect: subjectIds.map((id) => ({ id })),
+            };
         }
-        const exam = await this.prisma.exam.update({
-            where: { id },
-            data: data,
-            include: { subjects: true },
-        });
+        const exam = await this.examRepository.update(id, updateInput);
         await this.invalidateCache();
         return exam;
     }
     async findAll(cursor, take) {
-        const safeTake = Math.min(take || 20, 100);
-        return this.prisma.exam.findMany({
-            where: { isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                cutoff: true,
-                syllabus: true,
-                noOfQuestions: true,
-                subjects: { select: { id: true, name: true } },
-            },
-            take: safeTake,
-            skip: cursor ? 1 : 0,
-            cursor: cursor ? { id: cursor } : undefined,
-            orderBy: { createdAt: 'desc' },
-        });
+        return this.examRepository.findAll(cursor, take);
     }
     async findOne(id) {
-        return this.prisma.exam.findUnique({
-            where: { id, isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                cutoff: true,
-                syllabus: true,
-                eligibility: true,
-                longDescription: true,
-                noOfQuestions: true,
-                pattern: true,
-                shortDescription: true,
-                applicationStatus: true,
-                createdAt: true,
-                subjects: { select: { id: true, name: true } },
-            },
-        });
+        return this.examRepository.findById(id);
     }
     async getTest(examId) {
-        const exam = await this.prisma.exam.findUnique({
-            where: { id: examId, isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                noOfQuestions: true,
-                tests: {
-                    where: { isDeleted: false },
-                    take: 10,
-                    select: {
-                        id: true,
-                        name: true,
-                        questions: {
-                            select: {
-                                id: true,
-                                subject: { select: { id: true, name: true } },
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        const exam = await this.examRepository.findWithTests(examId);
         if (!exam)
             throw new common_1.NotFoundException('Exam not found');
-        if (exam.tests.length === 0)
+        if (exam.tests.length === 0) {
             throw new common_1.NotFoundException('No tests found for this exam. Use POST to generate one.');
+        }
         const randomTest = exam.tests[Math.floor(Math.random() * exam.tests.length)];
         const { tests, ...examInfo } = exam;
         return { test: randomTest, exam: examInfo };
     }
     async generateTest(examId) {
-        const exam = await this.prisma.exam.findUnique({
-            where: { id: examId, isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                noOfQuestions: true,
-                subjects: { select: { id: true } },
-            },
-        });
+        const exam = await this.examRepository.findForTestGeneration(examId);
         if (!exam)
             throw new common_1.NotFoundException('Exam not found');
-        if (!exam.subjects || exam.subjects.length === 0) {
-            throw new common_1.InternalServerErrorException('No subjects associated with this exam to generate questions');
-        }
         const subjectIds = exam.subjects.map((s) => s.id);
-        const questions = await this.prisma.question.findMany({
-            where: { subjectId: { in: subjectIds } },
-            select: { id: true },
-        });
-        if (questions.length === 0) {
+        const totalQuestions = await this.examRepository.countQuestions(subjectIds);
+        if (totalQuestions === 0) {
             throw new common_1.NotFoundException('No questions available in associated subjects to generate a test');
         }
-        const selectedQuestions = questions
-            .sort(() => 0.5 - Math.random())
-            .slice(0, exam.noOfQuestions || 100);
-        const newTest = await this.prisma.test.create({
-            data: {
-                name: `${exam.name} Auto-Generated - ${new Date().toLocaleDateString()}`,
-                examId: exam.id,
-                questions: {
-                    connect: selectedQuestions.map((q) => ({ id: q.id })),
-                },
-            },
-            select: {
-                id: true,
-                name: true,
-                createdAt: true,
-                questions: {
-                    select: {
-                        id: true,
-                        subject: { select: { id: true, name: true } },
-                    },
-                },
-            },
+        const testSize = exam.noOfQuestions || 100;
+        const selectedQuestionIds = [];
+        const usedOffsets = new Set();
+        if (testSize > totalQuestions / 2) {
+            const allQs = await this.examRepository.findAllQuestionIds(subjectIds);
+            selectedQuestionIds.push(...allQs
+                .sort(() => 0.5 - Math.random())
+                .slice(0, testSize)
+                .map((q) => q.id));
+        }
+        else {
+            while (selectedQuestionIds.length < testSize &&
+                usedOffsets.size < totalQuestions) {
+                const randomOffset = Math.floor(Math.random() * totalQuestions);
+                if (!usedOffsets.has(randomOffset)) {
+                    usedOffsets.add(randomOffset);
+                    const [question] = await this.examRepository.findQuestionAtOffset(subjectIds, randomOffset);
+                    if (question)
+                        selectedQuestionIds.push(question.id);
+                }
+            }
+        }
+        const newTest = await this.examRepository.createTest({
+            name: `${exam.name} Auto-Generated - ${new Date().toLocaleDateString()}`,
+            exam: { connect: { id: exam.id } },
+            questions: { connect: selectedQuestionIds.map((id) => ({ id })) },
         });
         return { test: newTest, exam };
     }
     async findByTier(tier) {
-        return this.prisma.exam.findMany({
-            where: {
-                isDeleted: false,
-                name: {
-                    contains: `Tier ${tier}`,
-                    mode: 'insensitive',
-                },
-            },
-            select: {
-                id: true,
-                name: true,
-                shortDescription: true,
-                subjects: { select: { id: true, name: true } },
-            },
-        });
+        return this.examRepository.findByTier(tier);
     }
     async remove(id) {
-        const exam = await this.prisma.exam.delete({
-            where: { id },
-        });
+        const exam = await this.examRepository.softDelete(id);
         await this.invalidateCache();
         return exam;
     }
@@ -208,7 +113,7 @@ let ExamService = class ExamService {
 exports.ExamService = ExamService;
 exports.ExamService = ExamService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [exam_repository_1.ExamRepository,
         cache_service_1.CacheService])
 ], ExamService);
 //# sourceMappingURL=exam.service.js.map

@@ -10,6 +10,7 @@ exports.CareerReadinessModule = void 0;
 const common_1 = require("@nestjs/common");
 const career_readiness_controller_1 = require("./career-readiness.controller");
 const career_readiness_service_1 = require("./career-readiness.service");
+const career_readiness_repository_1 = require("./repository/career-readiness.repository");
 const prisma_module_1 = require("../../database/prisma.module");
 let CareerReadinessModule = class CareerReadinessModule {
 };
@@ -18,7 +19,8 @@ exports.CareerReadinessModule = CareerReadinessModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule],
         controllers: [career_readiness_controller_1.CareerReadinessController],
-        providers: [career_readiness_service_1.CareerReadinessService],
+        providers: [career_readiness_service_1.CareerReadinessService, career_readiness_repository_1.CareerReadinessRepository],
+        exports: [career_readiness_service_1.CareerReadinessService, career_readiness_repository_1.CareerReadinessRepository],
     })
 ], CareerReadinessModule);
 //# sourceMappingURL=career-readiness.module.js.map

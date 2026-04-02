@@ -10,6 +10,7 @@ exports.UserModule = void 0;
 const common_1 = require("@nestjs/common");
 const user_service_1 = require("./user.service");
 const user_controller_1 = require("./user.controller");
+const user_repository_1 = require("./repository/user.repository");
 const result_module_1 = require("../result/result.module");
 const mock_test_module_1 = require("../mock-test/mock-test.module");
 let UserModule = class UserModule {
@@ -18,9 +19,9 @@ exports.UserModule = UserModule;
 exports.UserModule = UserModule = __decorate([
     (0, common_1.Module)({
         imports: [(0, common_1.forwardRef)(() => result_module_1.ResultModule), mock_test_module_1.MockTestModule],
-        providers: [user_service_1.UserService],
+        providers: [user_service_1.UserService, user_repository_1.UserRepository],
         controllers: [user_controller_1.UserController],
-        exports: [user_service_1.UserService],
+        exports: [user_service_1.UserService, user_repository_1.UserRepository],
     })
 ], UserModule);
 //# sourceMappingURL=user.module.js.map

@@ -46,6 +46,11 @@ let ArthaProcessor = ArthaProcessor_1 = class ArthaProcessor extends bullmq_1.Wo
         }
     }
     async handleTierAnalysis(userId, assessmentId, tier, inputData) {
+        const assessment = await this.repository.findAssessmentById(assessmentId);
+        if (assessment?.status === 'COMPLETED') {
+            this.logger.log(`Assessment ${assessmentId} already completed. Skipping.`);
+            return;
+        }
         await this.repository.completeAssessment(assessmentId, {
             status: 'PROCESSING',
         });

@@ -8,26 +8,28 @@ export declare class StudyPlanController {
     private readonly studyPlanService;
     private readonly logger;
     constructor(studyPlanService: StudyPlanService);
-    generate(dto: CreateStudyPlanDto): Promise<Record<string, unknown> & {
+    generate(dto: CreateStudyPlanDto, req: any): Promise<Record<string, unknown> & {
         days?: unknown[];
     }>;
     save(body: {
         dto: CreateStudyPlanDto;
         aiData: Record<string, unknown>;
-    }): Promise<{
+    }, req: any): Promise<{
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -37,35 +39,38 @@ export declare class StudyPlanController {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
         preferredStudyTimes: string;
     }>;
-    findByUserId(userId: number): Promise<({
+    findByUserId(userId: number, req: any): Promise<({
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -75,35 +80,38 @@ export declare class StudyPlanController {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
         preferredStudyTimes: string;
     }) | null>;
-    findOne(id: string): Promise<({
+    findOne(id: string, req: any): Promise<({
         days: ({
             activities: {
-                description: string;
+                isDeleted: boolean;
                 id: string;
-                completed: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                description: string;
+                completed: boolean;
                 timeSlot: string;
                 focusArea: string | null;
                 missed: boolean;
                 dayId: string;
             }[];
         } & {
+            isDeleted: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
@@ -113,58 +121,57 @@ export declare class StudyPlanController {
         })[];
     } & {
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;
         preferredStudyTimes: string;
     }) | null>;
-    updateActivityStatus(activityId: string, userId: number, data: UpdateActivityStatusDto): Promise<{
+    updateActivityStatus(activityId: string, userId: number, data: UpdateActivityStatusDto, req: any): Promise<{
         day: {
             id: string;
             date: Date | null;
             planId: string;
         };
     } & {
-        description: string;
+        isDeleted: boolean;
         id: string;
-        completed: boolean;
         createdAt: Date;
         updatedAt: Date;
+        description: string;
+        completed: boolean;
         timeSlot: string;
         focusArea: string | null;
         missed: boolean;
         dayId: string;
     }>;
-    simulateDayPassed(id: string): Promise<{
+    simulateDayPassed(id: string, req: any): Promise<{
         message: string;
         movedCount: number;
     }>;
-    simulateDateChange(id: string): Promise<{
-        message: string;
-        movedCount: number;
-    }>;
-    delete(id: string): Promise<{
+    delete(id: string, req: any): Promise<{
         userId: number;
+        isDeleted: boolean;
         id: string;
-        examId: number | null;
         createdAt: Date;
         updatedAt: Date;
-        weakAreas: string[];
+        examId: number | null;
         targetExam: string;
         examDate: Date;
         tier1Score: number | null;
         tier2Score: number | null;
         currentLevel: string;
+        weakAreas: string[];
         dailyStudyHours: number;
         mockFrequency: string;
         revisionStrategy: string;

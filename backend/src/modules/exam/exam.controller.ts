@@ -98,6 +98,9 @@ export class ExamController {
     return this.examService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'USER')
+  @ApiBearerAuth('access-token')
   @Get(':id/test')
   @ApiOperation({
     summary: 'Get a random existing test for this exam (No side effects)',
@@ -107,6 +110,9 @@ export class ExamController {
     return this.examService.getTest(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('access-token')
   @Post(':id/test')
   @ApiOperation({ summary: 'Generate a new test for this exam (Side effects)' })
   @ApiResponse({ status: 201, description: 'New test generated' })

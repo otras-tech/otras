@@ -2,7 +2,7 @@ import { RedisService } from '../../common/redis/redis.service';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../database/prisma.service';
+import { AuthRepository } from './repository/auth.repository';
 import { User } from '@prisma/client';
 import { RegisterDto } from './dto/auth.dto';
 export type AuthUser = Omit<User, 'password'>;
@@ -10,12 +10,12 @@ export declare class AuthService {
     private userService;
     private jwtService;
     private configService;
-    private prisma;
+    private repository;
     private redisService;
     private readonly logger;
     private readonly BCRYPT_ROUNDS;
     private readonly MAX_SESSIONS;
-    constructor(userService: UserService, jwtService: JwtService, configService: ConfigService, prisma: PrismaService, redisService: RedisService);
+    constructor(userService: UserService, jwtService: JwtService, configService: ConfigService, repository: AuthRepository, redisService: RedisService);
     validateUser(loginId: string, pass: string): Promise<AuthUser | null>;
     register(data: RegisterDto): Promise<{
         user: AuthUser;

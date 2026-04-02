@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ResultService } from './result.service';
 import { ResultController } from './result.controller';
+import { ResultRepository } from './repository/result.repository';
 import { UserModule } from '../user/user.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ResultProcessor } from './result.processor';
@@ -20,6 +21,7 @@ import { getQueueToken } from '@nestjs/bullmq';
   ],
   providers: [
     ResultService,
+    ResultRepository,
     ResultProcessor,
     ...(process.env.DISABLE_REDIS === 'true'
       ? [

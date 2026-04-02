@@ -1,62 +1,58 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
-import { Prisma } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { ApplicationRepository } from './repository/application.repository';
+import { UpdateApplicationStatusDto } from './dto/application.dto';
 
 @Injectable()
 export class ApplicationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly applicationRepository: ApplicationRepository) {}
 
-  async create(userId: number, examId: number) {
-    return this.prisma.application.upsert({
-      where: {
-        userId_examId: {
-          userId,
-          examId,
-        },
-      },
-      update: {},
-      create: {
-        userId,
-        examId,
-      },
-    });
+  /**
+   * Ownership enforced: user can only apply for themselves.
+   */
+  async create(requesterId: number, requesterRole: string, userId: number, examId: number) {
+    if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('You can only apply for yourself');
+    }
+    return this.applicationRepository.upsert(userId, examId);
   }
 
-  async findByUser(userId: number) {
-    return this.prisma.application.findMany({
-      where: { userId },
-      include: {
-        exam: true,
-      },
-    });
+  /**
+   * Ownership enforced: user can only view their own applications.
+   */
+  async findByUser(requesterId: number, requesterRole: string, userId: number) {
+    if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Access denied');
+    }
+    return this.applicationRepository.findByUserId(userId);
   }
 
   async findByOtrId(otrId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { otrId },
-    });
-    if (!user) return [];
-    return this.prisma.application.findMany({
-      where: { userId: user.id },
-      include: {
-        exam: true,
-      },
-    });
+    const result = await this.applicationRepository.findByOtrId(otrId);
+    if (result === null) return [];
+    return result;
   }
 
   async findAll() {
-    return this.prisma.application.findMany({
-      include: {
-        user: true,
-        exam: true,
-      },
-    });
+    return this.applicationRepository.findAll();
   }
 
-  async updateStatus(id: number, statusData: any) {
-    return this.prisma.application.update({
-      where: { id },
-      data: statusData,
-    });
+  /**
+   * Admin-only: validates resource exists before update.
+   */
+  async updateStatus(
+    requesterRole: string,
+    id: number,
+    statusData: UpdateApplicationStatusDto,
+  ) {
+    if (requesterRole.toUpperCase() !== 'ADMIN') {
+      throw new ForbiddenException('Only admins can update application status');
+    }
+    const existing = await this.applicationRepository.findById(id);
+    if (!existing) throw new NotFoundException('Application not found');
+    return this.applicationRepository.updateStatus(id, statusData as any);
   }
 }

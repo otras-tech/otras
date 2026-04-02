@@ -12,62 +12,43 @@ var MockTestService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MockTestService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const mock_test_repository_1 = require("./repository/mock-test.repository");
 const cache_service_1 = require("../../common/cache/cache.service");
 const redis_service_1 = require("../../common/redis/redis.service");
 let MockTestService = MockTestService_1 = class MockTestService {
-    prisma;
+    mockTestRepository;
     cacheService;
     redisService;
     logger = new common_1.Logger(MockTestService_1.name);
-    constructor(prisma, cacheService, redisService) {
-        this.prisma = prisma;
+    constructor(mockTestRepository, cacheService, redisService) {
+        this.mockTestRepository = mockTestRepository;
         this.cacheService = cacheService;
         this.redisService = redisService;
     }
-    async findAll(categoryId, cursor) {
+    async findAll(categoryId, cursor, take) {
+        const safeTake = Math.min(take || 20, 100);
         const cacheKey = cache_service_1.CacheService.buildKey('mock_tests', {
             categoryId,
             cursor,
+            take: safeTake,
         });
-        if (!cacheKey) {
-            return this.prisma.mockTest.findMany({
-                where: { categoryId, isDeleted: false },
-                take: 20,
-                orderBy: { createdAt: 'desc' },
-            });
-        }
-        try {
-            const cached = await this.cacheService.get(cacheKey);
-            if (cached) {
-                this.logger.log(`Cache Hit: ${cacheKey}`);
-                return cached;
+        if (cacheKey) {
+            try {
+                const cached = await this.cacheService.get(cacheKey);
+                if (cached)
+                    return cached;
             }
-        }
-        catch (err) {
-            this.logger.error(`Redis error (findAll): ${err.message}`);
+            catch (err) { }
         }
         try {
-            const results = await this.prisma.mockTest.findMany({
-                where: {
-                    categoryId: categoryId || undefined,
-                    isDeleted: false,
-                },
-                select: {
-                    id: true,
-                    title: true,
-                    duration: true,
-                    category: { select: { name: true } },
-                },
-                take: 20,
-                skip: cursor ? 1 : 0,
-                cursor: cursor ? { id: cursor } : undefined,
-                orderBy: { createdAt: 'desc' },
-            });
-            await this.cacheService.set(cacheKey, results, 600000);
+            const results = await this.mockTestRepository.findAll(categoryId, cursor, safeTake);
+            if (cacheKey) {
+                await this.cacheService.set(cacheKey, results, 600000);
+            }
             return results;
         }
         catch (error) {
+            this.logger.error(`FindAll error: ${error.message}`);
             throw new common_1.InternalServerErrorException('Error fetching mock tests');
         }
     }
@@ -78,29 +59,22 @@ let MockTestService = MockTestService_1 = class MockTestService {
             if (cached)
                 return cached;
         }
-        catch (err) {
-        }
-        const mockTest = await this.prisma.mockTest.findUnique({
-            where: { id, isDeleted: false },
-            select: {
-                id: true,
-                title: true,
-                duration: true,
-                category: { select: { name: true } },
-                exam: { select: { name: true } },
-            },
-        });
+        catch (err) { }
+        const mockTest = await this.mockTestRepository.findById(id);
         if (!mockTest)
             throw new common_1.NotFoundException('Mock test not found');
         await this.cacheService.set(cacheKey, mockTest, 3600000);
         return mockTest;
     }
-    async startAttempt(dto) {
+    async startAttempt(requesterOtrId, dto) {
         const { otrId, mockTestOrTestId } = dto;
+        if (requesterOtrId !== otrId) {
+            throw new common_1.ForbiddenException('Cannot start attempt for another user');
+        }
         try {
-            return await this.prisma.$transaction(async (tx) => {
-                const user = await tx.user.findUnique({
-                    where: { otrId },
+            return await this.mockTestRepository.$transaction(async (tx) => {
+                const user = await tx.user.findFirst({
+                    where: { otrId, isDeleted: false },
                     select: { id: true },
                 });
                 if (!user)
@@ -119,22 +93,26 @@ let MockTestService = MockTestService_1 = class MockTestService {
             });
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException)
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException)
                 throw error;
+            this.logger.error(`StartAttempt error: ${error.message}`);
             throw new common_1.InternalServerErrorException('Error starting attempt');
         }
     }
-    async submitAttempt(dto) {
+    async submitAttempt(requesterOtrId, dto) {
+        if (requesterOtrId !== dto.otrId) {
+            throw new common_1.ForbiddenException('Cannot submit for another user');
+        }
         try {
-            return await this.prisma.$transaction(async (tx) => {
+            return await this.mockTestRepository.$transaction(async (tx) => {
                 const attemptData = {
                     score: dto.score,
                     totalMarks: dto.totalMarks,
                     submitTime: new Date(),
                 };
                 if (dto.attemptId) {
-                    const existing = await tx.mockTestAttempt.findUnique({
-                        where: { id: dto.attemptId },
+                    const existing = await tx.mockTestAttempt.findFirst({
+                        where: { id: dto.attemptId, isDeleted: false },
                         select: { otrId: true },
                     });
                     if (!existing)
@@ -149,8 +127,8 @@ let MockTestService = MockTestService_1 = class MockTestService {
                     this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
                     return result;
                 }
-                const user = await tx.user.findUnique({
-                    where: { otrId: dto.otrId },
+                const user = await tx.user.findFirst({
+                    where: { otrId: dto.otrId, isDeleted: false },
                     select: { id: true },
                 });
                 if (!user)
@@ -169,14 +147,16 @@ let MockTestService = MockTestService_1 = class MockTestService {
             });
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException ||
-                error instanceof common_1.ForbiddenException)
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException)
                 throw error;
             this.logger.error(`Submission error: ${error.message}`);
             throw new common_1.InternalServerErrorException('Error submitting attempt');
         }
     }
-    async calculateRank(mockTestId, otrId) {
+    async calculateRank(requesterOtrId, mockTestId, otrId) {
+        if (requesterOtrId !== otrId) {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         try {
             const rankKey = `ranks:mockTest:${mockTestId}`;
             const [redisRank, redisTotal] = await Promise.all([
@@ -186,40 +166,20 @@ let MockTestService = MockTestService_1 = class MockTestService {
             if (redisRank !== null) {
                 const percentile = redisTotal > 1 ? ((redisTotal - redisRank) / redisTotal) * 100 : 100;
                 return {
-                    rank: redisRank,
+                    rank: redisRank + 1,
                     total: redisTotal,
-                    topPercentage: Math.ceil((redisRank / redisTotal) * 100),
+                    topPercentage: Math.ceil(((redisRank + 1) / redisTotal) * 100),
                     percentile: Math.round(percentile * 10) / 10,
                     source: 'cache',
                 };
             }
-            const userAttempt = await this.prisma.mockTestAttempt.findFirst({
-                where: { mockTestId, otrId, isDeleted: false },
-                orderBy: { score: 'desc' },
-                select: { score: true, attemptedAt: true },
-            });
+            const userAttempt = await this.mockTestRepository.findBestAttempt(mockTestId, otrId);
             if (!userAttempt) {
-                const total = await this.prisma.mockTestAttempt.count({
-                    where: { mockTestId, isDeleted: false },
-                });
+                const total = await this.mockTestRepository.countAttempts(mockTestId);
                 return { msg: 'User has not attempted this test yet', total };
             }
-            const betterAttemptsCount = await this.prisma.mockTestAttempt.count({
-                where: {
-                    mockTestId,
-                    isDeleted: false,
-                    OR: [
-                        { score: { gt: userAttempt.score } },
-                        {
-                            score: userAttempt.score,
-                            attemptedAt: { lt: userAttempt.attemptedAt },
-                        },
-                    ],
-                },
-            });
-            const total = await this.prisma.mockTestAttempt.count({
-                where: { mockTestId, isDeleted: false },
-            });
+            const betterAttemptsCount = await this.mockTestRepository.countBetterAttempts(mockTestId, userAttempt.score, userAttempt.attemptedAt);
+            const total = await this.mockTestRepository.countAttempts(mockTestId);
             const rank = betterAttemptsCount + 1;
             const percentile = total > 1 ? ((total - rank) / total) * 100 : 100;
             this.syncToLeaderboard(mockTestId, otrId, userAttempt.score);
@@ -236,11 +196,14 @@ let MockTestService = MockTestService_1 = class MockTestService {
             throw new common_1.InternalServerErrorException('Error calculating rank');
         }
     }
-    async submitExamAttempt(dto) {
+    async submitExamAttempt(requesterOtrId, dto) {
+        if (requesterOtrId !== dto.otrId) {
+            throw new common_1.ForbiddenException('Cannot submit for another user');
+        }
         try {
-            return await this.prisma.$transaction(async (tx) => {
-                const user = await tx.user.findUnique({
-                    where: { otrId: dto.otrId },
+            return await this.mockTestRepository.$transaction(async (tx) => {
+                const user = await tx.user.findFirst({
+                    where: { otrId: dto.otrId, isDeleted: false },
                     select: { id: true },
                 });
                 if (!user)
@@ -250,7 +213,7 @@ let MockTestService = MockTestService_1 = class MockTestService {
                     score: dto.score,
                     totalMarks: dto.totalMarks,
                     correctAnswers: dto.correctAnswers ?? null,
-                    subjectBreakdown: dto.subjectBreakdown ?? undefined,
+                    subjectBreakdown: dto.subjectBreakdown ?? {},
                     submitTime: new Date(),
                 };
                 if (dto.attemptId) {
@@ -276,47 +239,32 @@ let MockTestService = MockTestService_1 = class MockTestService {
             });
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException)
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException)
                 throw error;
             this.logger.error(`Exam submission error: ${error.message}`);
             throw new common_1.InternalServerErrorException('Error processing exam attempt');
         }
     }
-    async getUserMockAttempts(otrId, cursor) {
+    async getUserMockAttempts(requesterOtrId, otrId, cursor) {
+        if (requesterOtrId !== otrId) {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         try {
-            return await this.prisma.mockTestAttempt.findMany({
-                where: {
-                    otrId,
-                    isDeleted: false,
-                    OR: [{ submitTime: { not: null } }, { score: { gt: 0 } }],
-                },
-                select: {
-                    id: true,
-                    score: true,
-                    totalMarks: true,
-                    correctAnswers: true,
-                    subjectBreakdown: true,
-                    attemptedAt: true,
-                    mockTest: { select: { title: true } },
-                },
-                orderBy: { attemptedAt: 'desc' },
-                take: 20,
-                skip: cursor ? 1 : 0,
-                cursor: cursor ? { id: cursor } : undefined,
-            });
+            return await this.mockTestRepository.getUserMockAttempts(otrId, cursor);
         }
         catch (error) {
+            this.logger.error(`GetUserAttempts error: ${error.message}`);
             throw new common_1.InternalServerErrorException('Error fetching user attempts');
         }
     }
     async resolveMockTestId(tx, id) {
-        const mockTest = await tx.mockTest.findUnique({
+        const mockTest = await tx.mockTest.findFirst({
             where: { id, isDeleted: false },
             select: { id: true },
         });
         if (mockTest)
             return mockTest.id;
-        const test = await tx.test.findUnique({
+        const test = await tx.test.findFirst({
             where: { id, isDeleted: false },
             select: { examId: true },
         });
@@ -328,28 +276,26 @@ let MockTestService = MockTestService_1 = class MockTestService {
     }
     async getOrCreateOfficialMockTest(tx, examId) {
         const categoryName = 'Official Assessment';
-        let category = await tx.mockTestCategory.findUnique({
+        const category = await tx.mockTestCategory.upsert({
             where: { name: categoryName },
+            update: { isDeleted: false },
+            create: { name: categoryName },
             select: { id: true },
         });
-        if (!category) {
-            category = await tx.mockTestCategory.create({
-                data: { name: categoryName },
-                select: { id: true },
-            });
-        }
         let mockTest = await tx.mockTest.findFirst({
             where: { examId, categoryId: category.id, isDeleted: false },
             select: { id: true },
         });
         if (!mockTest) {
-            const exam = await tx.exam.findUnique({
-                where: { id: examId },
+            const exam = await tx.exam.findFirst({
+                where: { id: examId, isDeleted: false },
                 select: { name: true },
             });
+            if (!exam)
+                throw new common_1.NotFoundException(`Active exam with ID ${examId} not found`);
             mockTest = await tx.mockTest.create({
                 data: {
-                    title: `${exam?.name || 'Exam'} - Official Assessment`,
+                    title: `${exam.name} - Official Assessment`,
                     duration: 60,
                     sectionType: 'Full Length',
                     categoryId: category.id,
@@ -362,13 +308,18 @@ let MockTestService = MockTestService_1 = class MockTestService {
     }
     async syncToLeaderboard(mockTestId, otrId, score) {
         const rankKey = `ranks:mockTest:${mockTestId}`;
-        await this.redisService.zAdd(rankKey, score, otrId);
+        try {
+            await this.redisService.zAdd(rankKey, score, otrId);
+        }
+        catch (err) {
+            this.logger.error(`Failed to sync leaderboard for test ${mockTestId}: ${err.message}`);
+        }
     }
 };
 exports.MockTestService = MockTestService;
 exports.MockTestService = MockTestService = MockTestService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [mock_test_repository_1.MockTestRepository,
         cache_service_1.CacheService,
         redis_service_1.RedisService])
 ], MockTestService);

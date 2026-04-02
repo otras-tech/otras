@@ -10,6 +10,7 @@ exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
 const admin_controller_1 = require("./admin.controller");
+const admin_repository_1 = require("./repository/admin.repository");
 const jwt_1 = require("@nestjs/jwt");
 const prisma_module_1 = require("../../database/prisma.module");
 let AdminModule = class AdminModule {
@@ -24,7 +25,7 @@ exports.AdminModule = AdminModule = __decorate([
                 signOptions: { expiresIn: '1d' },
             }),
         ],
-        providers: [admin_service_1.AdminService],
+        providers: [admin_service_1.AdminService, admin_repository_1.AdminRepository],
         controllers: [admin_controller_1.AdminController],
         exports: [admin_service_1.AdminService],
     })

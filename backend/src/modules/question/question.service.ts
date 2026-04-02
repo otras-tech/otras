@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { QuestionRepository } from './repository/question.repository';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly questionRepository: QuestionRepository) {}
 
   create(data: {
     text: string;
@@ -14,11 +14,9 @@ export class QuestionService {
     subjectId: number;
   }) {
     const { subjectId, ...rest } = data;
-    return this.prisma.question.create({
-      data: {
-        ...rest,
-        subject: { connect: { id: subjectId } },
-      },
+    return this.questionRepository.create({
+      ...rest,
+      subject: { connect: { id: subjectId } },
     });
   }
 
@@ -26,24 +24,15 @@ export class QuestionService {
     const where: Prisma.QuestionWhereInput = {};
     if (query?.subjectId) where.subjectId = query.subjectId;
     if (query?.examId) {
-      where.tests = {
-        some: {
-          examId: query.examId,
-        },
-      };
+      where.tests = { some: { examId: query.examId } };
     }
-
-    return this.prisma.question.findMany({
-      where,
-      include: { subject: true },
-    });
+    return this.questionRepository.findAll(where);
   }
 
-  findOne(id: number) {
-    return this.prisma.question.findUnique({
-      where: { id },
-      include: { subject: true },
-    });
+  async findOne(id: number) {
+    const question = await this.questionRepository.findById(id);
+    if (!question) throw new NotFoundException('Question not found');
+    return question;
   }
 
   update(
@@ -61,15 +50,10 @@ export class QuestionService {
     if (subjectId) {
       updateData.subject = { connect: { id: subjectId } };
     }
-    return this.prisma.question.update({
-      where: { id },
-      data: updateData,
-    });
+    return this.questionRepository.update(id, updateData);
   }
 
   remove(id: number) {
-    return this.prisma.question.delete({
-      where: { id },
-    });
+    return this.questionRepository.softDelete(id);
   }
 }

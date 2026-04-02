@@ -11,59 +11,44 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubjectService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const subject_repository_1 = require("./repository/subject.repository");
 let SubjectService = class SubjectService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    subjectRepository;
+    constructor(subjectRepository) {
+        this.subjectRepository = subjectRepository;
     }
     create(data) {
         const { examId, ...rest } = data;
-        return this.prisma.subject.create({
-            data: {
-                ...rest,
-                ...(examId && {
-                    exams: {
-                        connect: { id: examId },
-                    },
-                }),
-            },
-        });
+        const createInput = { ...rest };
+        if (examId) {
+            createInput.exams = { connect: { id: examId } };
+        }
+        return this.subjectRepository.create(createInput);
     }
-    findAll() {
-        return this.prisma.subject.findMany({
-            include: { exams: true, questions: true },
-        });
+    findAll(cursor, take) {
+        return this.subjectRepository.findAll(cursor, take);
     }
-    findOne(id) {
-        return this.prisma.subject.findUnique({
-            where: { id },
-            include: { exams: true, questions: true },
-        });
+    async findOne(id) {
+        const subject = await this.subjectRepository.findById(id);
+        if (!subject)
+            throw new common_1.NotFoundException('Subject not found');
+        return subject;
     }
     update(id, data) {
         const { examId, ...rest } = data;
-        return this.prisma.subject.update({
-            where: { id },
-            data: {
-                ...rest,
-                ...(examId && {
-                    exams: {
-                        connect: { id: examId },
-                    },
-                }),
-            },
-        });
+        const updateInput = { ...rest };
+        if (examId) {
+            updateInput.exams = { connect: { id: examId } };
+        }
+        return this.subjectRepository.update(id, updateInput);
     }
     remove(id) {
-        return this.prisma.subject.delete({
-            where: { id },
-        });
+        return this.subjectRepository.softDelete(id);
     }
 };
 exports.SubjectService = SubjectService;
 exports.SubjectService = SubjectService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [subject_repository_1.SubjectRepository])
 ], SubjectService);
 //# sourceMappingURL=subject.service.js.map

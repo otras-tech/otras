@@ -1,42 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CategoryRepository } from './repository/category.repository';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly categoryRepository: CategoryRepository) {}
 
   create(createCategoryDto: CreateCategoryDto) {
-    return this.prisma.mockTestCategory.create({
-      data: {
-        name: createCategoryDto.name,
-      },
-    });
+    return this.categoryRepository.create(createCategoryDto.name);
   }
 
   findAll() {
-    return this.prisma.mockTestCategory.findMany({ take: 100 });
+    return this.categoryRepository.findAll();
   }
 
-  findOne(id: number) {
-    return this.prisma.mockTestCategory.findUnique({
-      where: { id },
-    });
+  async findOne(id: number) {
+    const category = await this.categoryRepository.findById(id);
+    if (!category) throw new NotFoundException('Category not found');
+    return category;
   }
 
   update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return this.prisma.mockTestCategory.update({
-      where: { id },
-      data: {
-        name: updateCategoryDto.name,
-      },
-    });
+    return this.categoryRepository.update(id, updateCategoryDto.name!);
   }
 
   remove(id: number) {
-    return this.prisma.mockTestCategory.delete({
-      where: { id },
-    });
+    return this.categoryRepository.softDelete(id);
   }
 }

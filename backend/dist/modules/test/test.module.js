@@ -10,13 +10,15 @@ exports.TestModule = void 0;
 const common_1 = require("@nestjs/common");
 const test_service_1 = require("./test.service");
 const test_controller_1 = require("./test.controller");
+const test_repository_1 = require("./repository/test.repository");
 let TestModule = class TestModule {
 };
 exports.TestModule = TestModule;
 exports.TestModule = TestModule = __decorate([
     (0, common_1.Module)({
         controllers: [test_controller_1.TestController],
-        providers: [test_service_1.TestService],
+        providers: [test_service_1.TestService, test_repository_1.TestRepository],
+        exports: [test_repository_1.TestRepository],
     })
 ], TestModule);
 //# sourceMappingURL=test.module.js.map

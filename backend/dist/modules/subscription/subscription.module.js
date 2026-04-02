@@ -10,14 +10,13 @@ exports.SubscriptionModule = void 0;
 const common_1 = require("@nestjs/common");
 const subscription_service_1 = require("./subscription.service");
 const subscription_controller_1 = require("./subscription.controller");
-const prisma_module_1 = require("../../database/prisma.module");
+const subscription_repository_1 = require("./repository/subscription.repository");
 let SubscriptionModule = class SubscriptionModule {
 };
 exports.SubscriptionModule = SubscriptionModule;
 exports.SubscriptionModule = SubscriptionModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
-        providers: [subscription_service_1.SubscriptionService],
+        providers: [subscription_service_1.SubscriptionService, subscription_repository_1.SubscriptionRepository],
         controllers: [subscription_controller_1.SubscriptionController],
     })
 ], SubscriptionModule);

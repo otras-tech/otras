@@ -1,15 +1,23 @@
-import { PrismaService } from '../../database/prisma.service';
-import { Prisma } from '@prisma/client';
+import { QuestionRepository } from './repository/question.repository';
 export declare class QuestionService {
-    private prisma;
-    constructor(prisma: PrismaService);
+    private readonly questionRepository;
+    constructor(questionRepository: QuestionRepository);
     create(data: {
         text: string;
         options: string[];
         answer: string;
         explanation?: string;
         subjectId: number;
-    }): Prisma.Prisma__QuestionClient<{
+    }): Promise<{
+        subject: {
+            isDeleted: boolean;
+            id: number;
+            createdAt: Date;
+            updatedAt: Date;
+            name: string;
+        };
+    } & {
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -18,18 +26,20 @@ export declare class QuestionService {
         answer: string;
         explanation: string | null;
         subjectId: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    }>;
     findAll(query?: {
         examId?: number;
         subjectId?: number;
-    }): Prisma.PrismaPromise<({
+    }): Promise<({
         subject: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         };
     } & {
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -39,14 +49,16 @@ export declare class QuestionService {
         explanation: string | null;
         subjectId: number;
     })[]>;
-    findOne(id: number): Prisma.Prisma__QuestionClient<({
+    findOne(id: number): Promise<{
         subject: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         };
     } & {
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -55,14 +67,15 @@ export declare class QuestionService {
         answer: string;
         explanation: string | null;
         subjectId: number;
-    }) | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
+    }>;
     update(id: number, data: {
         text?: string;
         options?: string[];
         answer?: string;
         explanation?: string;
         subjectId?: number;
-    }): Prisma.Prisma__QuestionClient<{
+    }): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -71,8 +84,9 @@ export declare class QuestionService {
         answer: string;
         explanation: string | null;
         subjectId: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
-    remove(id: number): Prisma.Prisma__QuestionClient<{
+    }>;
+    remove(id: number): Promise<{
+        isDeleted: boolean;
         id: number;
         createdAt: Date;
         updatedAt: Date;
@@ -81,5 +95,5 @@ export declare class QuestionService {
         answer: string;
         explanation: string | null;
         subjectId: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs>;
+    }>;
 }

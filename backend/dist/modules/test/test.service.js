@@ -11,13 +11,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TestService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const test_repository_1 = require("./repository/test.repository");
 const cache_service_1 = require("../../common/cache/cache.service");
 let TestService = class TestService {
-    prisma;
+    repository;
     cacheService;
-    constructor(prisma, cacheService) {
-        this.prisma = prisma;
+    constructor(repository, cacheService) {
+        this.repository = repository;
         this.cacheService = cacheService;
     }
     async invalidateCache() {
@@ -25,126 +25,61 @@ let TestService = class TestService {
     }
     async create(createTestDto) {
         const { name, examId, questionIds: manualQuestionIds } = createTestDto;
-        let questionIdsToConnect = [];
+        let questionIds = [];
         if (manualQuestionIds && manualQuestionIds.length > 0) {
-            const existingQuestions = await this.prisma.question.findMany({
-                where: { id: { in: manualQuestionIds } },
-                select: { id: true },
-            });
-            if (existingQuestions.length !== manualQuestionIds.length) {
-                const existingIds = existingQuestions.map((q) => q.id);
+            const existing = await this.repository.findQuestionsByIds(manualQuestionIds);
+            if (existing.length !== manualQuestionIds.length) {
+                const existingIds = existing.map((q) => q.id);
                 const missingIds = manualQuestionIds.filter((id) => !existingIds.includes(id));
                 throw new common_1.BadRequestException(`Some question IDs do not exist: ${missingIds.join(', ')}`);
             }
-            questionIdsToConnect = manualQuestionIds.map((id) => ({ id }));
+            questionIds = manualQuestionIds;
         }
         else {
-            const exam = await this.prisma.exam.findUnique({
-                where: { id: examId },
-                include: { subjects: true },
-            });
+            const exam = await this.repository.findExamWithSubjects(examId);
             if (!exam)
                 throw new common_1.BadRequestException('Exam not found');
             if (!exam.subjects || exam.subjects.length === 0) {
-                throw new common_1.BadRequestException('This exam has no associated subjects and no manual questionIds provided. Please add subjects to the exam or provide questionIds.');
+                throw new common_1.BadRequestException('This exam has no associated subjects. Please add subjects first.');
             }
             const subjectIds = exam.subjects.map((s) => s.id);
-            const questions = await this.prisma.question.findMany({
-                where: { subjectId: { in: subjectIds } },
-                select: { id: true },
-            });
+            const questions = await this.repository.findQuestionsBySubjectIds(subjectIds);
             if (questions.length === 0) {
-                throw new common_1.BadRequestException('No questions found for the subjects associated with this exam. Please add questions to the subjects first.');
+                throw new common_1.BadRequestException('No questions found for the subjects associated with this exam.');
             }
             const targetCount = exam.noOfQuestions || 100;
-            questionIdsToConnect = questions
+            questionIds = questions
                 .sort(() => 0.5 - Math.random())
                 .slice(0, targetCount)
-                .map((q) => ({ id: q.id }));
+                .map((q) => q.id);
         }
-        if (questionIdsToConnect.length === 0) {
-            throw new common_1.BadRequestException('Cannot create a test with zero questions. Please provide questionIds or ensure the exam subjects have questions.');
+        if (questionIds.length === 0) {
+            throw new common_1.BadRequestException('Cannot create a test with zero questions.');
         }
-        const test = await this.prisma.test.create({
-            data: {
-                name,
-                examId,
-                questions: {
-                    connect: questionIdsToConnect,
-                },
-            },
-            select: {
-                id: true,
-                name: true,
-                createdAt: true,
-                exam: {
-                    select: { id: true, name: true },
-                },
-                _count: {
-                    select: { questions: true },
-                },
-            },
-        });
+        const test = await this.repository.createTest({ name, examId }, questionIds);
         await this.invalidateCache();
         return test;
     }
     findAll(cursor, take) {
         const safeTake = Math.min(take || 20, 100);
-        return this.prisma.test.findMany({
-            where: { isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                createdAt: true,
-                exam: {
-                    select: { id: true, name: true },
-                },
-                _count: {
-                    select: { questions: true },
-                },
-            },
-            take: safeTake,
-            skip: cursor ? 1 : 0,
-            cursor: cursor ? { id: cursor } : undefined,
-            orderBy: { createdAt: 'desc' },
-        });
+        return this.repository.findAll(cursor, safeTake);
     }
-    findOne(id) {
-        return this.prisma.test.findUnique({
-            where: { id, isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                createdAt: true,
-                exam: {
-                    select: { id: true, name: true, noOfQuestions: true },
-                },
-                questions: {
-                    select: {
-                        id: true,
-                        text: true,
-                        options: true,
-                        subject: { select: { id: true, name: true } },
-                    },
-                },
-            },
-        });
+    async findOne(id) {
+        const test = await this.repository.findById(id);
+        if (!test)
+            throw new common_1.NotFoundException('Test not found');
+        return test;
     }
     async update(id, updateTestDto) {
-        const test = await this.prisma.test.update({
-            where: { id },
-            data: {
-                name: updateTestDto.name,
-                examId: updateTestDto.examId,
-            },
+        const test = await this.repository.updateTest(id, {
+            name: updateTestDto.name,
+            examId: updateTestDto.examId,
         });
         await this.invalidateCache();
         return test;
     }
     async remove(id) {
-        const test = await this.prisma.test.delete({
-            where: { id },
-        });
+        const test = await this.repository.softDelete(id);
         await this.invalidateCache();
         return test;
     }
@@ -152,7 +87,7 @@ let TestService = class TestService {
 exports.TestService = TestService;
 exports.TestService = TestService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+    __metadata("design:paramtypes", [test_repository_1.TestRepository,
         cache_service_1.CacheService])
 ], TestService);
 //# sourceMappingURL=test.service.js.map

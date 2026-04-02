@@ -7,125 +7,127 @@ export declare class ExamController {
     constructor(examService: ExamService, cacheService: CacheService);
     create(createExamDto: CreateExamDto): Promise<{
         subjects: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         }[];
     } & {
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
     update(id: number, updateData: CreateExamDto): Promise<{
         subjects: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         }[];
     } & {
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
     remove(id: number): Promise<{
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
     findAll(): Promise<{
-        name: string;
         id: number;
+        name: string;
         cutoff: number | null;
         syllabus: string | null;
         noOfQuestions: number | null;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     }[]>;
     findOne(id: number): Promise<{
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     } | null>;
     getTest(id: number): Promise<{
         test: {
-            name: string;
             id: number;
+            name: string;
             questions: {
                 subject: {
-                    name: string;
                     id: number;
+                    name: string;
                 };
                 id: number;
             }[];
         };
         exam: {
-            name: string;
             id: number;
+            name: string;
             noOfQuestions: number | null;
         };
     }>;
     generateTest(id: number): Promise<{
         test: {
-            name: string;
             id: number;
             createdAt: Date;
+            name: string;
             questions: {
                 subject: {
-                    name: string;
                     id: number;
+                    name: string;
                 };
                 id: number;
             }[];
         };
         exam: {
-            name: string;
             id: number;
+            name: string;
             noOfQuestions: number | null;
             subjects: {
                 id: number;
@@ -133,12 +135,12 @@ export declare class ExamController {
         };
     }>;
     findByTier(tier: string): Promise<{
-        name: string;
         id: number;
+        name: string;
         shortDescription: string | null;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     }[]>;
 }

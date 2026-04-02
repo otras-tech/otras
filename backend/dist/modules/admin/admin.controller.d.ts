@@ -7,8 +7,9 @@ export declare class AdminController {
         access_token: string;
         admin: Omit<{
             password: string;
-            email: string;
+            isDeleted: boolean;
             id: number;
+            email: string;
             createdAt: Date;
             updatedAt: Date;
             username: string;
@@ -18,8 +19,9 @@ export declare class AdminController {
         access_token: string;
         admin: Omit<{
             password: string;
-            email: string;
+            isDeleted: boolean;
             id: number;
+            email: string;
             createdAt: Date;
             updatedAt: Date;
             username: string;

@@ -19,7 +19,7 @@ let StudyPlanRepository = class StudyPlanRepository {
     }
     async userExists(userId) {
         const user = await this.prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: userId, isDeleted: false },
             select: { id: true },
         });
         return !!user;
@@ -68,10 +68,11 @@ let StudyPlanRepository = class StudyPlanRepository {
     }
     async findByUserId(userId) {
         return this.prisma.studyPlan.findFirst({
-            where: { userId },
+            where: { userId, isDeleted: false },
             include: {
                 days: {
-                    include: { activities: true },
+                    where: { isDeleted: false },
+                    include: { activities: { where: { isDeleted: false } } },
                     orderBy: { date: 'asc' },
                 },
             },
@@ -79,19 +80,20 @@ let StudyPlanRepository = class StudyPlanRepository {
         });
     }
     async findById(id) {
-        return this.prisma.studyPlan.findUnique({
-            where: { id },
+        return this.prisma.studyPlan.findFirst({
+            where: { id, isDeleted: false },
             include: {
                 days: {
-                    include: { activities: true },
+                    where: { isDeleted: false },
+                    include: { activities: { where: { isDeleted: false } } },
                     orderBy: { date: 'asc' },
                 },
             },
         });
     }
     async findActivityWithDay(activityId) {
-        return this.prisma.studyActivity.findUnique({
-            where: { id: activityId },
+        return this.prisma.studyActivity.findFirst({
+            where: { id: activityId, isDeleted: false },
             include: { day: { select: { id: true, planId: true, date: true } } },
         });
     }
@@ -120,10 +122,16 @@ let StudyPlanRepository = class StudyPlanRepository {
         });
     }
     async deleteByUserId(userId) {
-        return this.prisma.studyPlan.deleteMany({ where: { userId } });
+        return this.prisma.studyPlan.updateMany({
+            where: { userId },
+            data: { isDeleted: true },
+        });
     }
     async delete(id) {
-        return this.prisma.studyPlan.delete({ where: { id } });
+        return this.prisma.studyPlan.update({
+            where: { id },
+            data: { isDeleted: true },
+        });
     }
 };
 exports.StudyPlanRepository = StudyPlanRepository;

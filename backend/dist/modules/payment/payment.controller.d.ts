@@ -3,78 +3,79 @@ import { CreateOrderDto, VerifyPaymentDto } from './dto/create-order.dto';
 export declare class PaymentController {
     private readonly paymentService;
     constructor(paymentService: PaymentService);
-    createOrder(req: any, createOrderDto: CreateOrderDto): Promise<{
+    createOrder(req: any, createOrderDto: CreateOrderDto, idempotencyKey?: string): Promise<{
         orderId: string;
         amount: number;
         currency: string;
         paymentId: number;
         keyId: any;
     }>;
-    verifyPayment(verifyPaymentDto: VerifyPaymentDto): Promise<{
+    verifyPayment(verifyPaymentDto: VerifyPaymentDto, idempotencyKey?: string): Promise<{
         message: string;
         payment: {
-            subscription: {
-                isDeleted: boolean;
-                title: string;
-                id: number;
-                createdAt: Date;
-                updatedAt: Date;
-                price: number;
-                features: string[];
-                isRecommended: boolean;
-            };
-        } & {
             userId: number;
             isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            subscriptionId: number;
             razorpayOrderId: string;
             razorpayPaymentId: string | null;
             razorpaySignature: string | null;
             amount: number;
             currency: string;
+            idempotencyKey: string | null;
             paymentMethod: string;
-        };
+            subscriptionId: number;
+        } | null;
     }>;
     payWithCredits(req: any, dto: {
         subscriptionId: number;
-    }): Promise<{
+    }, idempotencyKey?: string): Promise<{
         message: string;
         payment: {
-            id: number;
-            createdAt: Date;
-            updatedAt: Date;
-            referrerId: number;
-            refereeOtrId: string;
-            status: string;
-            creditsEarned: number;
-        } | {
             userId: number;
             isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            subscriptionId: number;
             razorpayOrderId: string;
             razorpayPaymentId: string | null;
             razorpaySignature: string | null;
             amount: number;
             currency: string;
+            idempotencyKey: string | null;
             paymentMethod: string;
+            subscriptionId: number;
         };
         remainingCredits: number;
-    }>;
-    getPaymentsByUser(userId: string): Promise<({
-        subscription: {
+    } | {
+        message: string;
+        payment: {
+            userId: number;
             isDeleted: boolean;
-            title: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            status: string;
+            razorpayOrderId: string;
+            razorpayPaymentId: string | null;
+            razorpaySignature: string | null;
+            amount: number;
+            currency: string;
+            idempotencyKey: string | null;
+            paymentMethod: string;
+            subscriptionId: number;
+        };
+    }>;
+    getPaymentsByUser(userId: number, req: any, cursor?: number, take?: number): Promise<({
+        subscription: {
+            isDeleted: boolean;
+            id: number;
+            createdAt: Date;
+            updatedAt: Date;
+            title: string;
             price: number;
             features: string[];
             isRecommended: boolean;
@@ -86,42 +87,43 @@ export declare class PaymentController {
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        subscriptionId: number;
         razorpayOrderId: string;
         razorpayPaymentId: string | null;
         razorpaySignature: string | null;
         amount: number;
         currency: string;
+        idempotencyKey: string | null;
         paymentMethod: string;
+        subscriptionId: number;
     })[]>;
-    getAllPayments(): Promise<({
+    getAllPayments(cursor?: number, take?: number): Promise<({
         user: {
             password: string;
             role: string;
             isDeleted: boolean;
-            email: string;
+            id: number;
             firstName: string;
             lastName: string;
-            otrId: string;
+            email: string;
             age: number | null;
             category: string | null;
+            otrId: string;
             highestDegree: string | null;
             careerPreference: string | null;
             domicile: string | null;
             pincode: string | null;
-            referralCode: string;
-            id: number;
             createdAt: Date;
             updatedAt: Date;
             credits: number;
+            referralCode: string;
             preferredLanguage: string;
         };
         subscription: {
             isDeleted: boolean;
-            title: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            title: string;
             price: number;
             features: string[];
             isRecommended: boolean;
@@ -133,12 +135,13 @@ export declare class PaymentController {
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        subscriptionId: number;
         razorpayOrderId: string;
         razorpayPaymentId: string | null;
         razorpaySignature: string | null;
         amount: number;
         currency: string;
+        idempotencyKey: string | null;
         paymentMethod: string;
+        subscriptionId: number;
     })[]>;
 }

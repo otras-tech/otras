@@ -11,46 +11,44 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubscriptionService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../../database/prisma.service");
+const subscription_repository_1 = require("./repository/subscription.repository");
 let SubscriptionService = class SubscriptionService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    subscriptionRepository;
+    constructor(subscriptionRepository) {
+        this.subscriptionRepository = subscriptionRepository;
     }
     async create(data) {
-        return this.prisma.subscription.create({
-            data: {
-                title: data.title,
-                price: data.price,
-                features: data.features,
-                isRecommended: data.isRecommended,
-            },
+        return this.subscriptionRepository.create({
+            title: data.title,
+            price: data.price,
+            features: data.features,
+            isRecommended: data.isRecommended,
         });
     }
     async findAll() {
-        return this.prisma.subscription.findMany({ take: 50 });
+        return this.subscriptionRepository.findAll();
     }
     async findOne(id) {
-        return this.prisma.subscription.findUnique({ where: { id } });
+        const sub = await this.subscriptionRepository.findById(id);
+        if (!sub)
+            throw new common_1.NotFoundException('Subscription plan not found');
+        return sub;
     }
     async update(id, data) {
-        return this.prisma.subscription.update({
-            where: { id },
-            data: {
-                title: data.title,
-                price: data.price,
-                features: data.features,
-                isRecommended: data.isRecommended,
-            },
+        return this.subscriptionRepository.update(id, {
+            title: data.title,
+            price: data.price,
+            features: data.features,
+            isRecommended: data.isRecommended,
         });
     }
     async remove(id) {
-        return this.prisma.subscription.delete({ where: { id } });
+        return this.subscriptionRepository.softDelete(id);
     }
 };
 exports.SubscriptionService = SubscriptionService;
 exports.SubscriptionService = SubscriptionService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [subscription_repository_1.SubscriptionRepository])
 ], SubscriptionService);
 //# sourceMappingURL=subscription.service.js.map

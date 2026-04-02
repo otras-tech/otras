@@ -5,32 +5,32 @@ export declare class JobController {
     constructor(jobService: JobService);
     create(createJobDto: CreateJobDto): Promise<{
         isDeleted: boolean;
-        description: string;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
         status: string;
+        description: string;
+        title: string;
         deadline: Date;
     }>;
-    findAll(): Promise<{
+    findAll(cursor?: number, take?: number): Promise<{
         isDeleted: boolean;
-        description: string;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
         status: string;
+        description: string;
+        title: string;
         deadline: Date;
     }[]>;
     findOne(id: number): Promise<{
         isDeleted: boolean;
-        description: string;
-        title: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
         status: string;
+        description: string;
+        title: string;
         deadline: Date;
-    } | null>;
+    }>;
 }

@@ -1,44 +1,40 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { SubscriptionRepository } from './repository/subscription.repository';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly subscriptionRepository: SubscriptionRepository) {}
 
   async create(data: CreateSubscriptionDto) {
-    return this.prisma.subscription.create({
-      data: {
-        title: data.title,
-        price: data.price,
-        features: data.features,
-        isRecommended: data.isRecommended,
-      },
+    return this.subscriptionRepository.create({
+      title: data.title,
+      price: data.price,
+      features: data.features,
+      isRecommended: data.isRecommended,
     });
   }
 
   async findAll() {
-    return this.prisma.subscription.findMany({ take: 50 });
+    return this.subscriptionRepository.findAll();
   }
 
   async findOne(id: number) {
-    return this.prisma.subscription.findUnique({ where: { id } });
+    const sub = await this.subscriptionRepository.findById(id);
+    if (!sub) throw new NotFoundException('Subscription plan not found');
+    return sub;
   }
 
   async update(id: number, data: Partial<CreateSubscriptionDto>) {
-    return this.prisma.subscription.update({
-      where: { id },
-      data: {
-        title: data.title,
-        price: data.price,
-        features: data.features,
-        isRecommended: data.isRecommended,
-      },
+    return this.subscriptionRepository.update(id, {
+      title: data.title,
+      price: data.price,
+      features: data.features,
+      isRecommended: data.isRecommended,
     });
   }
 
   async remove(id: number) {
-    return this.prisma.subscription.delete({ where: { id } });
+    return this.subscriptionRepository.softDelete(id);
   }
 }

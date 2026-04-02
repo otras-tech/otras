@@ -27,8 +27,8 @@ let SubjectController = class SubjectController {
     create(createSubjectDto) {
         return this.subjectService.create(createSubjectDto);
     }
-    findAll() {
-        return this.subjectService.findAll();
+    findAll(cursor, take) {
+        return this.subjectService.findAll(cursor, take);
     }
     findOne(id) {
         return this.subjectService.findOne(id);
@@ -55,10 +55,14 @@ __decorate([
 ], SubjectController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all subjects' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all subjects (Paginated)' }),
+    (0, swagger_1.ApiQuery)({ name: 'cursor', required: false, type: Number }),
+    (0, swagger_1.ApiQuery)({ name: 'take', required: false, type: Number }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of subjects' }),
+    __param(0, (0, common_1.Query)('cursor', new common_1.ParseIntPipe({ optional: true }))),
+    __param(1, (0, common_1.Query)('take', new common_1.ParseIntPipe({ optional: true }))),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], SubjectController.prototype, "findAll", null);
 __decorate([

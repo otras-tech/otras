@@ -25,12 +25,13 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         this.rescheduler = rescheduler;
         this.configService = configService;
     }
-    async generate(dto) {
+    async generate(requesterId, requesterRole, dto) {
+        if (requesterId !== dto.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Cannot generate study plan for another user');
+        }
         try {
             this.logger.log(`Study Plan: Generating plan for ${dto.targetExam}`);
-            this.logger.log(`Checking existence for User ID: ${dto.userId}`);
             const userExists = await this.repository.userExists(dto.userId);
-            this.logger.log(`User exists: ${userExists}`);
             if (!userExists) {
                 throw new common_1.NotFoundException(`User with ID ${dto.userId} not found.`);
             }
@@ -64,13 +65,16 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
             }
         }
         catch (error) {
-            this.logger.error('FATAL: StudyPlan Service Error:', error);
-            if (error instanceof common_1.InternalServerErrorException)
+            if (error instanceof common_1.ForbiddenException || error instanceof common_1.NotFoundException || error instanceof common_1.InternalServerErrorException)
                 throw error;
+            this.logger.error('FATAL: StudyPlan Service Error:', error);
             throw new common_1.BadRequestException(`Backend Error: ${error.message}`);
         }
     }
-    async save(dto, aiData) {
+    async save(requesterId, requesterRole, dto, aiData) {
+        if (requesterId !== dto.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Cannot save study plan for another user');
+        }
         const processedData = this.assignSequentialDates(aiData);
         const days = processedData.days || [];
         const savedPlan = await this.repository.createPlanWithSchedule(dto, days);
@@ -84,16 +88,12 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         const startDate = new Date(today);
         startDate.setDate(today.getDate() + 1);
         startDate.setHours(0, 0, 0, 0);
-        this.logger.log(`TODAY: ${today.toISOString()}`);
-        this.logger.log(`START DATE (TOMORROW): ${startDate.toISOString()}`);
         const updatedDays = aiData.days.map((dayPlan, index) => {
             const currentDate = new Date(startDate);
             currentDate.setDate(startDate.getDate() + index);
             const dayName = currentDate.toLocaleDateString('en-US', {
                 weekday: 'short',
             });
-            this.logger.log(`GENERATED DATE for Day ${index + 1}: ${currentDate.toISOString()}`);
-            this.logger.log(`DAY NAME for Day ${index + 1}: ${dayName}`);
             return {
                 ...dayPlan,
                 date: currentDate,
@@ -105,19 +105,31 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
             days: updatedDays,
         };
     }
-    async findByUserId(userId) {
+    async findByUserId(requesterId, requesterRole, userId) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         const plan = await this.repository.findByUserId(userId);
         if (plan) {
             await this.processMissedTasks(plan.id);
         }
         return this.repository.findByUserId(userId);
     }
-    async findOne(id) {
+    async findOne(requesterId, requesterRole, id) {
+        const plan = await this.repository.findById(id);
+        if (!plan)
+            throw new common_1.NotFoundException('Plan not found');
+        if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         await this.processMissedTasks(id);
         return this.repository.findById(id);
     }
-    async updateActivityStatus(activityId, userId, status) {
-        this.logger.log(`Study Plan: Updating activity ${activityId} status (completed: ${status.completed}, missed: ${status.missed}) for user ${userId}`);
+    async updateActivityStatus(requesterId, requesterRole, activityId, userId, status) {
+        if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        this.logger.log(`Study Plan: Updating activity ${activityId} (completed: ${status.completed}, missed: ${status.missed})`);
         let activity;
         try {
             activity = await this.repository.updateActivityStatus(activityId, {
@@ -127,31 +139,29 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         }
         catch (e) {
             const err = e;
-            this.logger.error(`Failed to update activity ${activityId}: ${err.message}`);
             if (err.code === 'P2025') {
                 throw new common_1.NotFoundException(`Activity with ID ${activityId} not found.`);
             }
             throw new common_1.InternalServerErrorException(`Failed to update activity: ${err.message}`);
         }
-        if (status.completed) {
-            this.logger.log(`Study Plan: Task completed - ${activity.description}`);
-        }
         if (status.missed) {
             const activityWithDay = await this.repository.findActivityWithDay(activityId);
             if (activityWithDay) {
+                const day = activityWithDay.day;
                 await this.rescheduler.storeMissedTask(userId, {
                     activityId: activityWithDay.id,
                     description: activityWithDay.description,
                     timeSlot: activityWithDay.timeSlot,
-                    date: activityWithDay.day?.date?.toISOString() ?? '',
+                    date: day?.date?.toISOString() ?? '',
                 });
-                const planId = activityWithDay.day?.planId;
+                const planId = day?.planId;
                 if (planId) {
                     const plan = await this.repository.findById(planId);
-                    if (plan && plan.days && plan.days.length > 0) {
-                        const lastDay = plan.days[plan.days.length - 1];
+                    const days = plan?.days;
+                    if (plan && days && days.length > 0) {
+                        const lastDay = days[days.length - 1];
                         await this.repository.relocateActivity(activityWithDay.id, lastDay.id);
-                        this.logger.log(`MANUAL RESCHEDULER: Relocated activity ${activityId} to last day [${lastDay.id}]`);
+                        this.logger.log(`Rescheduled: Relocated missed activity ${activityId} to last day`);
                     }
                 }
             }
@@ -164,10 +174,10 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
             return 0;
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        this.logger.log(`AUTO-SCHEDULER: Checking missed tasks for plan ${planId}. Today: ${today.toLocaleDateString()}`);
-        const lastDay = plan.days[plan.days.length - 1];
+        const days = plan.days;
+        const lastDay = days[days.length - 1];
         let movedCount = 0;
-        for (const day of plan.days) {
+        for (const day of days) {
             if (!day.date)
                 continue;
             const dayDate = new Date(day.date);
@@ -175,46 +185,38 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
             if (dayDate < today) {
                 for (const activity of day.activities) {
                     if (!activity.completed && activity.dayId !== lastDay.id) {
-                        this.logger.log(`RELOCATING MISSED TASK: [${activity.id}] "${activity.description}" from ${dayDate.toLocaleDateString()} to FINAL DAY of schedule.`);
                         await this.repository.relocateActivity(activity.id, lastDay.id);
                         movedCount++;
                     }
                 }
             }
         }
-        if (movedCount > 0) {
-            this.logger.log(`AUTO-SCHEDULER: Relocated ${movedCount} tasks for plan ${planId}.`);
-        }
         return movedCount;
     }
-    async moveToNextDay(planId) {
-        const movedCount = await this.processMissedTasks(planId);
-        return { message: 'Missed tasks processed', movedCount };
-    }
-    async moveMissedTasks(planId) {
+    async simulateDayPassed(requesterId, requesterRole, planId) {
         const plan = await this.repository.findById(planId);
         if (!plan)
             throw new common_1.NotFoundException('Plan not found');
-        for (const day of plan.days) {
+        if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
+        const days = plan.days;
+        for (const day of days) {
             if (!day.date)
                 continue;
-            const originalDate = new Date(day.date);
-            const newDate = new Date(originalDate.getTime() - 24 * 60 * 60 * 1000);
+            const newDate = new Date(new Date(day.date).getTime() - 24 * 60 * 60 * 1000);
             await this.repository.updateDayDate(day.id, newDate);
         }
         const movedCount = await this.processMissedTasks(planId);
-        return {
-            message: 'Simulation successful: Dates shifted and missed tasks relocated.',
-            movedCount,
-        };
+        return { message: 'Simulation successful: Missed tasks relocated.', movedCount };
     }
-    async simulateDayPassed(planId) {
-        return this.moveMissedTasks(planId);
-    }
-    async viewPlan(id) {
-        return this.repository.findById(id);
-    }
-    async delete(id) {
+    async delete(requesterId, requesterRole, id) {
+        const plan = await this.repository.findById(id);
+        if (!plan)
+            throw new common_1.NotFoundException('Plan not found');
+        if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Access denied');
+        }
         return this.repository.delete(id);
     }
 };

@@ -1,117 +1,119 @@
-import { PrismaService } from '../../database/prisma.service';
+import { ExamRepository } from './repository/exam.repository';
 import { CacheService } from '../../common/cache/cache.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 export declare class ExamService {
-    private prisma;
-    private cacheService;
-    constructor(prisma: PrismaService, cacheService: CacheService);
+    private readonly examRepository;
+    private readonly cacheService;
+    constructor(examRepository: ExamRepository, cacheService: CacheService);
     invalidateCache(): Promise<void>;
     create(data: CreateExamDto): Promise<{
         subjects: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         }[];
     } & {
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
     update(id: number, updateData: CreateExamDto): Promise<{
         subjects: {
-            name: string;
+            isDeleted: boolean;
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
         }[];
     } & {
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
     findAll(cursor?: number, take?: number): Promise<{
-        name: string;
         id: number;
+        name: string;
         cutoff: number | null;
         syllabus: string | null;
         noOfQuestions: number | null;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     }[]>;
     findOne(id: number): Promise<{
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     } | null>;
     getTest(examId: number): Promise<{
         test: {
-            name: string;
             id: number;
+            name: string;
             questions: {
                 subject: {
-                    name: string;
                     id: number;
+                    name: string;
                 };
                 id: number;
             }[];
         };
         exam: {
-            name: string;
             id: number;
+            name: string;
             noOfQuestions: number | null;
         };
     }>;
     generateTest(examId: number): Promise<{
         test: {
-            name: string;
             id: number;
             createdAt: Date;
+            name: string;
             questions: {
                 subject: {
-                    name: string;
                     id: number;
+                    name: string;
                 };
                 id: number;
             }[];
         };
         exam: {
-            name: string;
             id: number;
+            name: string;
             noOfQuestions: number | null;
             subjects: {
                 id: number;
@@ -119,27 +121,27 @@ export declare class ExamService {
         };
     }>;
     findByTier(tier: string): Promise<{
-        name: string;
         id: number;
+        name: string;
         shortDescription: string | null;
         subjects: {
-            name: string;
             id: number;
+            name: string;
         }[];
     }[]>;
     remove(id: number): Promise<{
         isDeleted: boolean;
-        pattern: string | null;
-        name: string;
         id: number;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        applicationStatus: string;
+        pattern: string | null;
         cutoff: number | null;
         syllabus: string | null;
         eligibility: string | null;
         longDescription: string | null;
         noOfQuestions: number | null;
         shortDescription: string | null;
-        applicationStatus: string;
     }>;
 }
