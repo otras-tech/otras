@@ -8,6 +8,7 @@ export declare class SubmitMockAttemptDto {
     score: number;
     totalMarks: number;
     attemptId?: number;
+    subjectBreakdown?: Record<string, any>;
 }
 export declare class SubmitExamAttemptDto {
     otrId: string;

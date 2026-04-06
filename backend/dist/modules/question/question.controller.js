@@ -47,6 +47,9 @@ let QuestionController = class QuestionController {
 exports.QuestionController = QuestionController;
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new question in the bank' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Question created' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -86,6 +89,9 @@ __decorate([
 ], QuestionController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a question' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Question updated' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -97,6 +103,9 @@ __decorate([
 ], QuestionController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a question' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Question deleted' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -107,9 +116,6 @@ __decorate([
 exports.QuestionController = QuestionController = __decorate([
     (0, swagger_1.ApiTags)('Questions'),
     (0, common_1.Controller)('question'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
     __metadata("design:paramtypes", [question_service_1.QuestionService])
 ], QuestionController);
 //# sourceMappingURL=question.controller.js.map

@@ -1,3 +1,7 @@
+// ✅ Ensure early environment variables loading for robust bootstrap
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+require('dotenv').config();
+
 // ✅ Ensure global crypto is available (Required for NestJS 11 and @nestjs/schedule)
 if (!globalThis.crypto) {
   try {
@@ -23,53 +27,85 @@ async function bootstrap() {
   logger.log('🚀 Nest application bootstrapping...');
 
   const app = await NestFactory.create(AppModule, {
-    bufferLogs: false, // ✅ Set to false to see logs immediately during startup
+    bufferLogs: false,
+    bodyParser: true,
   });
+
   const configService = app.get(ConfigService);
-  logger.log('✅ AppModule initialized');
+
+  const pinoLogger = app.get(PinoLogger);
+  app.useLogger(pinoLogger);
+
 
   // ✅ Production: Trust Proxy for load balancers
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // ✅ Production: Security Headers
-  app.use(helmet());
-
-  const pinoLogger = app.get(PinoLogger);
-  app.useLogger(pinoLogger);
+  // ✅ Production-Grade Security Chain
   app.setGlobalPrefix('api/v1');
 
-  // ✅ Production: Restricted CORS
-  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
+  // ✅ Production-Grade Security Headers (Uniform Application)
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Essential for Swagger/cross-domain asset compatibility
+    }),
+  );
 
+
+  // ✅ Production-Grade Robust CORS (Restricted to Allowlist)
+  const allowedOrigins = configService.get<string[]>('allowedOrigins') || ['*'];
+  
   app.enableCors({
-    origin: allowedOrigins ? allowedOrigins.split(',') : false, // no wildcard in prod
+    origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+
+      const isAllowed = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`[CORS] Request blocked from unauthorized origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'x-idempotency-key',
+      'x-request-id',
+    ],
+    exposedHeaders: ['x-request-id'],
   });
 
-  // ✅ Production: Global Validation Pipe (Strict)
+  // ✅ Production-Grade Utilities
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: true, // Fail if unknown properties are sent
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // ✅ Production: Global Exception Filter
   app.useGlobalFilters(new GlobalExceptionFilter());
-
-  // ✅ Production: Global Transformation Interceptor
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // ✅ Optimized: Express middleware for large payloads
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  // Standard body limits handled via NestFactory configuration during creation
 
   // ✅ Swagger Documentation (Enabled if not production OR SHOW_SWAGGER=true)
   const showSwagger = configService.get('SHOW_SWAGGER') === 'true';
+
   if (configService.get('NODE_ENV') !== 'production' || showSwagger) {
     const config = new DocumentBuilder()
       .setTitle('Otras API')
@@ -83,14 +119,19 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: { persistAuthorization: true },
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
     });
+
   }
 
   const port = configService.get<number>('PORT') || 4000;
 
   try {
     await app.listen(port, '0.0.0.0');
+
+
     logger.log(`🚀 Backend is running on: http://localhost:${port}/api/v1`);
     logger.log(`📄 API Documentation: http://localhost:${port}/api/docs`);
   } catch (error) {

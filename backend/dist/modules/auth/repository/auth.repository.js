@@ -30,23 +30,23 @@ let AuthRepository = class AuthRepository {
         const prisma = tx || this.prisma;
         return prisma.refreshToken.delete({ where: { id } }).catch(() => null);
     }
-    async deleteTokensByUserId(userId, tx) {
+    async deleteTokensByUserId(userId, userType, tx) {
         const prisma = tx || this.prisma;
-        return prisma.refreshToken.deleteMany({ where: { userId } });
+        return prisma.refreshToken.deleteMany({ where: { userId, userType } });
     }
-    async deleteTokenByJti(id, userId) {
+    async deleteTokenByJti(id, userId, userType) {
         return this.prisma.refreshToken.deleteMany({
-            where: { id, userId },
+            where: { id, userId, userType },
         });
     }
-    async countTokensByUserId(userId, tx) {
+    async countTokensByUserId(userId, userType, tx) {
         const prisma = tx || this.prisma;
-        return prisma.refreshToken.count({ where: { userId } });
+        return prisma.refreshToken.count({ where: { userId, userType } });
     }
-    async findOldestSession(userId, tx) {
+    async findOldestSession(userId, userType, tx) {
         const prisma = tx || this.prisma;
         return prisma.refreshToken.findFirst({
-            where: { userId },
+            where: { userId, userType },
             orderBy: { createdAt: 'asc' },
         });
     }

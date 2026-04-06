@@ -19,7 +19,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { CreateJobDto } from './dto/create-job.dto';
-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -27,7 +26,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @ApiTags('Jobs')
 @Controller('jobs')
 export class JobController {
-  constructor(private readonly jobService: JobService) {}
+  constructor(private readonly jobService: JobService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -15,9 +15,8 @@ const uuid_1 = require("uuid");
 const REDACTED_FIELDS = [
     'password',
     'token',
-    'secret',
-    'authorization',
     'cookie',
+    'set-cookie',
     'tokenHash',
 ];
 let LoggerModule = class LoggerModule {
@@ -45,18 +44,21 @@ exports.LoggerModule = LoggerModule = __decorate([
                             correlationId: req.id,
                         }),
                         serializers: {
-                            req: (req) => ({
-                                id: req.id,
-                                method: req.method,
-                                url: req.url,
-                                query: req.query,
-                                params: req.params,
-                                headers: {
-                                    'user-agent': req.headers?.['user-agent'],
-                                    'content-type': req.headers?.['content-type'],
-                                    'x-request-id': req.headers?.['x-request-id'],
-                                },
-                            }),
+                            req: (req) => {
+                                const headers = { ...req.headers };
+                                REDACTED_FIELDS.forEach((f) => {
+                                    if (headers[f])
+                                        headers[f] = '[REDACTED]';
+                                });
+                                return {
+                                    id: req.id,
+                                    method: req.method,
+                                    url: req.url,
+                                    query: req.query,
+                                    params: req.params,
+                                    headers,
+                                };
+                            },
                             res: (res) => ({
                                 statusCode: res.statusCode,
                             }),

@@ -9,6 +9,7 @@ import { RegisterDto } from '../auth/dto/auth.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResultService } from '../result/result.service';
 import { MockTestService } from '../mock-test/mock-test.service';
+import { CacheService } from '../../common/cache/cache.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -18,6 +19,7 @@ export class UserService {
     private readonly userRepository: UserRepository,
     private readonly resultService: ResultService,
     private readonly mockTestService: MockTestService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async create(data: RegisterDto) {
@@ -99,163 +101,198 @@ export class UserService {
     return this.userRepository.findByOtrId(otrId);
   }
 
+  /**
+   * Ownership enforced at Guard level.
+   */
   async findById(id: number) {
     return this.userRepository.findById(id);
   }
+
 
   async findAll(cursor?: number, take?: number) {
     return this.userRepository.findAll(cursor, take);
   }
 
   /**
-   * Ownership is enforced here: only self or ADMIN can update.
+   * Ownership enforced at Guard level.
    */
-  async update(requesterId: number, requesterRole: string, targetId: number, data: UpdateUserDto) {
-    if (requesterId !== targetId && requesterRole.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('You can only update your own profile');
-    }
-
+  async update(targetId: number, data: UpdateUserDto) {
     const { password, ...updateData } = data;
     const finalData: Prisma.UserUpdateInput = { ...updateData };
     if (password) {
       finalData.password = await bcrypt.hash(password, 10);
     }
-    return this.userRepository.update(targetId, finalData);
+    const result = await this.userRepository.update(targetId, finalData);
+
+    // Invalidate dashboard caches on update
+    await this.cacheService.safeInvalidate([
+      `user_dashboard:${targetId}`,
+      `user_tier_status:${targetId}`,
+    ]);
+
+    return result;
   }
 
+
   /**
-   * Admin-only soft delete with explicit check at service level.
+   * Admin-only check enforced at Guard level (@Roles('ADMIN')).
    */
-  async remove(requesterRole: string, id: number) {
-    if (requesterRole.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Only admins can delete users');
-    }
+  async remove(id: number) {
     return this.userRepository.softDelete(id);
   }
 
   /**
-   * Ownership enforced: user can only view their own dashboard.
+   * Ownership enforced at Guard level.
    */
-  async getDashboardData(requesterId: number, requesterRole: string, id: number) {
-    if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
+  async getDashboardData(id: number) {
 
-    const user = await this.userRepository.findByIdActive(id);
-    if (!user) throw new NotFoundException('User not found');
+    const cacheKey = `user_dashboard:${id}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const user = await this.userRepository.findByIdActive(id);
+        if (!user) throw new NotFoundException('User not found');
 
-    const [results, mockAttempts, arthaProfile] = await Promise.all([
-      this.resultService.getUserResults(id, undefined, 10),
-      this.mockTestService.getUserMockAttempts(user.otrId!, user.otrId!, undefined),
-      this.userRepository.getArthaProfile(id.toString()),
-    ]);
+        const [results, mockAttempts, arthaProfile] = await Promise.all([
+          this.resultService.getUserResults(id, undefined, 10),
+          this.mockTestService.getUserMockAttempts(
+            user.otrId!,
+            user.otrId!,
+            undefined,
+          ),
+          this.userRepository.getArthaProfile(id.toString()),
+        ]);
 
-    const mergedAttempts = [
-      ...results.map((r) => ({
-        id: `res_${r.id}`,
-        score: r.score,
-        percentage: Math.min(
-          Math.round((r.score / (r.test?._count?.questions || 1)) * 100),
-          100,
-        ),
-        createdAt: r.createdAt,
-        testName: r.test?.name || 'Artha Assessment',
-        type: 'artha' as const,
-        subjectBreakdown: r.subjectBreakdown as Record<string, unknown> | null,
-      })),
-      ...mockAttempts.map((m) => ({
-        id: `mock_${m.id}`,
-        score: m.score,
-        percentage:
-          m.totalMarks > 0 ? Math.round((m.score / m.totalMarks) * 100) : 0,
-        createdAt: m.attemptedAt,
-        testName: m.mockTest?.title || 'Official Mock Test',
-        type: 'mock' as const,
-        subjectBreakdown: m.subjectBreakdown as Record<string, unknown> | null,
-      })),
-    ].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        // ✅ HIGH-SCALE OPTIMIZATION: Linear Two-Pointer Merge
+        // Since both repositories return DESC sorted results, we aggregate in O(n) instead of O(n log n)
+        const mergedAttempts = [];
+        let rIdx = 0;
+        let mIdx = 0;
+        const targetCount = 10;
+
+        while (mergedAttempts.length < targetCount && (rIdx < results.length || mIdx < mockAttempts.length)) {
+          const res = results[rIdx];
+          const mock = mockAttempts[mIdx];
+
+          const resTime = res ? new Date(res.createdAt).getTime() : -1;
+          const mockTime = mock ? new Date(mock.attemptedAt).getTime() : -1;
+
+          if (resTime >= mockTime) {
+            mergedAttempts.push({
+              id: `res_${res.id}`,
+              score: res.score,
+              percentage: Math.min(
+                Math.round((res.score / (res.test?._count?.questions || 1)) * 100),
+                100,
+              ),
+              createdAt: res.createdAt,
+              testName: res.test?.name || 'Artha Assessment',
+              type: 'artha' as const,
+              subjectBreakdown: res.subjectBreakdown as Record<string, unknown> | null,
+            });
+            rIdx++;
+          } else {
+            mergedAttempts.push({
+              id: `mock_${mock.id}`,
+              score: mock.score,
+              percentage: mock.totalMarks > 0 ? Math.round((mock.score / mock.totalMarks) * 100) : 0,
+              createdAt: mock.attemptedAt,
+              testName: mock.mockTest?.title || 'Official Mock Test',
+              type: 'mock' as const,
+              subjectBreakdown: mock.subjectBreakdown as Record<string, unknown> | null,
+            });
+            mIdx++;
+          }
+        }
+
+        const dashboardResults = mergedAttempts;
+        const readinessIndex = arthaProfile?.readinessIndex || dashboardResults[0]?.percentage || 0;
+
+        return {
+          user: {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            otrId: user.otrId,
+            email: user.email,
+          },
+          stats: {
+            readinessIndex: Math.round(readinessIndex),
+            testsCompleted: mergedAttempts.length,
+            recentTend: mergedAttempts
+              .slice(0, 7)
+              .reverse()
+              .map((r) => r.percentage),
+            percentile: arthaProfile?.percentile || 0,
+            logicalScore: arthaProfile?.logicalScore || 0,
+            quantScore: arthaProfile?.quantScore || 0,
+            verbalScore: arthaProfile?.verbalScore || 0,
+          },
+          recentResults: mergedAttempts.slice(0, 5).map((a) => ({
+            id: a.id,
+            score: Number(a.score.toFixed(1)),
+            percentage: a.percentage,
+            createdAt: a.createdAt,
+            test: { name: a.testName },
+          })),
+        };
+      },
+      300000, // 5 minutes cache
     );
-
-    const readinessIndex =
-      arthaProfile?.readinessIndex || mergedAttempts[0]?.percentage || 0;
-
-    return {
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        otrId: user.otrId,
-        email: user.email,
-      },
-      stats: {
-        readinessIndex: Math.round(readinessIndex),
-        testsCompleted: mergedAttempts.length,
-        recentTend: mergedAttempts
-          .slice(0, 7)
-          .reverse()
-          .map((r) => r.percentage),
-        percentile: arthaProfile?.percentile || 0,
-        logicalScore: arthaProfile?.logicalScore || 0,
-        quantScore: arthaProfile?.quantScore || 0,
-        verbalScore: arthaProfile?.verbalScore || 0,
-      },
-      recentResults: mergedAttempts.slice(0, 5).map((a) => ({
-        id: a.id,
-        score: Number(a.score.toFixed(1)),
-        percentage: a.percentage,
-        createdAt: a.createdAt,
-        test: { name: a.testName },
-      })),
-    };
   }
+
 
   async getArthaProfile(userId: string) {
     return this.userRepository.getArthaProfile(userId);
   }
 
   /**
-   * Ownership enforced: user can only view their own tier status.
+   * Ownership enforced at Guard level.
    */
-  async getTierStatus(requesterId: number, requesterRole: string, id: number) {
-    if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
-      throw new ForbiddenException('Access denied');
-    }
+  async getTierStatus(id: number) {
 
-    const oneYearAgo = new Date();
-    oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+    const cacheKey = `user_tier_status:${id}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const oneYearAgo = new Date();
+        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
-    const [profile, activePayment, anyPastPayment] = await Promise.all([
-      this.userRepository.getArthaProfile(id.toString()),
-      this.userRepository.getActivePayment(id, oneYearAgo),
-      this.userRepository.getAnyPastPayment(id),
-    ]);
+        const [profile, activePayment, anyPastPayment] = await Promise.all([
+          this.userRepository.getArthaProfile(id.toString()),
+          this.userRepository.getActivePayment(id, oneYearAgo),
+          this.userRepository.getAnyPastPayment(id),
+        ]);
 
-    const hasActiveSubscription = !!activePayment;
-    const hasExpiredSubscription = !hasActiveSubscription && !!anyPastPayment;
+        const hasActiveSubscription = !!activePayment;
+        const hasExpiredSubscription =
+          !hasActiveSubscription && !!anyPastPayment;
 
-    const t1Prog = profile?.tier1Progress || 0;
-    const t2Prog = profile?.tier2Progress || 0;
-    const t3Prog = profile?.tier3Progress || 0;
+        const t1Prog = profile?.tier1Progress || 0;
+        const t2Prog = profile?.tier2Progress || 0;
+        const t3Prog = profile?.tier3Progress || 0;
 
-    return {
-      tier1: { unlocked: true, completed: t1Prog === 100 },
-      tier2: {
-        unlocked: t1Prog === 100,
-        completed: t2Prog === 100,
-        subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
-        subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
+        return {
+          tier1: { unlocked: true, completed: t1Prog === 100 },
+          tier2: {
+            unlocked: t1Prog === 100,
+            completed: t2Prog === 100,
+            subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
+            subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
+          },
+          tier3: {
+            unlocked: t2Prog === 100,
+            completed: t3Prog === 100,
+            subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
+            subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
+          },
+          hasActiveSubscription,
+          hasExpiredSubscription,
+        };
       },
-      tier3: {
-        unlocked: t2Prog === 100,
-        completed: t3Prog === 100,
-        subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
-        subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
-      },
-      hasActiveSubscription,
-      hasExpiredSubscription,
-    };
+      300000, // 5 minutes cache
+    );
   }
+
 
   private generateOtrId(state: string, pincode: string): string {
     const stateMapping: Record<string, string> = {

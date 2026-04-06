@@ -98,12 +98,12 @@ export declare class ArthaRepository {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: Prisma.JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: Prisma.JsonValue | null;
     }) | null>;
     findLatestAssessmentByTier(profileId: string, tier: number): Promise<{
         exam: string | null;
@@ -122,12 +122,12 @@ export declare class ArthaRepository {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: Prisma.JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: Prisma.JsonValue | null;
     } | null>;
     updateProfileProgressByTier(profileId: string, tier: number, progress: number, readinessIndex?: number): Promise<{
         userId: string;
@@ -167,12 +167,12 @@ export declare class ArthaRepository {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: Prisma.JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: Prisma.JsonValue | null;
     }>;
     getPercentileData(tier: number, accuracy: number): Promise<{
         percentile: number;
@@ -196,12 +196,12 @@ export declare class ArthaRepository {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: Prisma.JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: Prisma.JsonValue | null;
     }>;
     completeAssessment(assessmentId: string, data: Partial<AssessmentCompletionData>): Promise<{
         exam: string | null;
@@ -220,12 +220,12 @@ export declare class ArthaRepository {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: Prisma.JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: Prisma.JsonValue | null;
     }>;
     updateProfileReadiness(userId: string, readinessIndex: number): Promise<{
         userId: string;

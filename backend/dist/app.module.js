@@ -5,12 +5,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var AppModule_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const core_1 = require("@nestjs/core");
 const config_1 = require("@nestjs/config");
 const schedule_1 = require("@nestjs/schedule");
 const bullmq_1 = require("@nestjs/bullmq");
@@ -50,13 +55,33 @@ const career_ai_module_1 = require("./modules/career-ai/career-ai.module");
 const language_middleware_1 = require("./middleware/language.middleware");
 const validation_1 = require("./config/validation");
 const configuration_1 = __importDefault(require("./config/configuration"));
-let AppModule = class AppModule {
+let AppModule = AppModule_1 = class AppModule {
+    configService;
+    logger = new common_1.Logger(AppModule_1.name);
+    constructor(configService) {
+        this.configService = configService;
+        const accessSecret = this.configService.get('JWT_ACCESS_SECRET') || this.configService.get('jwt.accessSecret');
+        const dbUrl = this.configService.get('DATABASE_URL');
+        this.logger.log(`[STARTUP-DIAGNOSTIC] Environment Check:`);
+        this.logger.log(`[STARTUP-DIAGNOSTIC] JWT_ACCESS_SECRET Present: ${!!accessSecret}`);
+        this.logger.log(`[STARTUP-DIAGNOSTIC] DATABASE_URL Present: ${!!dbUrl}`);
+        this.logger.log(`[STARTUP-DIAGNOSTIC] NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+    }
     configure(consumer) {
+        consumer
+            .apply((req, res, next) => {
+            const auth = req.headers['authorization'];
+            console.log(`[AUTH-DEBUG] ${req.method} ${req.url} - Auth Header Present: ${!!auth}`);
+            if (auth)
+                console.log(`[AUTH-DEBUG] Prefix: ${auth.substring(0, 15)}...`);
+            next();
+        })
+            .forRoutes('*');
         consumer.apply(language_middleware_1.LanguageMiddleware).forRoutes('*');
     }
 };
 exports.AppModule = AppModule;
-exports.AppModule = AppModule = __decorate([
+exports.AppModule = AppModule = AppModule_1 = __decorate([
     (0, common_1.Module)({
         imports: [
             config_1.ConfigModule.forRoot({
@@ -64,6 +89,7 @@ exports.AppModule = AppModule = __decorate([
                 cache: true,
                 load: [configuration_1.default],
                 validationSchema: validation_1.validationSchema,
+                envFilePath: ['.env.local', '.env'],
             }),
             logger_module_1.LoggerModule,
             schedule_1.ScheduleModule.forRoot(),
@@ -99,7 +125,7 @@ exports.AppModule = AppModule = __decorate([
                 useFactory: (config) => {
                     const isRedisDisabled = config.get('DISABLE_REDIS') === 'true' ||
                         config.get('DISABLE_REDIS') === true;
-                    const baseConfig = { throttlers: [{ ttl: 60000, limit: 100 }] };
+                    const baseConfig = { throttlers: [{ ttl: 60000, limit: 120 }] };
                     if (isRedisDisabled) {
                         return baseConfig;
                     }
@@ -161,8 +187,8 @@ exports.AppModule = AppModule = __decorate([
                         connection: {
                             host: config.get('REDIS_HOST') || '127.0.0.1',
                             port: parseInt(config.get('REDIS_PORT') || '6379'),
-                            enableOfflineQueue: false,
-                            lazyConnect: true,
+                            enableOfflineQueue: true,
+                            lazyConnect: false,
                             connectTimeout: 5000,
                             maxRetriesPerRequest: 1,
                             retryStrategy: (times) => {
@@ -187,7 +213,14 @@ exports.AppModule = AppModule = __decorate([
             }),
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
-    })
+        providers: [
+            app_service_1.AppService,
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard,
+            },
+        ],
+    }),
+    __metadata("design:paramtypes", [config_1.ConfigService])
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

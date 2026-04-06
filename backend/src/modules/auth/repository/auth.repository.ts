@@ -22,26 +22,26 @@ export class AuthRepository {
     return prisma.refreshToken.delete({ where: { id } }).catch(() => null);
   }
 
-  async deleteTokensByUserId(userId: number, tx?: Prisma.TransactionClient) {
+  async deleteTokensByUserId(userId: number, userType: string, tx?: Prisma.TransactionClient) {
     const prisma = tx || this.prisma;
-    return prisma.refreshToken.deleteMany({ where: { userId } });
+    return prisma.refreshToken.deleteMany({ where: { userId, userType } });
   }
 
-  async deleteTokenByJti(id: string, userId: number) {
+  async deleteTokenByJti(id: string, userId: number, userType: string) {
     return this.prisma.refreshToken.deleteMany({
-      where: { id, userId },
+      where: { id, userId, userType },
     });
   }
 
-  async countTokensByUserId(userId: number, tx?: Prisma.TransactionClient) {
+  async countTokensByUserId(userId: number, userType: string, tx?: Prisma.TransactionClient) {
     const prisma = tx || this.prisma;
-    return prisma.refreshToken.count({ where: { userId } });
+    return prisma.refreshToken.count({ where: { userId, userType } });
   }
 
-  async findOldestSession(userId: number, tx?: Prisma.TransactionClient) {
+  async findOldestSession(userId: number, userType: string, tx?: Prisma.TransactionClient) {
     const prisma = tx || this.prisma;
     return prisma.refreshToken.findFirst({
-      where: { userId },
+      where: { userId, userType },
       orderBy: { createdAt: 'asc' },
     });
   }

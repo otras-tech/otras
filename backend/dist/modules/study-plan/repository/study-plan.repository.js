@@ -115,6 +115,12 @@ let StudyPlanRepository = class StudyPlanRepository {
             data: { dayId: targetDayId },
         });
     }
+    async relocateMultipleActivities(activityIds, targetDayId) {
+        return this.prisma.studyActivity.updateMany({
+            where: { id: { in: activityIds } },
+            data: { dayId: targetDayId },
+        });
+    }
     async updateDayDate(dayId, newDate) {
         return this.prisma.studyPlanDay.update({
             where: { id: dayId },

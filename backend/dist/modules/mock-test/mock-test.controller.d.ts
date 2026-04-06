@@ -4,7 +4,14 @@ import { RequestUser } from '../../common/types/types';
 export declare class MockTestController {
     private readonly mockTestService;
     constructor(mockTestService: MockTestService);
-    findAll(categoryId?: number, cursor?: number): Promise<{}>;
+    findAll(categoryId?: number, cursor?: number): Promise<{
+        id: number;
+        category: {
+            name: string;
+        };
+        title: string;
+        duration: number;
+    }[]>;
     startAttempt(dto: StartMockAttemptDto, user: RequestUser): Promise<{
         id: number;
         startTime: Date | null;
@@ -47,5 +54,15 @@ export declare class MockTestController {
         percentile?: undefined;
         source?: undefined;
     }>;
-    findOne(id: number): Promise<any>;
+    findOne(id: number): Promise<{
+        exam: {
+            name: string;
+        } | null;
+        id: number;
+        category: {
+            name: string;
+        };
+        title: string;
+        duration: number;
+    }>;
 }

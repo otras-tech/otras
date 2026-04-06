@@ -23,6 +23,7 @@ let SubjectService = class SubjectService {
         if (examId) {
             createInput.exams = { connect: { id: examId } };
         }
+        console.log(this.subjectRepository.create(createInput));
         return this.subjectRepository.create(createInput);
     }
     findAll(cursor, take) {

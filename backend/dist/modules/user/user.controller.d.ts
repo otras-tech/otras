@@ -13,7 +13,7 @@ export declare class UserController {
         otrId: string;
         createdAt: Date;
     }[]>;
-    findOne(id: number, req: any): Promise<{
+    findOne(id: number): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
@@ -34,7 +34,7 @@ export declare class UserController {
         referralCode: string;
         preferredLanguage: string;
     } | null>;
-    getDashboardData(id: number, req: any): Promise<{
+    getDashboardData(id: number): Promise<{
         user: {
             firstName: string;
             lastName: string;
@@ -60,7 +60,7 @@ export declare class UserController {
             };
         }[];
     }>;
-    update(id: number, data: UpdateUserDto, req: any): Promise<{
+    update(id: number, data: UpdateUserDto): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
@@ -81,7 +81,7 @@ export declare class UserController {
         referralCode: string;
         preferredLanguage: string;
     }>;
-    remove(id: number, req: any): Promise<{
+    remove(id: number): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
@@ -102,7 +102,7 @@ export declare class UserController {
         referralCode: string;
         preferredLanguage: string;
     }>;
-    getTierStatus(id: number, req: any): Promise<{
+    getTierStatus(id: number): Promise<{
         tier1: {
             unlocked: boolean;
             completed: boolean;

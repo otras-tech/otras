@@ -42,31 +42,44 @@ export class CacheService {
   }
 
   /**
-   * Invalidates all keys matching a pattern.
-   * Note: This requires the store to support 'keys' method (Redis store does).
+   * Invalidates all keys matching a pattern using non-blocking SCAN.
+   * Crucial for 500K+ users to prevent Redis event loop blocking.
    */
   async invalidatePattern(pattern: string): Promise<void> {
     try {
-      const store = (
-        this.cacheManager as Cache & {
-          store?: { keys?: (pattern: string) => Promise<string[]> };
+      const store = (this.cacheManager as any).store;
+      const client = store?.client; // 'cache-manager-redis-yet' exposes the ioredis client
+
+      if (client && typeof client.scan === 'function') {
+        let cursor = '0';
+        let totalInvalidated = 0;
+
+        do {
+          const result = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+          cursor = result[0];
+          const keys = result[1];
+
+          if (keys && keys.length > 0) {
+            await Promise.all(keys.map((key: string) => this.del(key)));
+            totalInvalidated += keys.length;
+          }
+        } while (cursor !== '0');
+
+        if (totalInvalidated > 0) {
+          this.logger.log(`Invalidated ${totalInvalidated} keys matching pattern: ${pattern}`);
         }
-      ).store;
-      if (store?.keys) {
+      } else if (store?.keys) {
         const keys = await store.keys(pattern);
         if (keys && keys.length > 0) {
-          await Promise.all(
-            keys.map((key: string) => this.cacheManager.del(key)),
-          );
-          this.logger.log(
-            `Invalidated ${keys.length} keys matching pattern: ${pattern}`,
-          );
+          await Promise.all(keys.map((key: string) => this.del(key)));
+          this.logger.warn(`Invalidated ${keys.length} keys using blocking KEYS fallback`);
         }
       }
     } catch (error: any) {
       this.logger.error(`Error invalidating pattern "${pattern}"`, error.stack);
     }
   }
+
 
   // ─── NEW: Stampede-Protected Cache Read ───────────────────────────
 

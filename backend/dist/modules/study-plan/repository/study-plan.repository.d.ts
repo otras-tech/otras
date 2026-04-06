@@ -177,6 +177,7 @@ export declare class StudyPlanRepository {
         missed: boolean;
         dayId: string;
     }>;
+    relocateMultipleActivities(activityIds: string[], targetDayId: string): Promise<Prisma.BatchPayload>;
     updateDayDate(dayId: string, newDate: Date): Promise<{
         isDeleted: boolean;
         id: string;

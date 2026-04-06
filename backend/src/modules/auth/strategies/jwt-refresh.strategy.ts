@@ -14,7 +14,8 @@ export class JwtRefreshStrategy extends PassportStrategy(
     const options: StrategyOptionsWithRequest = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_REFRESH_SECRET') || 'secret',
+      secretOrKey: configService.get<string>('jwt.refreshSecret') || 'secret',
+
       passReqToCallback: true,
     };
     super(options);
@@ -28,7 +29,8 @@ export class JwtRefreshStrategy extends PassportStrategy(
     if (!authHeader) {
       throw new UnauthorizedException('Refresh token missing');
     }
-    const refreshToken = authHeader.replace('Bearer', '').trim();
+    const refreshToken = authHeader.replace(/bearer/i, '').trim();
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token malformed');
     }

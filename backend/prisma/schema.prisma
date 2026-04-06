@@ -28,7 +28,6 @@ model User {
   preferredLanguage     String                     @default("en")
   isDeleted             Boolean                    @default(false)
   role                  String                     @default("USER")
-  refreshTokens         RefreshToken[]
   applications          Application[]
   arthaRecentReports    ArthaRecentReport[]
   careerReadinessScores CareerReadinessTestScore[]
@@ -98,6 +97,8 @@ model Subject {
 
   @@index([name])
   @@index([isDeleted])
+  subjectScores      SubjectScore[]
+  mockAttemptScores  MockAttemptScore[]
 }
 
 model Question {
@@ -189,8 +190,9 @@ model Result {
   tier             Int?
   startTime        DateTime?
   submitTime       DateTime?
-  test             Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
-  user             User      @relation(fields: [userId], references: [id])
+  test             Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id])
+  subjectScores    SubjectScore[]
 
   @@index([userId])
   @@index([testId])
@@ -267,8 +269,9 @@ model MockTestAttempt {
   submitTime       DateTime?
   updatedAt        DateTime  @updatedAt
   isDeleted        Boolean   @default(false)
-  mockTest         MockTest  @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
-  user             User      @relation(fields: [otrId], references: [otrId])
+  mockTest         MockTest           @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [otrId], references: [otrId])
+  subjectScores    MockAttemptScore[]
 
   @@index([otrId])
   @@index([mockTestId])
@@ -576,13 +579,42 @@ model Roadmap {
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    Int
+  userType  String   @default("USER") // Discriminator: "USER" or "ADMIN"
   tokenHash String
   expiresAt DateTime
   createdAt DateTime @default(now())
   isDeleted Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId, userType])
   @@index([expiresAt])
   @@index([isDeleted])
 }
+
+model SubjectScore {
+  id        Int     @id @default(autoincrement())
+  resultId  Int
+  subjectId Int
+  correct   Int     @default(0)
+  wrong     Int     @default(0)
+  score     Float   @default(0)
+  result    Result  @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@index([resultId])
+  @@index([subjectId])
+}
+
+model MockAttemptScore {
+  id              Int             @id @default(autoincrement())
+  mockAttemptId   Int
+  subjectId       Int
+  correct         Int             @default(0)
+  wrong           Int             @default(0)
+  score           Float           @default(0)
+  mockAttempt     MockTestAttempt @relation(fields: [mockAttemptId], references: [id], onDelete: Cascade)
+  subject         Subject         @relation(fields: [subjectId], references: [id])
+
+  @@index([mockAttemptId])
+  @@index([subjectId])
+}
+

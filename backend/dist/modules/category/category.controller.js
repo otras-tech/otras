@@ -44,9 +44,6 @@ let CategoryController = class CategoryController {
 };
 exports.CategoryController = CategoryController;
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new mock test category (Admin only)' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Category created' }),
@@ -58,6 +55,7 @@ __decorate([
 ], CategoryController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)('USER', 'ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Get all mock test categories' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of categories' }),
     __metadata("design:type", Function),
@@ -66,6 +64,7 @@ __decorate([
 ], CategoryController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)('USER', 'ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Get category by ID' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Category details' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Category not found' }),
@@ -75,9 +74,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CategoryController.prototype, "findOne", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Patch)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a category (Admin only)' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -88,9 +84,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CategoryController.prototype, "update", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Delete)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a category (Admin only)' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -100,6 +93,9 @@ __decorate([
 ], CategoryController.prototype, "remove", null);
 exports.CategoryController = CategoryController = __decorate([
     (0, swagger_1.ApiTags)('Mock Tests'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
     (0, common_1.Controller)('categories'),
     __metadata("design:paramtypes", [category_service_1.CategoryService])
 ], CategoryController);

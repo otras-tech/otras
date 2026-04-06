@@ -1,5 +1,5 @@
 import { ReferralService } from './referral.service';
-import { CreateReferralDto } from './dto/referral.dto';
+import { CreateReferralDto, GetReferralHistoryDto } from './dto/referral.dto';
 export declare class ReferralController {
     private readonly referralService;
     constructor(referralService: ReferralService);
@@ -21,17 +21,14 @@ export declare class ReferralController {
         availableCredits: number;
         referralCode: string;
         referrals: {
-            isDeleted: boolean;
             id: number;
             createdAt: Date;
-            updatedAt: Date;
             status: string;
             refereeOtrId: string;
             creditsEarned: number;
-            referrerId: number;
         }[];
     }>;
-    getReferralHistory(referrerId: number, req: any): Promise<{
+    getReferralHistory(referrerId: number, query: GetReferralHistoryDto, req: any): Promise<{
         id: number;
         friendOtrId: string;
         signupDate: Date;
@@ -61,20 +58,15 @@ export declare class ReferralController {
         mockTestId: number;
         isRedeemed: boolean;
     })[]>;
-    getAllReferrals(): Promise<({
+    getAllReferrals(query: GetReferralHistoryDto): Promise<{
+        id: number;
+        createdAt: Date;
+        status: string;
+        refereeOtrId: string;
         referrer: {
             firstName: string;
             lastName: string;
             otrId: string;
         };
-    } & {
-        isDeleted: boolean;
-        id: number;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string;
-        refereeOtrId: string;
-        creditsEarned: number;
-        referrerId: number;
-    })[]>;
+    }[]>;
 }

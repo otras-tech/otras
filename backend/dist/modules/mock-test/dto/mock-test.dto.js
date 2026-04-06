@@ -35,6 +35,7 @@ class SubmitMockAttemptDto {
     score;
     totalMarks;
     attemptId;
+    subjectBreakdown;
 }
 exports.SubmitMockAttemptDto = SubmitMockAttemptDto;
 __decorate([
@@ -70,6 +71,15 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], SubmitMockAttemptDto.prototype, "attemptId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: { Quant: 10, Logical: 5 },
+        description: 'JSON string or object for breakdown',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], SubmitMockAttemptDto.prototype, "subjectBreakdown", void 0);
 class SubmitExamAttemptDto {
     otrId;
     examId;

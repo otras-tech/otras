@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 export interface Response<T> {
     success: boolean;
     data: T;
+    meta?: Record<string, any>;
     message?: string;
 }
 export declare class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {

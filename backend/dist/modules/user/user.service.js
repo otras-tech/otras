@@ -47,15 +47,18 @@ const common_1 = require("@nestjs/common");
 const user_repository_1 = require("./repository/user.repository");
 const result_service_1 = require("../result/result.service");
 const mock_test_service_1 = require("../mock-test/mock-test.service");
+const cache_service_1 = require("../../common/cache/cache.service");
 const bcrypt = __importStar(require("bcrypt"));
 let UserService = class UserService {
     userRepository;
     resultService;
     mockTestService;
-    constructor(userRepository, resultService, mockTestService) {
+    cacheService;
+    constructor(userRepository, resultService, mockTestService, cacheService) {
         this.userRepository = userRepository;
         this.resultService = resultService;
         this.mockTestService = mockTestService;
+        this.cacheService = cacheService;
     }
     async create(data) {
         const { referralCode, ...userData } = data;
@@ -128,120 +131,134 @@ let UserService = class UserService {
     async findAll(cursor, take) {
         return this.userRepository.findAll(cursor, take);
     }
-    async update(requesterId, requesterRole, targetId, data) {
-        if (requesterId !== targetId && requesterRole.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('You can only update your own profile');
-        }
+    async update(targetId, data) {
         const { password, ...updateData } = data;
         const finalData = { ...updateData };
         if (password) {
             finalData.password = await bcrypt.hash(password, 10);
         }
-        return this.userRepository.update(targetId, finalData);
+        const result = await this.userRepository.update(targetId, finalData);
+        await this.cacheService.safeInvalidate([
+            `user_dashboard:${targetId}`,
+            `user_tier_status:${targetId}`,
+        ]);
+        return result;
     }
-    async remove(requesterRole, id) {
-        if (requesterRole.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Only admins can delete users');
-        }
+    async remove(id) {
         return this.userRepository.softDelete(id);
     }
-    async getDashboardData(requesterId, requesterRole, id) {
-        if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
-        const user = await this.userRepository.findByIdActive(id);
-        if (!user)
-            throw new common_1.NotFoundException('User not found');
-        const [results, mockAttempts, arthaProfile] = await Promise.all([
-            this.resultService.getUserResults(id, undefined, 10),
-            this.mockTestService.getUserMockAttempts(user.otrId, user.otrId, undefined),
-            this.userRepository.getArthaProfile(id.toString()),
-        ]);
-        const mergedAttempts = [
-            ...results.map((r) => ({
-                id: `res_${r.id}`,
-                score: r.score,
-                percentage: Math.min(Math.round((r.score / (r.test?._count?.questions || 1)) * 100), 100),
-                createdAt: r.createdAt,
-                testName: r.test?.name || 'Artha Assessment',
-                type: 'artha',
-                subjectBreakdown: r.subjectBreakdown,
-            })),
-            ...mockAttempts.map((m) => ({
-                id: `mock_${m.id}`,
-                score: m.score,
-                percentage: m.totalMarks > 0 ? Math.round((m.score / m.totalMarks) * 100) : 0,
-                createdAt: m.attemptedAt,
-                testName: m.mockTest?.title || 'Official Mock Test',
-                type: 'mock',
-                subjectBreakdown: m.subjectBreakdown,
-            })),
-        ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        const readinessIndex = arthaProfile?.readinessIndex || mergedAttempts[0]?.percentage || 0;
-        return {
-            user: {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                otrId: user.otrId,
-                email: user.email,
-            },
-            stats: {
-                readinessIndex: Math.round(readinessIndex),
-                testsCompleted: mergedAttempts.length,
-                recentTend: mergedAttempts
-                    .slice(0, 7)
-                    .reverse()
-                    .map((r) => r.percentage),
-                percentile: arthaProfile?.percentile || 0,
-                logicalScore: arthaProfile?.logicalScore || 0,
-                quantScore: arthaProfile?.quantScore || 0,
-                verbalScore: arthaProfile?.verbalScore || 0,
-            },
-            recentResults: mergedAttempts.slice(0, 5).map((a) => ({
-                id: a.id,
-                score: Number(a.score.toFixed(1)),
-                percentage: a.percentage,
-                createdAt: a.createdAt,
-                test: { name: a.testName },
-            })),
-        };
+    async getDashboardData(id) {
+        const cacheKey = `user_dashboard:${id}`;
+        return this.cacheService.getOrSet(cacheKey, async () => {
+            const user = await this.userRepository.findByIdActive(id);
+            if (!user)
+                throw new common_1.NotFoundException('User not found');
+            const [results, mockAttempts, arthaProfile] = await Promise.all([
+                this.resultService.getUserResults(id, undefined, 10),
+                this.mockTestService.getUserMockAttempts(user.otrId, user.otrId, undefined),
+                this.userRepository.getArthaProfile(id.toString()),
+            ]);
+            const mergedAttempts = [];
+            let rIdx = 0;
+            let mIdx = 0;
+            const targetCount = 10;
+            while (mergedAttempts.length < targetCount && (rIdx < results.length || mIdx < mockAttempts.length)) {
+                const res = results[rIdx];
+                const mock = mockAttempts[mIdx];
+                const resTime = res ? new Date(res.createdAt).getTime() : -1;
+                const mockTime = mock ? new Date(mock.attemptedAt).getTime() : -1;
+                if (resTime >= mockTime) {
+                    mergedAttempts.push({
+                        id: `res_${res.id}`,
+                        score: res.score,
+                        percentage: Math.min(Math.round((res.score / (res.test?._count?.questions || 1)) * 100), 100),
+                        createdAt: res.createdAt,
+                        testName: res.test?.name || 'Artha Assessment',
+                        type: 'artha',
+                        subjectBreakdown: res.subjectBreakdown,
+                    });
+                    rIdx++;
+                }
+                else {
+                    mergedAttempts.push({
+                        id: `mock_${mock.id}`,
+                        score: mock.score,
+                        percentage: mock.totalMarks > 0 ? Math.round((mock.score / mock.totalMarks) * 100) : 0,
+                        createdAt: mock.attemptedAt,
+                        testName: mock.mockTest?.title || 'Official Mock Test',
+                        type: 'mock',
+                        subjectBreakdown: mock.subjectBreakdown,
+                    });
+                    mIdx++;
+                }
+            }
+            const dashboardResults = mergedAttempts;
+            const readinessIndex = arthaProfile?.readinessIndex || dashboardResults[0]?.percentage || 0;
+            return {
+                user: {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    otrId: user.otrId,
+                    email: user.email,
+                },
+                stats: {
+                    readinessIndex: Math.round(readinessIndex),
+                    testsCompleted: mergedAttempts.length,
+                    recentTend: mergedAttempts
+                        .slice(0, 7)
+                        .reverse()
+                        .map((r) => r.percentage),
+                    percentile: arthaProfile?.percentile || 0,
+                    logicalScore: arthaProfile?.logicalScore || 0,
+                    quantScore: arthaProfile?.quantScore || 0,
+                    verbalScore: arthaProfile?.verbalScore || 0,
+                },
+                recentResults: mergedAttempts.slice(0, 5).map((a) => ({
+                    id: a.id,
+                    score: Number(a.score.toFixed(1)),
+                    percentage: a.percentage,
+                    createdAt: a.createdAt,
+                    test: { name: a.testName },
+                })),
+            };
+        }, 300000);
     }
     async getArthaProfile(userId) {
         return this.userRepository.getArthaProfile(userId);
     }
-    async getTierStatus(requesterId, requesterRole, id) {
-        if (requesterId !== id && requesterRole.toUpperCase() !== 'ADMIN') {
-            throw new common_1.ForbiddenException('Access denied');
-        }
-        const oneYearAgo = new Date();
-        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
-        const [profile, activePayment, anyPastPayment] = await Promise.all([
-            this.userRepository.getArthaProfile(id.toString()),
-            this.userRepository.getActivePayment(id, oneYearAgo),
-            this.userRepository.getAnyPastPayment(id),
-        ]);
-        const hasActiveSubscription = !!activePayment;
-        const hasExpiredSubscription = !hasActiveSubscription && !!anyPastPayment;
-        const t1Prog = profile?.tier1Progress || 0;
-        const t2Prog = profile?.tier2Progress || 0;
-        const t3Prog = profile?.tier3Progress || 0;
-        return {
-            tier1: { unlocked: true, completed: t1Prog === 100 },
-            tier2: {
-                unlocked: t1Prog === 100,
-                completed: t2Prog === 100,
-                subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
-                subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
-            },
-            tier3: {
-                unlocked: t2Prog === 100,
-                completed: t3Prog === 100,
-                subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
-                subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
-            },
-            hasActiveSubscription,
-            hasExpiredSubscription,
-        };
+    async getTierStatus(id) {
+        const cacheKey = `user_tier_status:${id}`;
+        return this.cacheService.getOrSet(cacheKey, async () => {
+            const oneYearAgo = new Date();
+            oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+            const [profile, activePayment, anyPastPayment] = await Promise.all([
+                this.userRepository.getArthaProfile(id.toString()),
+                this.userRepository.getActivePayment(id, oneYearAgo),
+                this.userRepository.getAnyPastPayment(id),
+            ]);
+            const hasActiveSubscription = !!activePayment;
+            const hasExpiredSubscription = !hasActiveSubscription && !!anyPastPayment;
+            const t1Prog = profile?.tier1Progress || 0;
+            const t2Prog = profile?.tier2Progress || 0;
+            const t3Prog = profile?.tier3Progress || 0;
+            return {
+                tier1: { unlocked: true, completed: t1Prog === 100 },
+                tier2: {
+                    unlocked: t1Prog === 100,
+                    completed: t2Prog === 100,
+                    subscriptionRequired: t1Prog === 100 && !hasActiveSubscription,
+                    subscriptionExpired: t1Prog === 100 && hasExpiredSubscription,
+                },
+                tier3: {
+                    unlocked: t2Prog === 100,
+                    completed: t3Prog === 100,
+                    subscriptionRequired: t2Prog === 100 && !hasActiveSubscription,
+                    subscriptionExpired: t2Prog === 100 && hasExpiredSubscription,
+                },
+                hasActiveSubscription,
+                hasExpiredSubscription,
+            };
+        }, 300000);
     }
     generateOtrId(state, pincode) {
         const stateMapping = {
@@ -310,6 +327,7 @@ exports.UserService = UserService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [user_repository_1.UserRepository,
         result_service_1.ResultService,
-        mock_test_service_1.MockTestService])
+        mock_test_service_1.MockTestService,
+        cache_service_1.CacheService])
 ], UserService);
 //# sourceMappingURL=user.service.js.map

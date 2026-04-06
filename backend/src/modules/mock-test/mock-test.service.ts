@@ -33,39 +33,32 @@ export class MockTestService {
       take: safeTake,
     });
 
-    if (cacheKey) {
-      try {
-        const cached = await this.cacheService.get(cacheKey);
-        if (cached) return cached;
-      } catch (err) { /* ignore cache errors */ }
+    if (!cacheKey) {
+      return this.mockTestRepository.findAll(categoryId, cursor, safeTake);
     }
 
-    try {
-      const results = await this.mockTestRepository.findAll(categoryId, cursor, safeTake);
-
-      if (cacheKey) {
-        await this.cacheService.set(cacheKey, results, 600000); // 10 mins
-      }
-      return results;
-    } catch (error) {
-      this.logger.error(`FindAll error: ${(error as any).message}`);
-      throw new InternalServerErrorException('Error fetching mock tests');
-    }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      () => this.mockTestRepository.findAll(categoryId, cursor, safeTake),
+      600000, // 10 mins
+    );
   }
+
+
 
   async findOne(id: number) {
     const cacheKey = `mock_test_id_${id}`;
-    try {
-      const cached = await this.cacheService.get<any>(cacheKey);
-      if (cached) return cached;
-    } catch (err) { /* ignore */ }
-
-    const mockTest = await this.mockTestRepository.findById(id);
-    if (!mockTest) throw new NotFoundException('Mock test not found');
-
-    await this.cacheService.set(cacheKey, mockTest, 3600000); // 1 hour
-    return mockTest;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const mockTest = await this.mockTestRepository.findById(id);
+        if (!mockTest) throw new NotFoundException('Mock test not found');
+        return mockTest;
+      },
+      3600000, // 1 hour
+    );
   }
+
 
   async startAttempt(requesterOtrId: string, dto: StartMockAttemptDto) {
     const { otrId, mockTestOrTestId } = dto;
@@ -127,9 +120,13 @@ export class MockTestService {
 
           const result = await tx.mockTestAttempt.update({
             where: { id: dto.attemptId },
-            data: attemptData,
+            data: { ...attemptData, subjectBreakdown: dto.subjectBreakdown as any },
             select: { id: true, score: true, otrId: true, mockTestId: true },
           });
+
+          if (dto.subjectBreakdown) {
+            await this.saveRelationalMockScores(tx, result.id, dto.subjectBreakdown);
+          }
 
           this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
           return result;
@@ -147,10 +144,15 @@ export class MockTestService {
           data: {
             otrId: dto.otrId,
             mockTestId,
+            subjectBreakdown: dto.subjectBreakdown as any,
             ...attemptData,
           },
           select: { id: true, score: true, otrId: true, mockTestId: true },
         });
+
+        if (dto.subjectBreakdown) {
+          await this.saveRelationalMockScores(tx, result.id, dto.subjectBreakdown);
+        }
 
         this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
         return result;
@@ -193,9 +195,9 @@ export class MockTestService {
       }
 
       const betterAttemptsCount = await this.mockTestRepository.countBetterAttempts(
-          mockTestId,
-          userAttempt.score,
-          userAttempt.attemptedAt
+        mockTestId,
+        userAttempt.score,
+        userAttempt.attemptedAt
       );
 
       const total = await this.mockTestRepository.countAttempts(mockTestId);
@@ -247,6 +249,10 @@ export class MockTestService {
             select: { id: true, score: true, otrId: true, mockTestId: true },
           });
 
+          if (dto.subjectBreakdown) {
+            await this.saveRelationalMockScores(tx, result.id, dto.subjectBreakdown);
+          }
+
           this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
           return result;
         }
@@ -260,6 +266,10 @@ export class MockTestService {
           },
           select: { id: true, score: true, otrId: true, mockTestId: true },
         });
+
+        if (dto.subjectBreakdown) {
+          await this.saveRelationalMockScores(tx, result.id, dto.subjectBreakdown);
+        }
 
         this.syncToLeaderboard(result.mockTestId, result.otrId, result.score);
         return result;
@@ -275,7 +285,7 @@ export class MockTestService {
     if (requesterOtrId !== otrId) {
       throw new ForbiddenException('Access denied');
     }
-    
+
     try {
       return await this.mockTestRepository.getUserMockAttempts(otrId, cursor);
     } catch (error) {
@@ -312,6 +322,15 @@ export class MockTestService {
   ) {
     const categoryName = 'Official Assessment';
 
+    // 🔥 HIGH-SCALE OPTIMIZATION: Memoize the official test lookup
+    // We use a short cache for the ID to avoid repetitive lookups during surges
+    const cacheKey = `official_test_id:${examId}`;
+    const cachedId = await this.cacheService.get<number>(cacheKey);
+
+    if (cachedId) {
+      return { id: cachedId };
+    }
+
     // ✅ Atomic Upsert for Category (Avoids P2002 race conditions)
     const category = await tx.mockTestCategory.upsert({
       where: { name: categoryName },
@@ -332,7 +351,8 @@ export class MockTestService {
         select: { name: true },
       });
 
-      if (!exam) throw new NotFoundException(`Active exam with ID ${examId} not found`);
+      if (!exam)
+        throw new NotFoundException(`Active exam with ID ${examId} not found`);
 
       mockTest = await tx.mockTest.create({
         data: {
@@ -345,8 +365,11 @@ export class MockTestService {
         select: { id: true },
       });
     }
+
+    await this.cacheService.set(cacheKey, mockTest.id, 3600000); // Cache for 1 hour
     return mockTest;
   }
+
 
   private async syncToLeaderboard(
     mockTestId: number,
@@ -360,4 +383,46 @@ export class MockTestService {
       this.logger.error(`Failed to sync leaderboard for test ${mockTestId}: ${(err as any).message}`);
     }
   }
+
+  private async saveRelationalMockScores(
+    tx: Prisma.TransactionClient,
+    mockAttemptId: number,
+    subjectBreakdown: Record<string, any>,
+  ) {
+    const subjectNames = Object.keys(subjectBreakdown);
+    const subjects = await tx.subject.findMany({
+      where: {
+        name: { in: subjectNames, mode: 'insensitive' },
+        isDeleted: false,
+      },
+      select: { id: true, name: true },
+    });
+
+    const subjectMap = new Map(
+      subjects.map((s) => [s.name.toLowerCase(), s.id]),
+    );
+
+    const scoreData = Object.entries(subjectBreakdown)
+      .map(([name, data]) => {
+        const subjectId = subjectMap.get(name.toLowerCase());
+        if (!subjectId) return null;
+
+        const isObject = typeof data === 'object' && data !== null;
+        return {
+          mockAttemptId,
+          subjectId,
+          score: isObject ? (data.score ?? 0) : (data ?? 0),
+          correct: isObject ? (data.correct ?? 0) : 0,
+          wrong: isObject ? (data.wrong ?? 0) : 0,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+
+    if (scoreData.length > 0) {
+      // ENSURE IDEMPOTENCY: Clear existing relational scores for this attempt before re-inserting
+      await (tx as any).mockAttemptScore.deleteMany({ where: { mockAttemptId } });
+      await (tx as any).mockAttemptScore.createMany({ data: scoreData });
+    }
+  }
+
 }

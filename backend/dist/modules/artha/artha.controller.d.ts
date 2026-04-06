@@ -106,12 +106,12 @@ export declare class ArthaController {
         percentile: number | null;
         startTime: Date | null;
         submitTime: Date | null;
+        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
         logicalScore: number | null;
         quantScore: number | null;
         verbalScore: number | null;
         profileId: string;
         jobId: string | null;
-        subjectScores: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     completeTier1(body: ArthaProgressDto & {
         assessmentId?: string;

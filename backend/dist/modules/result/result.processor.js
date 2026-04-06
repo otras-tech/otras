@@ -91,6 +91,29 @@ let ResultProcessor = ResultProcessor_1 = class ResultProcessor extends bullmq_1
                         submitTime: new Date(),
                     },
                 });
+                const finalResultId = resultId;
+                const subjectNames = Object.keys(subjectBreakdown);
+                const subjects = await tx.subject.findMany({
+                    where: {
+                        name: { in: subjectNames, mode: 'insensitive' },
+                        isDeleted: false,
+                    },
+                    select: { id: true, name: true },
+                });
+                const subjectMap = new Map(subjects.map((s) => [s.name.toLowerCase(), s.id]));
+                const scoreData = Object.entries(subjectBreakdown)
+                    .map(([name, data]) => ({
+                    resultId: finalResultId,
+                    subjectId: subjectMap.get(name.toLowerCase()) || 0,
+                    correct: data.correct,
+                    wrong: data.wrong,
+                    score: data.score,
+                }))
+                    .filter((s) => s.subjectId !== 0);
+                if (scoreData.length > 0) {
+                    await tx.subjectScore.deleteMany({ where: { resultId: finalResultId } });
+                    await tx.subjectScore.createMany({ data: scoreData });
+                }
                 if (tier === 2 || tier === 3) {
                     const profile = await tx.arthaProfile.findFirst({
                         where: { userId: userId.toString() },

@@ -41,18 +41,24 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
 const admin_repository_1 = require("./repository/admin.repository");
-const jwt_1 = require("@nestjs/jwt");
+const auth_service_1 = require("../auth/auth.service");
 const bcrypt = __importStar(require("bcrypt"));
 let AdminService = class AdminService {
     repository;
-    jwtService;
-    constructor(repository, jwtService) {
+    authService;
+    constructor(repository, authService) {
         this.repository = repository;
-        this.jwtService = jwtService;
+        this.authService = authService;
+    }
+    async findById(id) {
+        return this.repository.findById(id);
     }
     async register(data) {
         const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -71,17 +77,18 @@ let AdminService = class AdminService {
         }
     }
     async login(admin) {
-        const payload = { email: admin.email, sub: admin.id, role: 'admin' };
+        const tokens = await this.authService.getTokens(admin.id, admin.email, 'ADMIN');
         return {
-            access_token: this.jwtService.sign(payload),
+            ...tokens,
             admin,
         };
     }
     async validateAdmin(email, pass) {
         const admin = await this.repository.findByEmail(email);
-        if (admin && (await bcrypt.compare(pass, admin.password))) {
-            const { password, ...result } = admin;
-            return result;
+        if (admin && !admin.isDeleted) {
+            if (await bcrypt.compare(pass, admin.password)) {
+                return admin;
+            }
         }
         return null;
     }
@@ -89,7 +96,8 @@ let AdminService = class AdminService {
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => auth_service_1.AuthService))),
     __metadata("design:paramtypes", [admin_repository_1.AdminRepository,
-        jwt_1.JwtService])
+        auth_service_1.AuthService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

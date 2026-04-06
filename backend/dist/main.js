@@ -1,41 +1,9 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+require('dotenv').config();
 if (!globalThis.crypto) {
     try {
         globalThis.crypto = require('node:crypto').webcrypto;
@@ -53,37 +21,62 @@ const swagger_1 = require("@nestjs/swagger");
 const helmet_1 = __importDefault(require("helmet"));
 const config_1 = require("@nestjs/config");
 const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
-const express = __importStar(require("express"));
 async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
     logger.log('🚀 Nest application bootstrapping...');
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         bufferLogs: false,
+        bodyParser: true,
     });
     const configService = app.get(config_1.ConfigService);
-    logger.log('✅ AppModule initialized');
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
-    app.use((0, helmet_1.default)());
     const pinoLogger = app.get(nestjs_pino_1.Logger);
     app.useLogger(pinoLogger);
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
     app.setGlobalPrefix('api/v1');
-    const allowedOrigins = configService.get('ALLOWED_ORIGINS');
+    app.use((0, helmet_1.default)({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+    }));
+    const allowedOrigins = configService.get('allowedOrigins') || ['*'];
     app.enableCors({
-        origin: allowedOrigins ? allowedOrigins.split(',') : false,
+        origin: (origin, callback) => {
+            if (!origin)
+                return callback(null, true);
+            const isAllowed = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
+            if (isAllowed) {
+                callback(null, true);
+            }
+            else {
+                logger.warn(`[CORS] Request blocked from unauthorized origin: ${origin}`);
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        allowedHeaders: [
+            'Content-Type',
+            'Accept',
+            'Authorization',
+            'x-idempotency-key',
+            'x-request-id',
+        ],
+        exposedHeaders: ['x-request-id'],
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true,
-        transformOptions: {
-            enableImplicitConversion: true,
-        },
+        transformOptions: { enableImplicitConversion: true },
     }));
     app.useGlobalFilters(new global_exception_filter_1.GlobalExceptionFilter());
     app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor());
-    app.use(express.json({ limit: '10mb' }));
-    app.use(express.urlencoded({ limit: '10mb', extended: true }));
     const showSwagger = configService.get('SHOW_SWAGGER') === 'true';
     if (configService.get('NODE_ENV') !== 'production' || showSwagger) {
         const config = new swagger_1.DocumentBuilder()
@@ -94,7 +87,9 @@ async function bootstrap() {
             .build();
         const document = swagger_1.SwaggerModule.createDocument(app, config);
         swagger_1.SwaggerModule.setup('api/docs', app, document, {
-            swaggerOptions: { persistAuthorization: true },
+            swaggerOptions: {
+                persistAuthorization: true,
+            },
         });
     }
     const port = configService.get('PORT') || 4000;

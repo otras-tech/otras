@@ -45,15 +45,32 @@ export class ArthaService {
       throw new ForbiddenException('Access denied');
     }
 
-    this.logger.log(`Fetching profile for user ${userId}`);
-    const profile = await this.repository.findProfileByUserId(userId);
-    const hasSubscription = await this.repository.hasActiveSubscription(userId);
+    this.logger.log(`Fetching profile status for user ${userId}`);
+
+    // 🔥 Parallelize independent DB calls to reduce latency
+    const [profile, hasSubscription, recentReports, selectedExam] =
+      await Promise.all([
+        this.repository.findProfileByUserId(userId),
+        this.repository.hasActiveSubscription(userId),
+        this.repository.findRecentReportsByUserId(userId),
+        this.repository.findSelectedExam(userId),
+      ]);
 
     if (!profile) {
       return {
         tier1: { unlocked: true, completed: false, progress: 0 },
-        tier2: { unlocked: false, completed: false, progress: 0, subscriptionRequired: false },
-        tier3: { unlocked: false, completed: false, progress: 0, subscriptionRequired: false },
+        tier2: {
+          unlocked: false,
+          completed: false,
+          progress: 0,
+          subscriptionRequired: false,
+        },
+        tier3: {
+          unlocked: false,
+          completed: false,
+          progress: 0,
+          subscriptionRequired: false,
+        },
         percentile: 0,
         readinessIndex: 0,
         logicalScore: 0,
@@ -63,7 +80,6 @@ export class ArthaService {
       };
     }
 
-    const recentReports = await this.repository.findRecentReportsByUserId(userId);
     const hasT1Report = recentReports.some((r) => r.tier === 1);
     const hasT2Report = recentReports.some((r) => r.tier === 2);
     const hasT3Report = recentReports.some((r) => r.tier === 3);
@@ -73,21 +89,26 @@ export class ArthaService {
     const tier3Completed = hasT3Report || profile.tier3Progress === 100;
 
     const allCompleted = hasT1Report && hasT2Report && hasT3Report;
-    const selectedExam = await this.repository.findSelectedExam(userId);
 
     return {
-      tier1: { unlocked: true, completed: tier1Completed, progress: profile.tier1Progress },
+      tier1: {
+        unlocked: true,
+        completed: tier1Completed,
+        progress: profile.tier1Progress,
+      },
       tier2: {
         unlocked: allCompleted || tier1Completed,
         completed: tier2Completed,
         progress: profile.tier2Progress,
-        subscriptionRequired: (allCompleted || tier1Completed) && !tier2Completed && !hasSubscription,
+        subscriptionRequired:
+          (allCompleted || tier1Completed) && !tier2Completed && !hasSubscription,
       },
       tier3: {
         unlocked: allCompleted || tier2Completed,
         completed: tier3Completed,
         progress: profile.tier3Progress,
-        subscriptionRequired: (allCompleted || tier2Completed) && !tier3Completed && !hasSubscription,
+        subscriptionRequired:
+          (allCompleted || tier2Completed) && !tier3Completed && !hasSubscription,
       },
       percentile: profile.percentile,
       readinessIndex: profile.readinessIndex || 0,
@@ -99,6 +120,7 @@ export class ArthaService {
       recentReports: recentReports,
     };
   }
+
 
   async startTierAssessment(
     requesterId: number,

@@ -1,20 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { AuthModule } from '../auth/auth.module';
 import { AdminController } from './admin.controller';
 import { AdminRepository } from './repository/admin.repository';
-import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../database/prisma.module';
 
 @Module({
   imports: [
     PrismaModule,
-    JwtModule.register({
-      secret: 'SECRET_KEY', // In production, use env variable
-      signOptions: { expiresIn: '1d' },
-    }),
+    forwardRef(() => AuthModule),
   ],
   providers: [AdminService, AdminRepository],
   controllers: [AdminController],
-  exports: [AdminService],
+  exports: [AdminService, AdminRepository],
 })
 export class AdminModule {}

@@ -20,21 +20,28 @@ let RolesGuard = class RolesGuard {
     }
     canActivate(context) {
         const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
+        console.log('RolesGuard executed');
         if (!requiredRoles || requiredRoles.length === 0) {
             return true;
         }
         const { user } = context.switchToHttp().getRequest();
+        console.log(`[ROLES-GUARD] Required Roles: ${JSON.stringify(requiredRoles)}`);
+        console.log(`[ROLES-GUARD] User from Request: ${JSON.stringify(user)}`);
         if (!user) {
-            throw new common_1.UnauthorizedException('Authentication required for this resource');
+            console.error('[ROLES-GUARD] Access denied: Authentication session context missing');
+            throw new common_1.ForbiddenException('Access denied: Authentication session context missing');
         }
         if (!user.role) {
+            console.error(`[ROLES-GUARD] User ${user.email} has no assigned role`);
             throw new common_1.ForbiddenException('User has no assigned role');
         }
         const userRoles = Array.isArray(user.role)
             ? user.role.map((r) => r.toUpperCase())
             : [user.role.toUpperCase()];
         const hasRole = requiredRoles.some((role) => userRoles.includes(role.toUpperCase()));
+        console.log(`[ROLES-GUARD] User Roles: ${JSON.stringify(userRoles)}, Has Required Role: ${hasRole}`);
         if (!hasRole) {
+            console.warn(`[ROLES-GUARD] Insufficient permissions for user ${user.email}. Required: [${requiredRoles.join(', ')}], Found: [${userRoles.join(', ')}]`);
             throw new common_1.ForbiddenException(`Insufficient permissions. Required one of: [${requiredRoles.join(', ')}]`);
         }
         return true;

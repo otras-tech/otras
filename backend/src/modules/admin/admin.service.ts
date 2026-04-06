@@ -1,20 +1,30 @@
-import {
+  import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { AdminRepository } from './repository/admin.repository';
-import { JwtService } from '@nestjs/jwt';
+import { AuthService } from '../auth/auth.service';
 import * as bcrypt from 'bcrypt';
 import { AdminRegisterDto } from './dto/admin.dto';
 import { Admin } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly repository: AdminRepository,
-    private readonly jwtService: JwtService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
   ) {}
+
+  async findById(id: number) {
+    return this.repository.findById(id);
+  }
+
+
 
   async register(data: AdminRegisterDto) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -33,22 +43,22 @@ export class AdminService {
   }
 
   async login(admin: Omit<Admin, 'password'>) {
-    const payload = { email: admin.email, sub: admin.id, role: 'admin' };
+    const tokens = await this.authService.getTokens(admin.id, admin.email, 'ADMIN');
     return {
-      access_token: this.jwtService.sign(payload),
+      ...tokens,
       admin,
     };
   }
 
-  async validateAdmin(
-    email: string,
-    pass: string,
-  ): Promise<Omit<Admin, 'password'> | null> {
+
+  async validateAdmin(email: string, pass: string): Promise<Admin | null> {
     const admin = await this.repository.findByEmail(email);
-    if (admin && (await bcrypt.compare(pass, admin.password))) {
-      const { password, ...result } = admin;
-      return result;
+    if (admin && !admin.isDeleted) {
+      if (await bcrypt.compare(pass, admin.password)) {
+        return admin;
+      }
     }
     return null;
   }
+
 }

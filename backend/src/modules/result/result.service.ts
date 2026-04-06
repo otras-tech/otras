@@ -10,6 +10,7 @@ import { SubmitTestDto, StartTestDto } from './dto/result.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { ResultProcessor } from './result.processor';
+import { CacheService } from '../../common/cache/cache.service';
 
 @Injectable()
 export class ResultService {
@@ -19,7 +20,9 @@ export class ResultService {
     @InjectQueue('result-calculation') private readonly resultQueue: Queue,
     private readonly resultRepository: ResultRepository,
     private readonly resultProcessor: ResultProcessor,
+    private readonly cacheService: CacheService,
   ) {}
+
 
   /**
    * Ownership enforced: user can only start tests for themselves.
@@ -96,12 +99,20 @@ export class ResultService {
    * (except when called internally from UserService).
    */
   async getUserResults(userId: number, cursor?: number, take?: number) {
-    try {
-      return await this.resultRepository.findByUserId(userId, cursor, take);
-    } catch {
-      throw new InternalServerErrorException('Could not fetch results');
-    }
+    const cacheKey = `user_results:${userId}:${cursor || 'start'}:${take || 20}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        try {
+          return await this.resultRepository.findByUserId(userId, cursor, take);
+        } catch {
+          throw new InternalServerErrorException('Could not fetch results');
+        }
+      },
+      60000, // 1 minute cache (short lived as these are high-impact)
+    );
   }
+
 
   async checkOwnership(resultId: number, userId: number): Promise<boolean> {
     return this.resultRepository.checkOwnership(resultId, userId);

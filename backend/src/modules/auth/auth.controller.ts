@@ -69,7 +69,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Log out current device session' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(@CurrentUser() user: RequestUser) {
-    return this.authService.logout(user.id, user.jti!);
+    return this.authService.logout(user.id, user.jti!, user.role);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -79,7 +79,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Log out all sessions on all devices' })
   @ApiResponse({ status: 200, description: 'Logout all successful' })
   async logoutAll(@CurrentUser() user: RequestUser) {
-    return this.authService.logoutAll(user.id);
+    return this.authService.logoutAll(user.id, user.role);
   }
 
   @UseGuards(JwtRefreshGuard)
@@ -97,6 +97,7 @@ export class AuthController {
     const userId = user.id;
     const refreshToken = user.refreshToken!;
     const jti = user.jti!;
-    return this.authService.refreshTokens(userId, refreshToken, jti);
+    const role = user.role;
+    return this.authService.refreshTokens(userId, refreshToken, jti, role);
   }
 }

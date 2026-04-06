@@ -37,16 +37,17 @@ let AuthController = class AuthController {
         return this.authService.login(user);
     }
     async logout(user) {
-        return this.authService.logout(user.id, user.jti);
+        return this.authService.logout(user.id, user.jti, user.role);
     }
     async logoutAll(user) {
-        return this.authService.logoutAll(user.id);
+        return this.authService.logoutAll(user.id, user.role);
     }
     async refreshTokens(user) {
         const userId = user.id;
         const refreshToken = user.refreshToken;
         const jti = user.jti;
-        return this.authService.refreshTokens(userId, refreshToken, jti);
+        const role = user.role;
+        return this.authService.refreshTokens(userId, refreshToken, jti, role);
     }
 };
 exports.AuthController = AuthController;

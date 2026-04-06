@@ -13,7 +13,9 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { SubjectService } from './subject.service';
-import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -25,13 +27,14 @@ import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @ApiTags('Subjects')
+@ApiBearerAuth('access-token')
 @Controller('subjects')
 export class SubjectController {
   constructor(private readonly subjectService: SubjectService) {}
 
-  @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth('access-token')
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Create a new subject (Admin only)' })
   @ApiResponse({ status: 201, description: 'Subject created' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -59,8 +62,11 @@ export class SubjectController {
     return this.subjectService.findOne(id);
   }
 
-  @UseGuards(AdminAuthGuard)
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update a subject (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Subject updated' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -69,8 +75,11 @@ export class SubjectController {
     return this.subjectService.update(id, data);
   }
 
-  @UseGuards(AdminAuthGuard)
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Delete a subject (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Subject deleted' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.subjectService.remove(id);
   }

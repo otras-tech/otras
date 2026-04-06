@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateReferralDto = void 0;
+exports.GetReferralHistoryDto = exports.CreateReferralDto = void 0;
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
 class CreateReferralDto {
@@ -32,4 +32,23 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreateReferralDto.prototype, "refereeOtrId", void 0);
+class GetReferralHistoryDto {
+    cursor;
+    take;
+}
+exports.GetReferralHistoryDto = GetReferralHistoryDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 123, description: 'Cursor for pagination' }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], GetReferralHistoryDto.prototype, "cursor", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 20, description: 'Number of items to fetch' }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(100),
+    __metadata("design:type", Number)
+], GetReferralHistoryDto.prototype, "take", void 0);
 //# sourceMappingURL=referral.dto.js.map

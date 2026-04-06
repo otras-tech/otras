@@ -19,15 +19,18 @@ const result_repository_1 = require("./repository/result.repository");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
 const result_processor_1 = require("./result.processor");
+const cache_service_1 = require("../../common/cache/cache.service");
 let ResultService = ResultService_1 = class ResultService {
     resultQueue;
     resultRepository;
     resultProcessor;
+    cacheService;
     logger = new common_1.Logger(ResultService_1.name);
-    constructor(resultQueue, resultRepository, resultProcessor) {
+    constructor(resultQueue, resultRepository, resultProcessor, cacheService) {
         this.resultQueue = resultQueue;
         this.resultRepository = resultRepository;
         this.resultProcessor = resultProcessor;
+        this.cacheService = cacheService;
     }
     async startTest(requesterId, userId, testId, tier) {
         if (requesterId !== userId) {
@@ -80,12 +83,15 @@ let ResultService = ResultService_1 = class ResultService {
         }
     }
     async getUserResults(userId, cursor, take) {
-        try {
-            return await this.resultRepository.findByUserId(userId, cursor, take);
-        }
-        catch {
-            throw new common_1.InternalServerErrorException('Could not fetch results');
-        }
+        const cacheKey = `user_results:${userId}:${cursor || 'start'}:${take || 20}`;
+        return this.cacheService.getOrSet(cacheKey, async () => {
+            try {
+                return await this.resultRepository.findByUserId(userId, cursor, take);
+            }
+            catch {
+                throw new common_1.InternalServerErrorException('Could not fetch results');
+            }
+        }, 60000);
     }
     async checkOwnership(resultId, userId) {
         return this.resultRepository.checkOwnership(resultId, userId);
@@ -97,6 +103,7 @@ exports.ResultService = ResultService = ResultService_1 = __decorate([
     __param(0, (0, bullmq_1.InjectQueue)('result-calculation')),
     __metadata("design:paramtypes", [bullmq_2.Queue,
         result_repository_1.ResultRepository,
-        result_processor_1.ResultProcessor])
+        result_processor_1.ResultProcessor,
+        cache_service_1.CacheService])
 ], ResultService);
 //# sourceMappingURL=result.service.js.map

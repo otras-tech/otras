@@ -47,7 +47,17 @@ export class SubmitMockAttemptDto {
   @IsOptional()
   @IsNumber()
   attemptId?: number;
+
+  @ApiPropertyOptional({
+    example: { Quant: 10, Logical: 5 },
+    description: 'JSON string or object for breakdown',
+  })
+  @IsOptional()
+  @IsObject()
+  subjectBreakdown?: Record<string, any>;
 }
+
+
 
 export class SubmitExamAttemptDto {
   @ApiProperty({ example: 'OTR123456' })

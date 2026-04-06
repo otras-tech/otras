@@ -31,14 +31,14 @@ let ReferralController = class ReferralController {
     getReferralStats(referrerId, req) {
         return this.referralService.getReferralStats(req.user.id, req.user.role, referrerId);
     }
-    getReferralHistory(referrerId, req) {
-        return this.referralService.getReferralHistory(req.user.id, req.user.role, referrerId);
+    getReferralHistory(referrerId, query, req) {
+        return this.referralService.getReferralHistory(req.user.id, req.user.role, referrerId, query);
     }
     getRewards(userId, req) {
         return this.referralService.getRewards(req.user.id, req.user.role, userId);
     }
-    getAllReferrals() {
-        return this.referralService.getAllReferrals();
+    getAllReferrals(query) {
+        return this.referralService.getAllReferrals(query.cursor, query.take);
     }
 };
 exports.ReferralController = ReferralController;
@@ -67,13 +67,17 @@ __decorate([
 ], ReferralController.prototype, "getReferralStats", null);
 __decorate([
     (0, common_1.Get)('history/:referrerId'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get detailed referral history for a user (Self or Admin)' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get detailed referral history for a user (Self or Admin)',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of referrals made' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - access denied' }),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
     __param(0, (0, common_1.Param)('referrerId', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, referral_dto_1.GetReferralHistoryDto, Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getReferralHistory", null);
 __decorate([
@@ -90,8 +94,10 @@ __decorate([
     (0, common_1.Get)('admin/all'),
     (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Get all referrals in the system (Admin only)' }),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [referral_dto_1.GetReferralHistoryDto]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getAllReferrals", null);
 exports.ReferralController = ReferralController = __decorate([

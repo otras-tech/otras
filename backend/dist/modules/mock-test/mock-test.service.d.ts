@@ -9,8 +9,25 @@ export declare class MockTestService {
     private readonly redisService;
     private readonly logger;
     constructor(mockTestRepository: MockTestRepository, cacheService: CacheService, redisService: RedisService);
-    findAll(categoryId?: number, cursor?: number, take?: number): Promise<{}>;
-    findOne(id: number): Promise<any>;
+    findAll(categoryId?: number, cursor?: number, take?: number): Promise<{
+        id: number;
+        category: {
+            name: string;
+        };
+        title: string;
+        duration: number;
+    }[]>;
+    findOne(id: number): Promise<{
+        exam: {
+            name: string;
+        } | null;
+        id: number;
+        category: {
+            name: string;
+        };
+        title: string;
+        duration: number;
+    }>;
     startAttempt(requesterOtrId: string, dto: StartMockAttemptDto): Promise<{
         id: number;
         startTime: Date | null;
@@ -56,4 +73,5 @@ export declare class MockTestService {
     private resolveMockTestId;
     private getOrCreateOfficialMockTest;
     private syncToLeaderboard;
+    private saveRelationalMockScores;
 }

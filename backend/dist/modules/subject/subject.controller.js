@@ -15,7 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubjectController = void 0;
 const common_1 = require("@nestjs/common");
 const subject_service_1 = require("./subject.service");
-const admin_auth_guard_1 = require("../auth/guards/admin-auth.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../../common/guards/roles.guard");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const swagger_1 = require("@nestjs/swagger");
 const create_subject_dto_1 = require("./dto/create-subject.dto");
 const update_subject_dto_1 = require("./dto/update-subject.dto");
@@ -42,9 +44,9 @@ let SubjectController = class SubjectController {
 };
 exports.SubjectController = SubjectController;
 __decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new subject (Admin only)' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Subject created' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
@@ -76,8 +78,11 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], SubjectController.prototype, "findOne", null);
 __decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a subject (Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Subject updated' }),
     (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
@@ -86,8 +91,11 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], SubjectController.prototype, "update", null);
 __decorate([
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a subject (Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Subject deleted' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -95,6 +103,7 @@ __decorate([
 ], SubjectController.prototype, "remove", null);
 exports.SubjectController = SubjectController = __decorate([
     (0, swagger_1.ApiTags)('Subjects'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, common_1.Controller)('subjects'),
     __metadata("design:paramtypes", [subject_service_1.SubjectService])
 ], SubjectController);

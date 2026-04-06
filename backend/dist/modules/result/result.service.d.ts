@@ -2,12 +2,14 @@ import { ResultRepository } from './repository/result.repository';
 import { SubmitTestDto } from './dto/result.dto';
 import { Queue } from 'bullmq';
 import { ResultProcessor } from './result.processor';
+import { CacheService } from '../../common/cache/cache.service';
 export declare class ResultService {
     private readonly resultQueue;
     private readonly resultRepository;
     private readonly resultProcessor;
+    private readonly cacheService;
     private readonly logger;
-    constructor(resultQueue: Queue, resultRepository: ResultRepository, resultProcessor: ResultProcessor);
+    constructor(resultQueue: Queue, resultRepository: ResultRepository, resultProcessor: ResultProcessor, cacheService: CacheService);
     startTest(requesterId: number, userId: number, testId: number, tier?: number): Promise<{
         id: number;
         startTime: Date | null;

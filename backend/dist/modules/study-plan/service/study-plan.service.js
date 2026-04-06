@@ -15,15 +15,18 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const study_plan_repository_1 = require("../repository/study-plan.repository");
 const rescheduler_service_1 = require("./rescheduler.service");
+const cache_service_1 = require("../../../common/cache/cache.service");
 let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
     repository;
     rescheduler;
     configService;
+    cacheService;
     logger = new common_1.Logger(StudyPlanService_1.name);
-    constructor(repository, rescheduler, configService) {
+    constructor(repository, rescheduler, configService, cacheService) {
         this.repository = repository;
         this.rescheduler = rescheduler;
         this.configService = configService;
+        this.cacheService = cacheService;
     }
     async generate(requesterId, requesterRole, dto) {
         if (requesterId !== dto.userId && requesterRole.toUpperCase() !== 'ADMIN') {
@@ -79,6 +82,7 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         const days = processedData.days || [];
         const savedPlan = await this.repository.createPlanWithSchedule(dto, days);
         this.logger.log(`Study Plan: Plan saved for ${dto.targetExam}`);
+        await this.cacheService.safeInvalidate([`study_plan_user:${dto.userId}`]);
         return savedPlan;
     }
     assignSequentialDates(aiData) {
@@ -109,17 +113,22 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
             throw new common_1.ForbiddenException('Access denied');
         }
-        const plan = await this.repository.findByUserId(userId);
-        if (plan) {
-            await this.processMissedTasks(plan.id);
-        }
-        return this.repository.findByUserId(userId);
+        const cacheKey = `study_plan_user:${userId}`;
+        return this.cacheService.getOrSet(cacheKey, async () => {
+            const plan = await this.repository.findByUserId(userId);
+            if (plan) {
+                await this.processMissedTasks(plan.id);
+                return this.repository.findByUserId(userId);
+            }
+            return null;
+        }, 600000);
     }
     async findOne(requesterId, requesterRole, id) {
         const plan = await this.repository.findById(id);
         if (!plan)
             throw new common_1.NotFoundException('Plan not found');
-        if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+        if (requesterId !== plan.userId &&
+            requesterRole.toUpperCase() !== 'ADMIN') {
             throw new common_1.ForbiddenException('Access denied');
         }
         await this.processMissedTasks(id);
@@ -166,6 +175,7 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
                 }
             }
         }
+        await this.cacheService.safeInvalidate([`study_plan_user:${userId}`]);
         return activity;
     }
     async processMissedTasks(planId) {
@@ -176,7 +186,7 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const days = plan.days;
         const lastDay = days[days.length - 1];
-        let movedCount = 0;
+        const activityIdsToRelocate = [];
         for (const day of days) {
             if (!day.date)
                 continue;
@@ -185,13 +195,16 @@ let StudyPlanService = StudyPlanService_1 = class StudyPlanService {
             if (dayDate < today) {
                 for (const activity of day.activities) {
                     if (!activity.completed && activity.dayId !== lastDay.id) {
-                        await this.repository.relocateActivity(activity.id, lastDay.id);
-                        movedCount++;
+                        activityIdsToRelocate.push(activity.id);
                     }
                 }
             }
         }
-        return movedCount;
+        if (activityIdsToRelocate.length > 0) {
+            await this.repository.relocateMultipleActivities(activityIdsToRelocate, lastDay.id);
+            this.logger.log(`Batch relocated ${activityIdsToRelocate.length} missed activities for Plan ${planId}`);
+        }
+        return activityIdsToRelocate.length;
     }
     async simulateDayPassed(requesterId, requesterRole, planId) {
         const plan = await this.repository.findById(planId);
@@ -225,6 +238,7 @@ exports.StudyPlanService = StudyPlanService = StudyPlanService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [study_plan_repository_1.StudyPlanRepository,
         rescheduler_service_1.ReschedulerService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        cache_service_1.CacheService])
 ], StudyPlanService);
 //# sourceMappingURL=study-plan.service.js.map

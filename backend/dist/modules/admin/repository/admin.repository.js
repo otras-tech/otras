@@ -22,17 +22,17 @@ let AdminRepository = class AdminRepository {
     }
     async findByEmail(email) {
         return this.prisma.admin.findUnique({
-            where: { email, isDeleted: false },
+            where: { email },
         });
     }
     async findByUsername(username) {
         return this.prisma.admin.findUnique({
-            where: { username, isDeleted: false },
+            where: { username },
         });
     }
     async findById(id) {
         return this.prisma.admin.findUnique({
-            where: { id, isDeleted: false },
+            where: { id },
         });
     }
     async softDelete(id) {

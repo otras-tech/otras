@@ -25,13 +25,13 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('Mock Tests')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth('access-token')
   @Post()
   @ApiOperation({ summary: 'Create a new mock test category (Admin only)' })
   @ApiResponse({ status: 201, description: 'Category created' })
@@ -41,6 +41,7 @@ export class CategoryController {
   }
 
   @Get()
+  @Roles('USER', 'ADMIN') // Allow both roles to view
   @ApiOperation({ summary: 'Get all mock test categories' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   findAll() {
@@ -48,6 +49,7 @@ export class CategoryController {
   }
 
   @Get(':id')
+  @Roles('USER', 'ADMIN') // Allow both roles to view
   @ApiOperation({ summary: 'Get category by ID' })
   @ApiResponse({ status: 200, description: 'Category details' })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -55,9 +57,6 @@ export class CategoryController {
     return this.categoryService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth('access-token')
   @Patch(':id')
   @ApiOperation({ summary: 'Update a category (Admin only)' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -68,9 +67,6 @@ export class CategoryController {
     return this.categoryService.update(id, updateCategoryDto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth('access-token')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a category (Admin only)' })
   remove(@Param('id', ParseIntPipe) id: number) {

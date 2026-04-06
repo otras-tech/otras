@@ -15,8 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
-const swagger_1 = require("@nestjs/swagger");
 const admin_dto_1 = require("./dto/admin.dto");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const jwt_refresh_guard_1 = require("../auth/guards/jwt-refresh.guard");
+const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
+const swagger_1 = require("@nestjs/swagger");
+const throttler_1 = require("@nestjs/throttler");
 let AdminController = class AdminController {
     adminService;
     constructor(adminService) {
@@ -31,6 +35,14 @@ let AdminController = class AdminController {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
         return this.adminService.login(admin);
+    }
+    async logout(user) {
+        const authService = this.adminService.authService;
+        return authService.logout(user.id, user.jti, 'ADMIN');
+    }
+    async refresh(user) {
+        const authService = this.adminService.authService;
+        return authService.refreshTokens(user.id, user.refreshToken, user.jti, 'ADMIN');
     }
 };
 exports.AdminController = AdminController;
@@ -62,9 +74,30 @@ __decorate([
     __metadata("design:paramtypes", [admin_dto_1.AdminLoginDto]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "login", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.Post)('logout'),
+    (0, swagger_1.ApiOperation)({ summary: 'Admin logout' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "logout", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_refresh_guard_1.JwtRefreshGuard),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.Post)('refresh'),
+    (0, swagger_1.ApiOperation)({ summary: 'Admin token refresh' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "refresh", null);
 exports.AdminController = AdminController = __decorate([
     (0, swagger_1.ApiTags)('Admin'),
     (0, common_1.Controller)('admin/auth'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
     __metadata("design:paramtypes", [admin_service_1.AdminService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

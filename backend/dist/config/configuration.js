@@ -14,8 +14,8 @@ exports.default = () => ({
         disable: process.env.DISABLE_REDIS === 'true',
     },
     jwt: {
-        accessSecret: process.env.JWT_ACCESS_SECRET,
-        refreshSecret: process.env.JWT_REFRESH_SECRET,
+        accessSecret: (process.env.JWT_ACCESS_SECRET || 'secret').trim(),
+        refreshSecret: (process.env.JWT_REFRESH_SECRET || 'secret').trim(),
     },
 });
 //# sourceMappingURL=configuration.js.map

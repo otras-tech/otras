@@ -2,12 +2,14 @@ import { ConfigService } from '@nestjs/config';
 import { StudyPlanRepository } from '../repository/study-plan.repository';
 import { ReschedulerService } from './rescheduler.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
+import { CacheService } from '../../../common/cache/cache.service';
 export declare class StudyPlanService {
     private readonly repository;
     private readonly rescheduler;
     private readonly configService;
+    private readonly cacheService;
     private readonly logger;
-    constructor(repository: StudyPlanRepository, rescheduler: ReschedulerService, configService: ConfigService);
+    constructor(repository: StudyPlanRepository, rescheduler: ReschedulerService, configService: ConfigService, cacheService: CacheService);
     generate(requesterId: number, requesterRole: string, dto: CreateStudyPlanDto): Promise<Record<string, unknown> & {
         days?: unknown[];
     }>;

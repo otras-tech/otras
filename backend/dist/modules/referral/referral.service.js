@@ -27,35 +27,34 @@ let ReferralService = class ReferralService {
         if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
             throw new common_1.ForbiddenException('Access denied');
         }
-        const [referralsMade, referrer] = await Promise.all([
-            this.referralRepository.findByReferrerId(referrerId),
+        const [stats, referrer, recentReferrals] = await Promise.all([
+            this.referralRepository.countReferralStats(referrerId),
             this.referralRepository.findUserByIdWithCredits(referrerId),
+            this.referralRepository.findByReferrerId(referrerId, undefined, 10),
         ]);
         const joinedViaReferral = referrer
             ? await this.referralRepository.findFirstByRefereeOtrId(referrer.otrId)
             : null;
-        const totalReferrals = referralsMade.length;
-        const successReferrals = referralsMade.filter((r) => r.status === 'Qualified Referral').length;
-        let creditsEarned = referralsMade.reduce((sum, r) => sum + (r.creditsEarned || 0), 0);
+        let totalCreditsEarned = stats.creditsEarned;
         if (joinedViaReferral) {
-            creditsEarned += 10;
+            totalCreditsEarned += 10;
         }
-        const mockTestsEarned = Math.floor(successReferrals / 10);
+        const mockTestsEarned = Math.floor(stats.success / 10);
         return {
-            totalReferrals,
-            successReferrals,
-            creditsEarned,
+            totalReferrals: stats.total,
+            successReferrals: stats.success,
+            creditsEarned: totalCreditsEarned,
             mockTestsEarned,
             availableCredits: referrer?.credits ?? 0,
             referralCode: referrer?.referralCode ?? '',
-            referrals: referralsMade,
+            referrals: recentReferrals,
         };
     }
-    async getReferralHistory(requesterId, requesterRole, referrerId) {
+    async getReferralHistory(requesterId, requesterRole, referrerId, query) {
         if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
             throw new common_1.ForbiddenException('Access denied');
         }
-        const referrals = await this.referralRepository.findByReferreerIdOrdered(referrerId);
+        const referrals = await this.referralRepository.findByReferrerId(referrerId, query.cursor, query.take);
         return referrals.map((r) => ({
             id: r.id,
             friendOtrId: r.refereeOtrId,
@@ -70,8 +69,8 @@ let ReferralService = class ReferralService {
         }
         return this.referralRepository.findReferralRewardsByUserId(userId);
     }
-    async getAllReferrals() {
-        return this.referralRepository.findAll();
+    async getAllReferrals(cursor, take) {
+        return this.referralRepository.findAll(cursor, take);
     }
 };
 exports.ReferralService = ReferralService;

@@ -1,8 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, Logger } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { redisStore } from 'cache-manager-redis-yet';
@@ -44,14 +45,13 @@ import configuration from './config/configuration';
 
 @Module({
   imports: [
-    // ✅ Production: Configuration Management
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
       load: [configuration],
       validationSchema,
+      envFilePath: ['.env.local', '.env'],
     }),
-    // ✅ Production: Logger Module (Extracted)
     LoggerModule,
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -88,7 +88,7 @@ import configuration from './config/configuration';
         const isRedisDisabled =
           config.get('DISABLE_REDIS') === 'true' ||
           config.get('DISABLE_REDIS') === true;
-        const baseConfig = { throttlers: [{ ttl: 60000, limit: 100 }] };
+        const baseConfig = { throttlers: [{ ttl: 60000, limit: 120 }] };
 
         if (isRedisDisabled) {
           return baseConfig; // Default in-memory storage
@@ -159,8 +159,9 @@ import configuration from './config/configuration';
           connection: {
             host: config.get('REDIS_HOST') || '127.0.0.1',
             port: parseInt(config.get('REDIS_PORT') || '6379'),
-            enableOfflineQueue: false,
-            lazyConnect: true,
+            enableOfflineQueue: true,
+            lazyConnect: false,
+
             connectTimeout: 5000, // ✅ 5s connection timeout
             maxRetriesPerRequest: 1, // ✅ Fail fast
             retryStrategy: (times: number) => {
@@ -183,10 +184,37 @@ import configuration from './config/configuration';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
+  private readonly logger = new Logger(AppModule.name);
+
+  constructor(private configService: ConfigService) {
+    const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET') || this.configService.get<string>('jwt.accessSecret');
+    const dbUrl = this.configService.get<string>('DATABASE_URL');
+    
+    this.logger.log(`[STARTUP-DIAGNOSTIC] Environment Check:`);
+    this.logger.log(`[STARTUP-DIAGNOSTIC] JWT_ACCESS_SECRET Present: ${!!accessSecret}`);
+    this.logger.log(`[STARTUP-DIAGNOSTIC] DATABASE_URL Present: ${!!dbUrl}`);
+    this.logger.log(`[STARTUP-DIAGNOSTIC] NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+  }
+
   configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply((req: any, res: any, next: any) => {
+        const auth = req.headers['authorization'];
+        console.log(`[AUTH-DEBUG] ${req.method} ${req.url} - Auth Header Present: ${!!auth}`);
+        if (auth) console.log(`[AUTH-DEBUG] Prefix: ${auth.substring(0, 15)}...`);
+        next();
+      })
+      .forRoutes('*');
     consumer.apply(LanguageMiddleware).forRoutes('*');
   }
+
 }

@@ -3,11 +3,13 @@ import { RegisterDto } from '../auth/dto/auth.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResultService } from '../result/result.service';
 import { MockTestService } from '../mock-test/mock-test.service';
+import { CacheService } from '../../common/cache/cache.service';
 export declare class UserService {
     private readonly userRepository;
     private readonly resultService;
     private readonly mockTestService;
-    constructor(userRepository: UserRepository, resultService: ResultService, mockTestService: MockTestService);
+    private readonly cacheService;
+    constructor(userRepository: UserRepository, resultService: ResultService, mockTestService: MockTestService, cacheService: CacheService);
     create(data: RegisterDto): Promise<{
         password: string;
         role: string;
@@ -102,7 +104,7 @@ export declare class UserService {
         otrId: string;
         createdAt: Date;
     }[]>;
-    update(requesterId: number, requesterRole: string, targetId: number, data: UpdateUserDto): Promise<{
+    update(targetId: number, data: UpdateUserDto): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
@@ -123,7 +125,7 @@ export declare class UserService {
         referralCode: string;
         preferredLanguage: string;
     }>;
-    remove(requesterRole: string, id: number): Promise<{
+    remove(id: number): Promise<{
         password: string;
         role: string;
         isDeleted: boolean;
@@ -144,7 +146,7 @@ export declare class UserService {
         referralCode: string;
         preferredLanguage: string;
     }>;
-    getDashboardData(requesterId: number, requesterRole: string, id: number): Promise<{
+    getDashboardData(id: number): Promise<{
         user: {
             firstName: string;
             lastName: string;
@@ -189,7 +191,7 @@ export declare class UserService {
             preparationAdvice: string | null;
         } | null;
     } | null>;
-    getTierStatus(requesterId: number, requesterRole: string, id: number): Promise<{
+    getTierStatus(id: number): Promise<{
         tier1: {
             unlocked: boolean;
             completed: boolean;

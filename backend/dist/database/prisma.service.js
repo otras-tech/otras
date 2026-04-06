@@ -17,6 +17,11 @@ const config_1 = require("@nestjs/config");
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     logger = new common_1.Logger(PrismaService_1.name);
     constructor(config) {
+        const dbUrl = config.get('DATABASE_URL');
+        const hasLimit = dbUrl.includes('connection_limit=');
+        const finalUrl = hasLimit
+            ? dbUrl
+            : `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=30`;
         super({
             log: [
                 { emit: 'event', level: 'query' },
@@ -26,7 +31,7 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
             ],
             datasources: {
                 db: {
-                    url: config.get('DATABASE_URL'),
+                    url: finalUrl,
                 },
             },
         });

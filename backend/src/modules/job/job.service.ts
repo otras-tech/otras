@@ -4,9 +4,10 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class JobService {
-  constructor(private readonly repository: JobRepository) {}
+  constructor(private readonly repository: JobRepository) { }
 
   async create(data: Prisma.JobCreateInput) {
+
     return this.repository.create(data);
   }
 

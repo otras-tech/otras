@@ -21,12 +21,15 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CheckOwnership } from '../../common/decorators/check-ownership.decorator';
+import { OwnershipGuard } from '../../common/guards/ownership.guard';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, OwnershipGuard)
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -43,52 +46,49 @@ export class UserController {
   }
 
   @Get(':id')
+  @CheckOwnership()
   @ApiOperation({ summary: 'Get user by ID (Self or Admin only)' })
   @ApiResponse({ status: 200, description: 'User record' })
   @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    // Ownership enforced in service
+  async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findById(id);
   }
 
   @Get(':id/dashboard')
+  @CheckOwnership()
   @ApiOperation({ summary: 'Get unified dashboard data (Results + Mock Attempts)' })
   @ApiResponse({ status: 200, description: 'Aggregated dashboard statistics' })
   @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
-  async getDashboardData(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: any,
-  ) {
-    return this.userService.getDashboardData(req.user.id, req.user.role, id);
+  async getDashboardData(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.getDashboardData(id);
   }
 
   @Patch(':id')
+  @CheckOwnership()
   @UsePipes(new ValidationPipe({ whitelist: true }))
   @ApiOperation({ summary: 'Update your profile (Self or Admin only)' })
   @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateUserDto,
-    @Request() req: any,
   ) {
-    return this.userService.update(req.user.id, req.user.role, id, data);
+    return this.userService.update(id, data);
   }
 
   @Delete(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Soft delete a user (Admin only)' })
-  async remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    return this.userService.remove(req.user.role, id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.remove(id);
   }
 
   @Get(':id/tier-status')
+  @CheckOwnership()
   @ApiOperation({ summary: 'Get tier status for a user (Self or Admin only)' })
   @ApiResponse({ status: 403, description: 'Forbidden - Access denied' })
-  async getTierStatus(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: any,
-  ) {
-    return this.userService.getTierStatus(req.user.id, req.user.role, id);
+  async getTierStatus(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.getTierStatus(id);
   }
 }
+

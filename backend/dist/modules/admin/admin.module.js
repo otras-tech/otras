@@ -9,9 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
+const auth_module_1 = require("../auth/auth.module");
 const admin_controller_1 = require("./admin.controller");
 const admin_repository_1 = require("./repository/admin.repository");
-const jwt_1 = require("@nestjs/jwt");
 const prisma_module_1 = require("../../database/prisma.module");
 let AdminModule = class AdminModule {
 };
@@ -20,14 +20,11 @@ exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
         imports: [
             prisma_module_1.PrismaModule,
-            jwt_1.JwtModule.register({
-                secret: 'SECRET_KEY',
-                signOptions: { expiresIn: '1d' },
-            }),
+            (0, common_1.forwardRef)(() => auth_module_1.AuthModule),
         ],
         providers: [admin_service_1.AdminService, admin_repository_1.AdminRepository],
         controllers: [admin_controller_1.AdminController],
-        exports: [admin_service_1.AdminService],
+        exports: [admin_service_1.AdminService, admin_repository_1.AdminRepository],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

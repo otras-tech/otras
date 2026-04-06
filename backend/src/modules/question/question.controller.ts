@@ -21,13 +21,13 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 
 @ApiTags('Questions')
 @Controller('question')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
-@ApiBearerAuth('access-token')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new question in the bank' })
   @ApiResponse({ status: 201, description: 'Question created' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -66,6 +66,9 @@ export class QuestionController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a question' })
   @ApiResponse({ status: 200, description: 'Question updated' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -77,6 +80,9 @@ export class QuestionController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a question' })
   @ApiResponse({ status: 200, description: 'Question deleted' })
   remove(@Param('id', ParseIntPipe) id: number) {

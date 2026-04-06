@@ -11,6 +11,7 @@ import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthRepository } from './repository/auth.repository';
+import { AdminRepository } from '../admin/repository/admin.repository';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { User, Prisma } from '@prisma/client';
@@ -29,8 +30,9 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private repository: AuthRepository,
+    private adminRepository: AdminRepository,
     private redisService: RedisService,
-  ) {}
+  ) { }
 
   async validateUser(loginId: string, pass: string): Promise<AuthUser | null> {
     const user: User | null = await this.userService.findByEmail(loginId);
@@ -52,6 +54,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Registration failed');
     }
+
     const { password: _pw, ...safeUser } = user;
     return this.login(safeUser);
   }
@@ -73,31 +76,34 @@ export class AuthService {
     };
   }
 
-  async logout(userId: number, jti: string) {
-    await this.repository.deleteTokenByJti(jti, userId);
+  async logout(userId: number, jti: string, role: string) {
+    const userType = role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+    await this.repository.deleteTokenByJti(jti, userId, userType);
     return { success: true };
   }
 
-  async logoutAll(userId: number) {
-    await this.repository.deleteTokensByUserId(userId);
+  async logoutAll(userId: number, role: string) {
+    const userType = role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+    await this.repository.deleteTokensByUserId(userId, userType);
     return { success: true };
   }
 
-  async refreshTokens(userId: number, rt: string, jti: string) {
-    const lockKey = `refresh:${userId}:${jti}`;
+  async refreshTokens(userId: number, rt: string, jti: string, role: string) {
+    const userType = role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+    const lockKey = `refresh:${userType}:${userId}:${jti}`;
     const lockTtl = 10000;
 
     const lockValue = await this.redisService.acquireLock(lockKey, lockTtl);
     if (!lockValue) {
-      this.logger.warn(`Refresh token rotation in progress for user ${userId}, jti ${jti}`);
+      this.logger.warn(`Refresh token rotation in progress for ${userType} ${userId}, jti ${jti}`);
       throw new HttpException('Too Many Requests', HttpStatus.TOO_MANY_REQUESTS);
     }
 
     try {
       const tokenRecord = await this.repository.findTokenById(jti);
 
-      if (!tokenRecord || tokenRecord.userId !== userId) {
-        this.logger.warn(`Invalid JTI for user ${userId}`);
+      if (!tokenRecord || tokenRecord.userId !== userId || tokenRecord.userType !== userType) {
+        this.logger.warn(`Invalid JTI or UserType for user ${userId}`);
         throw new ForbiddenException('Access Denied');
       }
 
@@ -108,53 +114,56 @@ export class AuthService {
 
       const rtMatches = await bcrypt.compare(rt, tokenRecord.tokenHash);
       if (!rtMatches) {
-        this.logger.error(`Token reuse detected for user ${userId}. Revoking all sessions.`);
-        await this.logoutAll(userId);
+        this.logger.error(`Token reuse detected for ${userType} ${userId}. Revoking all sessions.`);
+        await this.logoutAll(userId, userType);
         throw new ForbiddenException('Security Breach Detected');
       }
 
-      const user = await this.userService.findById(userId);
-      if (!user || user.isDeleted) {
-        throw new ForbiddenException('User deactivated');
+      let identity: any;
+      if (userType === 'ADMIN') {
+        identity = await this.adminRepository.findById(userId);
+      } else {
+        identity = await this.userService.findById(userId);
+      }
+
+      if (!identity || (identity as any).isDeleted) {
+        throw new ForbiddenException('Account deactivated');
       }
 
       return await this.repository.runTransaction(async (tx) => {
         await this.repository.deleteToken(jti, tx);
-        return this.getTokens(user.id, user.email, user.role, tx);
+        return this.getTokens(userId, (identity as any).email, role, tx);
       });
     } finally {
       await this.redisService.releaseLock(lockKey, lockValue);
     }
   }
 
-  private async getTokens(
+  async getTokens(
     userId: number,
     email: string,
     role: string,
     tx?: Prisma.TransactionClient,
   ) {
     const jti = uuidv4();
+    const userType = role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+
+    this.logger.debug(`[AUTH-SERVICE] Generating tokens for ${userType}: ${userId}, Email: ${email}`);
 
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, email, role },
-        {
-          secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-          expiresIn: '15m',
-        },
+        { sub: userId, email, role: role.toUpperCase() },
+        { expiresIn: '15m' },
       ),
       this.jwtService.signAsync(
-        { sub: userId, email, role, jti },
-        {
-          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-          expiresIn: '7d',
-        },
+        { sub: userId, email, role: role.toUpperCase(), jti },
+        { expiresIn: '7d' },
       ),
     ]);
 
-    const sessionCount = await this.repository.countTokensByUserId(userId, tx);
+    const sessionCount = await this.repository.countTokensByUserId(userId, userType, tx);
     if (sessionCount >= this.MAX_SESSIONS) {
-      const oldestSession = await this.repository.findOldestSession(userId, tx);
+      const oldestSession = await this.repository.findOldestSession(userId, userType, tx);
       if (oldestSession) {
         await this.repository.deleteToken(oldestSession.id, tx);
       }
@@ -167,10 +176,16 @@ export class AuthService {
     await this.repository.createRefreshToken({
       id: jti,
       userId,
+      userType,
       tokenHash,
       expiresAt,
     }, tx);
 
-    return { access_token: at, refresh_token: rt };
+    return {
+      accessToken: at,
+      refreshToken: rt,
+      access_token: at,
+      refresh_token: rt,
+    };
   }
 }

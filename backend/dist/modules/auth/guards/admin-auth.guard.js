@@ -20,7 +20,7 @@ let AdminAuthGuard = class AdminAuthGuard extends jwt_auth_guard_1.JwtAuthGuard 
         if (user && user.role && user.role.toUpperCase() === 'ADMIN') {
             return true;
         }
-        throw new common_1.UnauthorizedException('Admin privileges required');
+        throw new common_1.ForbiddenException('Admin privileges required');
     }
 };
 exports.AdminAuthGuard = AdminAuthGuard;

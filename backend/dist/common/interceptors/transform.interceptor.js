@@ -15,10 +15,18 @@ let TransformInterceptor = class TransformInterceptor {
         if (request.url.includes('/health')) {
             return next.handle();
         }
-        return next.handle().pipe((0, operators_1.map)((data) => ({
-            success: true,
-            data: data || null,
-        })));
+        return next.handle().pipe((0, operators_1.map)((data) => {
+            if (data && typeof data === 'object' && 'data' in data && 'meta' in data) {
+                return {
+                    success: true,
+                    ...data,
+                };
+            }
+            return {
+                success: true,
+                data: data || null,
+            };
+        }));
     }
 };
 exports.TransformInterceptor = TransformInterceptor;

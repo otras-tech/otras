@@ -90,6 +90,7 @@ export class ResultProcessor extends WorkerHost {
 
       // 3. Update result and profile in a transaction
       await this.prisma.$transaction(async (tx) => {
+        // 3a. Update Result (Legacy JSON)
         await tx.result.update({
           where: { id: resultId },
           data: {
@@ -100,6 +101,41 @@ export class ResultProcessor extends WorkerHost {
           },
         });
 
+        // 3b. Relational Analytics: Map Subject Names to IDs and Bulk Insert
+        const finalResultId = resultId as number;
+        const subjectNames = Object.keys(subjectBreakdown);
+        const subjects = await tx.subject.findMany({
+          where: {
+            name: { in: subjectNames, mode: 'insensitive' },
+            isDeleted: false,
+          },
+          select: { id: true, name: true },
+        });
+
+        const subjectMap = new Map(
+          subjects.map((s) => [s.name.toLowerCase(), s.id]),
+        );
+
+        const scoreData = Object.entries(subjectBreakdown)
+          .map(([name, data]) => ({
+            resultId: finalResultId,
+            subjectId: subjectMap.get(name.toLowerCase()) || 0,
+            correct: data.correct,
+            wrong: data.wrong,
+            score: data.score,
+          }))
+          .filter((s) => s.subjectId !== 0);
+
+        if (scoreData.length > 0) {
+          // ENSURE IDEMPOTENCY: Delete existing scores for this result if any
+          await tx.subjectScore.deleteMany({ where: { resultId: finalResultId } });
+          await tx.subjectScore.createMany({ data: scoreData });
+        }
+
+
+
+
+        // 3c. Artha Profile Update
         if (tier === 2 || tier === 3) {
           const profile = await tx.arthaProfile.findFirst({
             where: { userId: userId.toString() },
@@ -113,6 +149,7 @@ export class ResultProcessor extends WorkerHost {
           }
         }
       });
+
 
       this.logger.log(
         `Successfully processed result${jobId ? ` for Job ID: ${jobId}` : ''}`,

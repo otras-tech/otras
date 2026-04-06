@@ -6,11 +6,15 @@ export declare class AuthController {
     constructor(authService: AuthService);
     register(dto: RegisterDto): Promise<{
         user: import("./auth.service").AuthUser;
+        accessToken: string;
+        refreshToken: string;
         access_token: string;
         refresh_token: string;
     }>;
     login(dto: LoginDto): Promise<{
         user: import("./auth.service").AuthUser;
+        accessToken: string;
+        refreshToken: string;
         access_token: string;
         refresh_token: string;
     }>;
@@ -21,6 +25,8 @@ export declare class AuthController {
         success: boolean;
     }>;
     refreshTokens(user: RequestUser): Promise<{
+        accessToken: string;
+        refreshToken: string;
         access_token: string;
         refresh_token: string;
     }>;

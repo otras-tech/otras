@@ -9,6 +9,7 @@ import {
   ValidationPipe,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { ReferralService } from './referral.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,7 +21,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { CreateReferralDto } from './dto/referral.dto';
+import { CreateReferralDto, GetReferralHistoryDto } from './dto/referral.dto';
 
 @ApiTags('Referrals')
 @ApiBearerAuth('access-token')
@@ -54,15 +55,25 @@ export class ReferralController {
   }
 
   @Get('history/:referrerId')
-  @ApiOperation({ summary: 'Get detailed referral history for a user (Self or Admin)' })
+  @ApiOperation({
+    summary: 'Get detailed referral history for a user (Self or Admin)',
+  })
   @ApiResponse({ status: 200, description: 'List of referrals made' })
   @ApiResponse({ status: 403, description: 'Forbidden - access denied' })
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   getReferralHistory(
     @Param('referrerId', ParseIntPipe) referrerId: number,
+    @Query() query: GetReferralHistoryDto,
     @Request() req: any,
   ) {
-    return this.referralService.getReferralHistory(req.user.id, req.user.role, referrerId);
+    return this.referralService.getReferralHistory(
+      req.user.id,
+      req.user.role,
+      referrerId,
+      query,
+    );
   }
+
 
   @Get('rewards/:userId')
   @ApiOperation({ summary: 'Get pending/earned referral rewards for a user (Self or Admin)' })
@@ -77,7 +88,9 @@ export class ReferralController {
   @Get('admin/all')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Get all referrals in the system (Admin only)' })
-  getAllReferrals() {
-    return this.referralService.getAllReferrals();
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  getAllReferrals(@Query() query: GetReferralHistoryDto) {
+    return this.referralService.getAllReferrals(query.cursor, query.take);
   }
+
 }

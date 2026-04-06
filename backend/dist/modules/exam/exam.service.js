@@ -25,10 +25,11 @@ let ExamService = class ExamService {
     }
     async create(data) {
         const { subjectIds, ...examData } = data;
-        const targetSubjects = subjectIds || [];
         const exam = await this.examRepository.create({
             ...examData,
-            subjects: { connect: targetSubjects.map((id) => ({ id })) },
+            subjects: {
+                connect: (subjectIds || []).map((id) => ({ id })),
+            },
         });
         await this.invalidateCache();
         return exam;
@@ -68,36 +69,21 @@ let ExamService = class ExamService {
         if (!exam)
             throw new common_1.NotFoundException('Exam not found');
         const subjectIds = exam.subjects.map((s) => s.id);
-        const totalQuestions = await this.examRepository.countQuestions(subjectIds);
-        if (totalQuestions === 0) {
+        const testSize = exam.noOfQuestions || 100;
+        const questionPool = await this.examRepository.findAllQuestionIds(subjectIds);
+        if (!questionPool || questionPool.length === 0) {
             throw new common_1.NotFoundException('No questions available in associated subjects to generate a test');
         }
-        const testSize = exam.noOfQuestions || 100;
-        const selectedQuestionIds = [];
-        const usedOffsets = new Set();
-        if (testSize > totalQuestions / 2) {
-            const allQs = await this.examRepository.findAllQuestionIds(subjectIds);
-            selectedQuestionIds.push(...allQs
-                .sort(() => 0.5 - Math.random())
-                .slice(0, testSize)
-                .map((q) => q.id));
-        }
-        else {
-            while (selectedQuestionIds.length < testSize &&
-                usedOffsets.size < totalQuestions) {
-                const randomOffset = Math.floor(Math.random() * totalQuestions);
-                if (!usedOffsets.has(randomOffset)) {
-                    usedOffsets.add(randomOffset);
-                    const [question] = await this.examRepository.findQuestionAtOffset(subjectIds, randomOffset);
-                    if (question)
-                        selectedQuestionIds.push(question.id);
-                }
-            }
-        }
+        const shuffled = questionPool.sort(() => 0.5 - Math.random());
+        const selectedQuestionIds = shuffled
+            .slice(0, testSize)
+            .map((q) => q.id);
         const newTest = await this.examRepository.createTest({
             name: `${exam.name} Auto-Generated - ${new Date().toLocaleDateString()}`,
             exam: { connect: { id: exam.id } },
-            questions: { connect: selectedQuestionIds.map((id) => ({ id })) },
+            questions: {
+                connect: selectedQuestionIds.map((id) => ({ id })),
+            },
         });
         return { test: newTest, exam };
     }

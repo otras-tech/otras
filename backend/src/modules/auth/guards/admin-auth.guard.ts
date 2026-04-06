@@ -2,7 +2,7 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
-  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -22,6 +22,6 @@ export class AdminAuthGuard extends JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    throw new UnauthorizedException('Admin privileges required');
+    throw new ForbiddenException('Admin privileges required');
   }
 }

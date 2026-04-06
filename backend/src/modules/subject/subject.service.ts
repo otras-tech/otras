@@ -5,7 +5,7 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
 export class SubjectService {
-  constructor(private readonly subjectRepository: SubjectRepository) {}
+  constructor(private readonly subjectRepository: SubjectRepository) { }
 
   create(data: CreateSubjectDto) {
     const { examId, ...rest } = data as CreateSubjectDto & { examId?: number };
@@ -13,6 +13,7 @@ export class SubjectService {
     if (examId) {
       createInput.exams = { connect: { id: examId } };
     }
+    console.log(this.subjectRepository.create(createInput))
     return this.subjectRepository.create(createInput);
   }
 

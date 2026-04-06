@@ -12,26 +12,18 @@ export declare class ReferralRepository {
         creditsEarned: number;
         referrerId: number;
     }>;
-    findByReferrerId(referrerId: number): Promise<{
-        isDeleted: boolean;
+    findByReferrerId(referrerId: number, cursor?: number, take?: number): Promise<{
         id: number;
         createdAt: Date;
-        updatedAt: Date;
         status: string;
         refereeOtrId: string;
         creditsEarned: number;
-        referrerId: number;
     }[]>;
-    findByReferreerIdOrdered(referrerId: number): Promise<{
-        isDeleted: boolean;
-        id: number;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string;
-        refereeOtrId: string;
+    countReferralStats(referrerId: number): Promise<{
+        total: number;
+        success: number;
         creditsEarned: number;
-        referrerId: number;
-    }[]>;
+    }>;
     findFirstByRefereeOtrId(refereeOtrId: string): Promise<{
         isDeleted: boolean;
         id: number;
@@ -65,22 +57,17 @@ export declare class ReferralRepository {
         mockTestId: number;
         isRedeemed: boolean;
     })[]>;
-    findAll(): Promise<({
+    findAll(cursor?: number, take?: number): Promise<{
+        id: number;
+        createdAt: Date;
+        status: string;
+        refereeOtrId: string;
         referrer: {
             firstName: string;
             lastName: string;
             otrId: string;
         };
-    } & {
-        isDeleted: boolean;
-        id: number;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string;
-        refereeOtrId: string;
-        creditsEarned: number;
-        referrerId: number;
-    })[]>;
+    }[]>;
     findUserByIdWithCredits(referrerId: number): Promise<{
         otrId: string;
         credits: number;

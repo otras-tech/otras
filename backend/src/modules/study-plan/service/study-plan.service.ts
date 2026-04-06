@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { StudyPlanRepository } from '../repository/study-plan.repository';
 import { ReschedulerService } from './rescheduler.service';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
+import { CacheService } from '../../../common/cache/cache.service';
 
 @Injectable()
 export class StudyPlanService {
@@ -19,6 +20,7 @@ export class StudyPlanService {
     private readonly repository: StudyPlanRepository,
     private readonly rescheduler: ReschedulerService,
     private readonly configService: ConfigService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async generate(requesterId: number, requesterRole: string, dto: CreateStudyPlanDto) {
@@ -99,8 +101,13 @@ export class StudyPlanService {
 
     const savedPlan = await this.repository.createPlanWithSchedule(dto, days);
     this.logger.log(`Study Plan: Plan saved for ${dto.targetExam}`);
+
+    // Invalidate caches
+    await this.cacheService.safeInvalidate([`study_plan_user:${dto.userId}`]);
+
     return savedPlan;
   }
+
 
   private assignSequentialDates(
     aiData: Record<string, unknown> & { days?: unknown[] },
@@ -135,29 +142,46 @@ export class StudyPlanService {
     };
   }
 
-  async findByUserId(requesterId: number, requesterRole: string, userId: number) {
+  async findByUserId(
+    requesterId: number,
+    requesterRole: string,
+    userId: number,
+  ) {
     if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
       throw new ForbiddenException('Access denied');
     }
 
-    const plan = await this.repository.findByUserId(userId);
-    if (plan) {
-      await this.processMissedTasks(plan.id);
-    }
-    return this.repository.findByUserId(userId);
+    const cacheKey = `study_plan_user:${userId}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const plan = await this.repository.findByUserId(userId);
+        if (plan) {
+          await this.processMissedTasks(plan.id);
+          // Re-fetch after processing missed tasks to ensure fresh state in cache
+          return this.repository.findByUserId(userId);
+        }
+        return null;
+      },
+      600000, // 10 minutes cache
+    );
   }
 
   async findOne(requesterId: number, requesterRole: string, id: string) {
     const plan = await this.repository.findById(id);
     if (!plan) throw new NotFoundException('Plan not found');
 
-    if (requesterId !== plan.userId && requesterRole.toUpperCase() !== 'ADMIN') {
+    if (
+      requesterId !== plan.userId &&
+      requesterRole.toUpperCase() !== 'ADMIN'
+    ) {
       throw new ForbiddenException('Access denied');
     }
 
     await this.processMissedTasks(id);
     return this.repository.findById(id);
   }
+
 
   async updateActivityStatus(
     requesterId: number,
@@ -189,7 +213,8 @@ export class StudyPlanService {
     }
 
     if (status.missed) {
-      const activityWithDay = await this.repository.findActivityWithDay(activityId);
+      const activityWithDay =
+        await this.repository.findActivityWithDay(activityId);
       if (activityWithDay) {
         const day = (activityWithDay as any).day;
         await this.rescheduler.storeMissedTask(userId, {
@@ -204,24 +229,36 @@ export class StudyPlanService {
           const days = (plan as any)?.days;
           if (plan && days && days.length > 0) {
             const lastDay = days[days.length - 1];
-            await this.repository.relocateActivity(activityWithDay.id, lastDay.id);
-            this.logger.log(`Rescheduled: Relocated missed activity ${activityId} to last day`);
+            await this.repository.relocateActivity(
+              activityWithDay.id,
+              lastDay.id,
+            );
+            this.logger.log(
+              `Rescheduled: Relocated missed activity ${activityId} to last day`,
+            );
           }
         }
       }
     }
+
+    // Invalidate caches
+    await this.cacheService.safeInvalidate([`study_plan_user:${userId}`]);
+
     return activity;
   }
 
+
   async processMissedTasks(planId: string) {
     const plan = await this.repository.findById(planId);
-    if (!plan || !(plan as any).days || (plan as any).days.length === 0) return 0;
+    if (!plan || !(plan as any).days || (plan as any).days.length === 0)
+      return 0;
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const days = (plan as any).days;
     const lastDay = days[days.length - 1];
-    let movedCount = 0;
+
+    const activityIdsToRelocate: string[] = [];
 
     for (const day of days) {
       if (!day.date) continue;
@@ -231,14 +268,26 @@ export class StudyPlanService {
       if (dayDate < today) {
         for (const activity of day.activities) {
           if (!activity.completed && activity.dayId !== lastDay.id) {
-            await this.repository.relocateActivity(activity.id, lastDay.id);
-            movedCount++;
+            activityIdsToRelocate.push(activity.id);
           }
         }
       }
     }
-    return movedCount;
+
+    // 🔥 HIGH-SCALE OPTIMIZATION: BATCH RELOCATION
+    // replaces O(N) DB calls with a single O(1) trip
+    if (activityIdsToRelocate.length > 0) {
+      await this.repository.relocateMultipleActivities(
+        activityIdsToRelocate,
+        lastDay.id,
+      );
+      this.logger.log(
+        `Batch relocated ${activityIdsToRelocate.length} missed activities for Plan ${planId}`,
+      );
+    }
+    return activityIdsToRelocate.length;
   }
+
 
   async simulateDayPassed(requesterId: number, requesterRole: string, planId: string) {
     const plan = await this.repository.findById(planId);

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ReferralRepository } from './repository/referral.repository';
+import { GetReferralHistoryDto } from './dto/referral.dto';
 
 @Injectable()
 export class ReferralService {
@@ -20,46 +21,50 @@ export class ReferralService {
       throw new ForbiddenException('Access denied');
     }
 
-    const [referralsMade, referrer] = await Promise.all([
-      this.referralRepository.findByReferrerId(referrerId),
+    // 🔥 HIGH-SCALE OPTIMIZATION:
+    // Replaced .length and .reduce filters (O(N) in memory) with DB counts (O(1) index lookups)
+    const [stats, referrer, recentReferrals] = await Promise.all([
+      this.referralRepository.countReferralStats(referrerId),
       this.referralRepository.findUserByIdWithCredits(referrerId),
+      this.referralRepository.findByReferrerId(referrerId, undefined, 10), // Only fetch top 10 for dashboard preview
     ]);
 
     const joinedViaReferral = referrer
       ? await this.referralRepository.findFirstByRefereeOtrId(referrer.otrId)
       : null;
 
-    const totalReferrals = referralsMade.length;
-    const successReferrals = referralsMade.filter(
-      (r) => r.status === 'Qualified Referral',
-    ).length;
-
-    let creditsEarned = referralsMade.reduce(
-      (sum, r) => sum + (r.creditsEarned || 0),
-      0,
-    );
+    let totalCreditsEarned = stats.creditsEarned;
     if (joinedViaReferral) {
-      creditsEarned += 10;
+      totalCreditsEarned += 10;
     }
-    const mockTestsEarned = Math.floor(successReferrals / 10);
+    const mockTestsEarned = Math.floor(stats.success / 10);
 
     return {
-      totalReferrals,
-      successReferrals,
-      creditsEarned,
+      totalReferrals: stats.total,
+      successReferrals: stats.success,
+      creditsEarned: totalCreditsEarned,
       mockTestsEarned,
       availableCredits: referrer?.credits ?? 0,
       referralCode: referrer?.referralCode ?? '',
-      referrals: referralsMade,
+      referrals: recentReferrals, // Limit sent data to preview size
     };
   }
 
-  async getReferralHistory(requesterId: number, requesterRole: string, referrerId: number) {
+  async getReferralHistory(
+    requesterId: number,
+    requesterRole: string,
+    referrerId: number,
+    query: GetReferralHistoryDto,
+  ) {
     if (requesterId !== referrerId && requesterRole.toUpperCase() !== 'ADMIN') {
       throw new ForbiddenException('Access denied');
     }
 
-    const referrals = await this.referralRepository.findByReferreerIdOrdered(referrerId);
+    const referrals = await this.referralRepository.findByReferrerId(
+      referrerId,
+      query.cursor,
+      query.take,
+    );
 
     return referrals.map((r) => ({
       id: r.id,
@@ -70,6 +75,7 @@ export class ReferralService {
     }));
   }
 
+
   async getRewards(requesterId: number, requesterRole: string, userId: number) {
     if (requesterId !== userId && requesterRole.toUpperCase() !== 'ADMIN') {
       throw new ForbiddenException('Access denied');
@@ -77,7 +83,8 @@ export class ReferralService {
     return this.referralRepository.findReferralRewardsByUserId(userId);
   }
 
-  async getAllReferrals() {
-    return this.referralRepository.findAll();
+  async getAllReferrals(cursor?: number, take?: number) {
+    return this.referralRepository.findAll(cursor, take);
   }
+
 }

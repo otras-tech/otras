@@ -12,8 +12,8 @@ declare const _default: () => {
         disable: boolean;
     };
     jwt: {
-        accessSecret: string | undefined;
-        refreshSecret: string | undefined;
+        accessSecret: string;
+        refreshSecret: string;
     };
 };
 export default _default;

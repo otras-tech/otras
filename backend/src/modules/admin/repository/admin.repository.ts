@@ -13,21 +13,24 @@ export class AdminRepository {
 
   async findByEmail(email: string) {
     return this.prisma.admin.findUnique({
-      where: { email, isDeleted: false },
+      where: { email },
     });
   }
+
 
   async findByUsername(username: string) {
     return this.prisma.admin.findUnique({
-      where: { username, isDeleted: false },
+      where: { username },
     });
   }
 
+
   async findById(id: number) {
     return this.prisma.admin.findUnique({
-      where: { id, isDeleted: false },
+      where: { id },
     });
   }
+
 
   async softDelete(id: number) {
     return this.prisma.admin.update({

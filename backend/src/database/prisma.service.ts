@@ -7,6 +7,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(config: ConfigService) {
+    const dbUrl = config.get('DATABASE_URL');
+    const hasLimit = dbUrl.includes('connection_limit=');
+
+    // 🔥 SCALABILITY ENFORCEMENT:
+    // If no limit is set, we append a safe default (10) for horizontal scaling resilience.
+    const finalUrl = hasLimit
+      ? dbUrl
+      : `${dbUrl}${dbUrl.includes('?') ? '&' : '?'}connection_limit=10&pool_timeout=30`;
+
     super({
       log: [
         { emit: 'event', level: 'query' },
@@ -16,10 +25,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       ],
       datasources: {
         db: {
-          url: config.get('DATABASE_URL'),
+          url: finalUrl,
         },
       },
     });
+
+
 
     // ✅ Production: Monitor slow queries (> 200ms)
     // ✅ Production: Monitor slow queries (> 200ms) with structured logging

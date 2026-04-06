@@ -118,12 +118,20 @@ export class StudyPlanRepository {
     });
   }
 
+  async relocateMultipleActivities(activityIds: string[], targetDayId: string) {
+    return this.prisma.studyActivity.updateMany({
+      where: { id: { in: activityIds } },
+      data: { dayId: targetDayId },
+    });
+  }
+
   async updateDayDate(dayId: string, newDate: Date) {
     return this.prisma.studyPlanDay.update({
       where: { id: dayId },
       data: { date: newDate },
     });
   }
+
 
   async deleteByUserId(userId: number) {
     return this.prisma.studyPlan.updateMany({
