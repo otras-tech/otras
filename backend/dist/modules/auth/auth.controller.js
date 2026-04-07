@@ -53,7 +53,7 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    (0, throttler_1.Throttle)({ default: { limit: 50, ttl: 60000 } }),
     (0, swagger_1.ApiOperation)({ summary: 'Register a new user' }),
     (0, swagger_1.ApiResponse)({
         status: 201,
@@ -70,7 +70,7 @@ __decorate([
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('login'),
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    (0, throttler_1.Throttle)({ default: { limit: 50, ttl: 60000 } }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'User login' }),
     (0, swagger_1.ApiResponse)({

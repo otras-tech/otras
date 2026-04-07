@@ -48,5 +48,9 @@ exports.validationSchema = Joi.object({
     DISABLE_REDIS: Joi.string().valid('true', 'false').default('false'),
     JWT_ACCESS_SECRET: Joi.string().min(16).required(),
     JWT_REFRESH_SECRET: Joi.string().min(16).required(),
+    THROTTLE_TTL: Joi.number().default(60000),
+    THROTTLE_LIMIT: Joi.number().default(120),
+    AUTH_THROTTLE_LIMIT: Joi.number().default(20),
+    DISABLE_THROTTLER: Joi.string().valid('true', 'false').default('false'),
 });
 //# sourceMappingURL=validation.js.map

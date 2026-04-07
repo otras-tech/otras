@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScalableThrottlerGuard } from './common/guards/scalable-throttler.guard';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { redisStore } from 'cache-manager-redis-yet';
@@ -88,7 +89,19 @@ import configuration from './config/configuration';
         const isRedisDisabled =
           config.get('DISABLE_REDIS') === 'true' ||
           config.get('DISABLE_REDIS') === true;
-        const baseConfig = { throttlers: [{ ttl: 60000, limit: 120 }] };
+        const disableThrottler =
+          config.get('throttler.disable') === true ||
+          config.get('DISABLE_THROTTLER') === 'true';
+
+        // ✅ If disabled, set a massive limit that can't be hit during load tests
+        const baseConfig = {
+          throttlers: [
+            {
+              ttl: config.get('throttler.ttl') || 60000,
+              limit: disableThrottler ? 1000000 : (config.get('throttler.limit') || 120),
+            },
+          ],
+        };
 
         if (isRedisDisabled) {
           return baseConfig; // Default in-memory storage
@@ -187,8 +200,12 @@ import configuration from './config/configuration';
   providers: [
     AppService,
     {
+      provide: ThrottlerGuard,
+      useClass: ScalableThrottlerGuard,
+    },
+    {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ScalableThrottlerGuard,
     },
   ],
 })
@@ -202,6 +219,8 @@ export class AppModule implements NestModule {
     this.logger.log(`[STARTUP-DIAGNOSTIC] Environment Check:`);
     this.logger.log(`[STARTUP-DIAGNOSTIC] JWT_ACCESS_SECRET Present: ${!!accessSecret}`);
     this.logger.log(`[STARTUP-DIAGNOSTIC] DATABASE_URL Present: ${!!dbUrl}`);
+    const disableT = this.configService.get('DISABLE_THROTTLER');
+    this.logger.log(`[STARTUP-DIAGNOSTIC] DISABLE_THROTTLER: ${disableT} (${typeof disableT})`);
     this.logger.log(`[STARTUP-DIAGNOSTIC] NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
   }
 

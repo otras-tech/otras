@@ -17,5 +17,11 @@ exports.default = () => ({
         accessSecret: (process.env.JWT_ACCESS_SECRET || 'secret').trim(),
         refreshSecret: (process.env.JWT_REFRESH_SECRET || 'secret').trim(),
     },
+    throttler: {
+        ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
+        limit: parseInt(process.env.THROTTLE_LIMIT || '120', 10),
+        authLimit: parseInt(process.env.AUTH_THROTTLE_LIMIT || '20', 10),
+        disable: process.env.DISABLE_THROTTLER === 'true',
+    },
 });
 //# sourceMappingURL=configuration.js.map

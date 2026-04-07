@@ -20,6 +20,7 @@ const config_1 = require("@nestjs/config");
 const schedule_1 = require("@nestjs/schedule");
 const bullmq_1 = require("@nestjs/bullmq");
 const throttler_1 = require("@nestjs/throttler");
+const scalable_throttler_guard_1 = require("./common/guards/scalable-throttler.guard");
 const cache_manager_1 = require("@nestjs/cache-manager");
 const throttler_storage_redis_1 = require("@nest-lab/throttler-storage-redis");
 const cache_manager_redis_yet_1 = require("cache-manager-redis-yet");
@@ -65,6 +66,8 @@ let AppModule = AppModule_1 = class AppModule {
         this.logger.log(`[STARTUP-DIAGNOSTIC] Environment Check:`);
         this.logger.log(`[STARTUP-DIAGNOSTIC] JWT_ACCESS_SECRET Present: ${!!accessSecret}`);
         this.logger.log(`[STARTUP-DIAGNOSTIC] DATABASE_URL Present: ${!!dbUrl}`);
+        const disableT = this.configService.get('DISABLE_THROTTLER');
+        this.logger.log(`[STARTUP-DIAGNOSTIC] DISABLE_THROTTLER: ${disableT} (${typeof disableT})`);
         this.logger.log(`[STARTUP-DIAGNOSTIC] NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
     }
     configure(consumer) {
@@ -125,7 +128,16 @@ exports.AppModule = AppModule = AppModule_1 = __decorate([
                 useFactory: (config) => {
                     const isRedisDisabled = config.get('DISABLE_REDIS') === 'true' ||
                         config.get('DISABLE_REDIS') === true;
-                    const baseConfig = { throttlers: [{ ttl: 60000, limit: 120 }] };
+                    const disableThrottler = config.get('throttler.disable') === true ||
+                        config.get('DISABLE_THROTTLER') === 'true';
+                    const baseConfig = {
+                        throttlers: [
+                            {
+                                ttl: config.get('throttler.ttl') || 60000,
+                                limit: disableThrottler ? 1000000 : (config.get('throttler.limit') || 120),
+                            },
+                        ],
+                    };
                     if (isRedisDisabled) {
                         return baseConfig;
                     }
@@ -216,8 +228,12 @@ exports.AppModule = AppModule = AppModule_1 = __decorate([
         providers: [
             app_service_1.AppService,
             {
+                provide: throttler_1.ThrottlerGuard,
+                useClass: scalable_throttler_guard_1.ScalableThrottlerGuard,
+            },
+            {
                 provide: core_1.APP_GUARD,
-                useClass: throttler_1.ThrottlerGuard,
+                useClass: scalable_throttler_guard_1.ScalableThrottlerGuard,
             },
         ],
     }),

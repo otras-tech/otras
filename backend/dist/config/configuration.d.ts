@@ -15,5 +15,11 @@ declare const _default: () => {
         accessSecret: string;
         refreshSecret: string;
     };
+    throttler: {
+        ttl: number;
+        limit: number;
+        authLimit: number;
+        disable: boolean;
+    };
 };
 export default _default;
