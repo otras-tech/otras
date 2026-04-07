@@ -37,7 +37,7 @@ export class MockTestController {
   constructor(private readonly mockTestService: MockTestService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all mock tests with optional filtering' })
+  @ApiOperation({ summary: 'List all mock tests with optional filtering (Paginated)' })
   @ApiQuery({
     name: 'categoryId',
     required: false,
@@ -48,13 +48,19 @@ export class MockTestController {
     required: false,
     description: 'Pagination cursor (ID)',
   })
+  @ApiQuery({
+    name: 'take',
+    required: false,
+    description: 'Pagination limit (Max 100)',
+  })
   @ApiResponse({ status: 200, description: 'List of mock tests' })
   async findAll(
     @Query('categoryId', new ParseIntPipe({ optional: true }))
     categoryId?: number,
     @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
   ) {
-    return this.mockTestService.findAll(categoryId, cursor);
+    return this.mockTestService.findAll(categoryId, cursor, take);
   }
 
   @UseGuards(JwtAuthGuard)

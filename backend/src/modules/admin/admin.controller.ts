@@ -14,11 +14,12 @@ import { JwtRefreshGuard } from '../auth/guards/jwt-refresh.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequestUser } from '../../common/types/types';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { ScalableThrottlerGuard } from '../../common/guards/scalable-throttler.guard';
 
 @ApiTags('Admin')
 @Controller('admin/auth')
-@UseGuards(ThrottlerGuard)
+@UseGuards(ScalableThrottlerGuard)
 export class AdminController {
   constructor(private adminService: AdminService) {}
 

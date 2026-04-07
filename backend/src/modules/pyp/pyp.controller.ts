@@ -10,9 +10,13 @@ import {
   UsePipes,
   ValidationPipe,
   UseGuards,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheService } from '../../common/cache/cache.service';
 import { PypService } from './pyp.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CreatePypDto } from './dto/pyp.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -22,7 +26,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Controller('pyps')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PypController {
-  constructor(private readonly pypService: PypService) {}
+  constructor(
+    private readonly pypService: PypService,
+    private readonly cacheService: CacheService,
+  ) { }
 
   @Post()
   @Roles('ADMIN')
@@ -35,10 +42,27 @@ export class PypController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all PYP entries' })
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('pyps_all')
+  @CacheTTL(600) // 10 minutes
+  @ApiOperation({ summary: 'Get all PYP entries (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of PYP entries' })
-  findAll() {
-    return this.pypService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.pypService.findAll(cursor, take);
+  }
+
+  @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(600) // 10 minutes
+  @ApiOperation({ summary: 'Get PYP entry by ID' })
+  @ApiResponse({ status: 200, description: 'PYP entry details' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.pypService.findOne(id);
   }
 
   @Patch(':id')
@@ -47,11 +71,13 @@ export class PypController {
   @ApiOperation({ summary: 'Update a PYP entry' })
   @ApiResponse({ status: 200, description: 'PYP entry updated' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: Partial<CreatePypDto>,
   ) {
-    return this.pypService.update(id, data);
+    const result = await this.pypService.update(id, data);
+    await this.cacheService.del(`pyp_details_${id}`);
+    return result;
   }
 
   @Delete(':id')
@@ -59,7 +85,9 @@ export class PypController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a PYP entry' })
   @ApiResponse({ status: 200, description: 'PYP entry deleted' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.pypService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.pypService.remove(id);
+    await this.cacheService.del(`pyp_details_${id}`);
+    return result;
   }
 }

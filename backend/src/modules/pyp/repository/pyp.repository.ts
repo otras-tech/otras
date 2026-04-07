@@ -10,10 +10,15 @@ export class PypRepository {
     return this.prisma.pYP.create({ data });
   }
 
-  async findAll() {
+  async findAll(cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.pYP.findMany({
       where: { isDeleted: false },
       include: { exam: true },
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 

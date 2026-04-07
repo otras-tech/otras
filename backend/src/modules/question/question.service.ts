@@ -1,12 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CacheService } from '../../common/cache/cache.service';
 import { QuestionRepository } from './repository/question.repository';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionService {
-  constructor(private readonly questionRepository: QuestionRepository) {}
+  constructor(
+    private readonly questionRepository: QuestionRepository,
+    private readonly cacheService: CacheService,
+  ) {}
 
-  create(data: {
+  async invalidateCache() {
+    await this.cacheService.safeInvalidate(['questions_all'], ['question_details_*']);
+  }
+
+  async create(data: {
     text: string;
     options: string[];
     answer: string;
@@ -14,19 +22,21 @@ export class QuestionService {
     subjectId: number;
   }) {
     const { subjectId, ...rest } = data;
-    return this.questionRepository.create({
+    const result = await this.questionRepository.create({
       ...rest,
       subject: { connect: { id: subjectId } },
     });
+    await this.invalidateCache();
+    return result;
   }
 
-  findAll(query?: { examId?: number; subjectId?: number }) {
+  findAll(query?: { examId?: number; subjectId?: number; cursor?: number; take?: number }) {
     const where: Prisma.QuestionWhereInput = {};
     if (query?.subjectId) where.subjectId = query.subjectId;
     if (query?.examId) {
       where.tests = { some: { examId: query.examId } };
     }
-    return this.questionRepository.findAll(where);
+    return this.questionRepository.findAll(where, query?.cursor, query?.take);
   }
 
   async findOne(id: number) {
@@ -35,7 +45,7 @@ export class QuestionService {
     return question;
   }
 
-  update(
+  async update(
     id: number,
     data: {
       text?: string;
@@ -50,10 +60,16 @@ export class QuestionService {
     if (subjectId) {
       updateData.subject = { connect: { id: subjectId } };
     }
-    return this.questionRepository.update(id, updateData);
+    const result = await this.questionRepository.update(id, updateData);
+    await this.invalidateCache();
+    await this.cacheService.del(`question_details_${id}`);
+    return result;
   }
 
-  remove(id: number) {
-    return this.questionRepository.softDelete(id);
+  async remove(id: number) {
+    const result = await this.questionRepository.softDelete(id);
+    await this.invalidateCache();
+    await this.cacheService.del(`question_details_${id}`);
+    return result;
   }
 }

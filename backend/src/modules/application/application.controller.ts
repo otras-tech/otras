@@ -10,7 +10,11 @@ import {
   ValidationPipe,
   UseGuards,
   Request,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheService } from '../../common/cache/cache.service';
 import { ApplicationService } from './application.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +24,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import {
   CreateApplicationDto,
@@ -31,7 +36,10 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('applications')
 export class ApplicationController {
-  constructor(private readonly applicationService: ApplicationService) {}
+  constructor(
+    private readonly applicationService: ApplicationService,
+    private readonly cacheService: CacheService,
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Submit a new exam application (Self or Admin)' })
@@ -49,29 +57,47 @@ export class ApplicationController {
 
   @Get('user/otr/:otrId')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Get applications by OTR ID (Admin only)' })
+  @ApiOperation({ summary: 'Get applications by OTR ID (Admin only) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of applications for the user' })
-  findByOtrId(@Param('otrId') otrId: string) {
-    return this.applicationService.findByOtrId(otrId);
+  findByOtrId(
+    @Param('otrId') otrId: string,
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.applicationService.findByOtrId(otrId, cursor, take);
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Get applications by User ID (Self or Admin)' })
+  @ApiOperation({ summary: 'Get applications by User ID (Self or Admin) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of applications for the user' })
   @ApiResponse({ status: 403, description: 'Forbidden - access denied' })
   findByUser(
     @Param('userId', ParseIntPipe) userId: number,
     @Request() req: any,
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
   ) {
-    return this.applicationService.findByUser(req.user.id, req.user.role, userId);
+    return this.applicationService.findByUser(req.user.id, req.user.role, userId, cursor, take);
   }
 
   @Get()
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Get all applications (Admin only)' })
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('applications_all')
+  @CacheTTL(300) // 5 minutes
+  @ApiOperation({ summary: 'Get all applications (Admin only) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of all applications' })
-  findAll() {
-    return this.applicationService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.applicationService.findAll(cursor, take);
   }
 
   @Patch(':id')

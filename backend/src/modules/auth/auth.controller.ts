@@ -7,7 +7,8 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { ScalableThrottlerGuard } from '../../common/guards/scalable-throttler.guard';
 import { AuthService } from './auth.service';
 import {
   ApiTags,
@@ -23,7 +24,7 @@ import { RequestUser } from '../../common/types/types';
 
 @ApiTags('Auth')
 @Controller('auth')
-@UseGuards(ThrottlerGuard)
+@UseGuards(ScalableThrottlerGuard)
 export class AuthController {
   constructor(private authService: AuthService) {}
 

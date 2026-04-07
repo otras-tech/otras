@@ -14,10 +14,15 @@ export class ApplicationRepository {
     });
   }
 
-  async findByUserId(userId: number) {
+  async findByUserId(userId: number, cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.application.findMany({
       where: { userId, isDeleted: false },
       include: { exam: { select: { id: true, name: true, applicationStatus: true } } },
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -32,7 +37,8 @@ export class ApplicationRepository {
     return this.prisma.application.findUnique({ where: { id } });
   }
 
-  async findByOtrId(otrId: string) {
+  async findByOtrId(otrId: string, cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     const user = await this.prisma.user.findUnique({
       where: { otrId },
       select: { id: true },
@@ -41,13 +47,22 @@ export class ApplicationRepository {
     return this.prisma.application.findMany({
       where: { userId: user.id, isDeleted: false },
       include: { exam: true },
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findAll() {
+  async findAll(cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.application.findMany({
       where: { isDeleted: false },
       include: { user: true, exam: true },
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 

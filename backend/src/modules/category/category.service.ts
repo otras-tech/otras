@@ -1,18 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CacheService } from '../../common/cache/cache.service';
 import { CategoryRepository } from './repository/category.repository';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly cacheService: CacheService,
+  ) { }
 
-  create(createCategoryDto: CreateCategoryDto) {
-    return this.categoryRepository.create(createCategoryDto.name);
+  async invalidateCache() {
+    await this.cacheService.safeInvalidate(['categories_all'], ['category_details_*']);
   }
 
-  findAll() {
-    return this.categoryRepository.findAll();
+  async create(createCategoryDto: CreateCategoryDto) {
+    const result = await this.categoryRepository.create(createCategoryDto.name);
+    await this.invalidateCache();
+    return result;
+  }
+
+  async findAll(cursor?: number, take?: number) {
+    return this.categoryRepository.findAll(cursor, take);
   }
 
   async findOne(id: number) {
@@ -21,11 +31,17 @@ export class CategoryService {
     return category;
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return this.categoryRepository.update(id, updateCategoryDto.name!);
+  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+    const result = await this.categoryRepository.update(id, updateCategoryDto.name!);
+    await this.invalidateCache();
+    await this.cacheService.del(`category_details_${id}`);
+    return result;
   }
 
-  remove(id: number) {
-    return this.categoryRepository.softDelete(id);
+  async remove(id: number) {
+    const result = await this.categoryRepository.softDelete(id);
+    await this.invalidateCache();
+    await this.cacheService.del(`category_details_${id}`);
+    return result;
   }
 }

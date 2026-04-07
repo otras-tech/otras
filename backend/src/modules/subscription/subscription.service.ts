@@ -1,22 +1,32 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CacheService } from '../../common/cache/cache.service';
 import { SubscriptionRepository } from './repository/subscription.repository';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private readonly subscriptionRepository: SubscriptionRepository) {}
+  constructor(
+    private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly cacheService: CacheService,
+  ) {}
+
+  async invalidateCache() {
+    await this.cacheService.safeInvalidate(['subscriptions_all'], ['subscription_details_*']);
+  }
 
   async create(data: CreateSubscriptionDto) {
-    return this.subscriptionRepository.create({
+    const result = await this.subscriptionRepository.create({
       title: data.title,
       price: data.price,
       features: data.features,
       isRecommended: data.isRecommended,
     });
+    await this.invalidateCache();
+    return result;
   }
 
-  async findAll() {
-    return this.subscriptionRepository.findAll();
+  async findAll(cursor?: number, take?: number) {
+    return this.subscriptionRepository.findAll(cursor, take);
   }
 
   async findOne(id: number) {
@@ -26,15 +36,21 @@ export class SubscriptionService {
   }
 
   async update(id: number, data: Partial<CreateSubscriptionDto>) {
-    return this.subscriptionRepository.update(id, {
+    const result = await this.subscriptionRepository.update(id, {
       title: data.title,
       price: data.price,
       features: data.features,
       isRecommended: data.isRecommended,
     });
+    await this.invalidateCache();
+    await this.cacheService.del(`subscription_details_${id}`);
+    return result;
   }
 
   async remove(id: number) {
-    return this.subscriptionRepository.softDelete(id);
+    const result = await this.subscriptionRepository.softDelete(id);
+    await this.invalidateCache();
+    await this.cacheService.del(`subscription_details_${id}`);
+    return result;
   }
 }

@@ -10,10 +10,14 @@ export class SubscriptionRepository {
     return this.prisma.subscription.create({ data });
   }
 
-  async findAll() {
+  async findAll(cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.subscription.findMany({
       where: { isDeleted: false },
-      take: 50,
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 

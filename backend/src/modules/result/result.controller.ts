@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ResultService } from './result.service';
 import { StartTestDto, SubmitTestDto } from './dto/result.dto';
@@ -53,18 +54,20 @@ export class ResultController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Get all test results for a user (Self or Admin)' })
-  @ApiQuery({ name: 'cursor', required: false, description: 'Pagination cursor (ID)' })
+  @ApiOperation({ summary: 'Get all test results for a user (Self or Admin) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Pagination cursor (ID)', type: Number })
+  @ApiQuery({ name: 'take', required: false, description: 'Pagination limit (Max 100)', type: Number })
   @ApiResponse({ status: 200, description: 'Returns a list of results' })
   @ApiResponse({ status: 403, description: 'Forbidden - access denied' })
   async getUserResults(
     @Param('userId', ParseIntPipe) userId: number,
     @Request() req: any,
     @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
   ) {
     if (req.user.id !== userId && req.user.role.toUpperCase() !== 'ADMIN') {
-      // Route-level check kept here for early short-circuit; service also validates
+      throw new ForbiddenException('Access denied to other user results');
     }
-    return this.resultService.getUserResults(userId, cursor);
+    return this.resultService.getUserResults(userId, cursor, take);
   }
 }

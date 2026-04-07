@@ -16,18 +16,20 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaymentService } from './payment.service';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { ScalableThrottlerGuard } from '../../common/guards/scalable-throttler.guard';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateOrderDto, VerifyPaymentDto } from './dto/create-order.dto';
 
 @ApiTags('Payments')
 @Controller('payments')
-@UseGuards(ThrottlerGuard)
+@UseGuards(ScalableThrottlerGuard)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -78,7 +80,10 @@ export class PaymentController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Get payment history for a specific user (Self or Admin)' })
+  @ApiOperation({ summary: 'Get payment history for a specific user (Self or Admin) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Payment history' })
   @ApiResponse({ status: 403, description: 'Forbidden - access denied' })
   getPaymentsByUser(
     @Param('userId', ParseIntPipe) userId: number,
@@ -93,7 +98,10 @@ export class PaymentController {
   @Roles('ADMIN')
   @ApiBearerAuth('access-token')
   @Get()
-  @ApiOperation({ summary: 'Get all payments (Admin only)' })
+  @ApiOperation({ summary: 'Get all payments (Admin only) - Paginated' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'All payments' })
   getAllPayments(
     @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
     @Query('take', new ParseIntPipe({ optional: true })) take?: number,

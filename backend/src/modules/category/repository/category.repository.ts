@@ -9,10 +9,13 @@ export class CategoryRepository {
     return this.prisma.mockTestCategory.create({ data: { name } });
   }
 
-  async findAll() {
+  async findAll(cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.mockTestCategory.findMany({
       where: { isDeleted: false },
-      take: 100,
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
     });
   }
 

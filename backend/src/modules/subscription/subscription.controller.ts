@@ -10,7 +10,11 @@ import {
   ValidationPipe,
   Patch,
   Delete,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheService } from '../../common/cache/cache.service';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +24,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
 
@@ -27,7 +32,10 @@ import { CreateSubscriptionDto } from './dto/subscription.dto';
 @ApiBearerAuth('access-token')
 @Controller('subscriptions')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(
+    private readonly subscriptionService: SubscriptionService,
+    private readonly cacheService: CacheService,
+  ) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -40,13 +48,23 @@ export class SubscriptionController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all active subscription plans' })
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('subscriptions_all')
+  @CacheTTL(600) // 10 minutes
+  @ApiOperation({ summary: 'Get all active subscription plans (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of subscription plans' })
-  findAll() {
-    return this.subscriptionService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.subscriptionService.findAll(cursor, take);
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(600) // 10 minutes
   @ApiOperation({ summary: 'Get subscription plan by ID' })
   @ApiResponse({ status: 200, description: 'Subscription plan details' })
   @ApiResponse({ status: 404, description: 'Subscription plan not found' })

@@ -50,6 +50,7 @@ export class TestRepository {
   }
 
   async findAll(cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.test.findMany({
       where: { isDeleted: false },
       select: {
@@ -63,7 +64,7 @@ export class TestRepository {
           select: { questions: true },
         },
       },
-      take,
+      take: safeTake,
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor } : undefined,
       orderBy: { createdAt: 'desc' },

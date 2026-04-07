@@ -10,7 +10,11 @@ import {
   ValidationPipe,
   Patch,
   Delete,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheService } from '../../common/cache/cache.service';
 import { CategoryService } from './category.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +24,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -30,7 +35,10 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 @Roles('ADMIN')
 @Controller('categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) {}
+  constructor(
+    private readonly categoryService: CategoryService,
+    private readonly cacheService: CacheService,
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new mock test category (Admin only)' })
@@ -42,14 +50,24 @@ export class CategoryController {
 
   @Get()
   @Roles('USER', 'ADMIN') // Allow both roles to view
-  @ApiOperation({ summary: 'Get all mock test categories' })
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('categories_all')
+  @CacheTTL(3600) // 1 hour (Very static)
+  @ApiOperation({ summary: 'Get all mock test categories (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of categories' })
-  findAll() {
-    return this.categoryService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.categoryService.findAll(cursor, take);
   }
 
   @Get(':id')
   @Roles('USER', 'ADMIN') // Allow both roles to view
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600) // 1 hour
   @ApiOperation({ summary: 'Get category by ID' })
   @ApiResponse({ status: 200, description: 'Category details' })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -60,16 +78,20 @@ export class CategoryController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a category (Admin only)' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
-    return this.categoryService.update(id, updateCategoryDto);
+    const result = await this.categoryService.update(id, updateCategoryDto);
+    await this.cacheService.del(`category_details_${id}`);
+    return result;
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a category (Admin only)' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.categoryService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.categoryService.remove(id);
+    await this.cacheService.del(`category_details_${id}`);
+    return result;
   }
 }

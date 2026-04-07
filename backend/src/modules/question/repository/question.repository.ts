@@ -10,10 +10,15 @@ export class QuestionRepository {
     return this.prisma.question.create({ data, include: { subject: true } });
   }
 
-  async findAll(where: Prisma.QuestionWhereInput) {
+  async findAll(where: Prisma.QuestionWhereInput, cursor?: number, take?: number) {
+    const safeTake = Math.min(take || 20, 100);
     return this.prisma.question.findMany({
       where: { ...where, isDeleted: false },
       include: { subject: true },
+      take: safeTake,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 

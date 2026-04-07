@@ -11,7 +11,10 @@ import {
   ParseIntPipe,
   UsePipes,
   ValidationPipe,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheService } from '../../common/cache/cache.service';
 import { SubjectService } from './subject.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -30,7 +33,10 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 @ApiBearerAuth('access-token')
 @Controller('subjects')
 export class SubjectController {
-  constructor(private readonly subjectService: SubjectService) {}
+  constructor(
+    private readonly subjectService: SubjectService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,6 +49,9 @@ export class SubjectController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('subjects_all')
+  @CacheTTL(600) // 10 minutes
   @ApiOperation({ summary: 'Get all subjects (Paginated)' })
   @ApiQuery({ name: 'cursor', required: false, type: Number })
   @ApiQuery({ name: 'take', required: false, type: Number })
@@ -55,6 +64,8 @@ export class SubjectController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(600) // 10 minutes
   @ApiOperation({ summary: 'Get subject by ID' })
   @ApiResponse({ status: 200, description: 'Subject details' })
   @ApiResponse({ status: 404, description: 'Subject not found' })
@@ -68,11 +79,13 @@ export class SubjectController {
   @ApiOperation({ summary: 'Update a subject (Admin only)' })
   @ApiResponse({ status: 200, description: 'Subject updated' })
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateSubjectDto,
   ) {
-    return this.subjectService.update(id, data);
+    const result = await this.subjectService.update(id, data);
+    await this.cacheService.del(`subject_details_${id}`);
+    return result;
   }
 
   @Delete(':id')
@@ -80,7 +93,9 @@ export class SubjectController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Delete a subject (Admin only)' })
   @ApiResponse({ status: 200, description: 'Subject deleted' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.subjectService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.subjectService.remove(id);
+    await this.cacheService.del(`subject_details_${id}`);
+    return result;
   }
 }

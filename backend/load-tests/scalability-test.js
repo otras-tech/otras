@@ -30,6 +30,17 @@ const allScenarios = {
     ],
     tags: { test_type: 'stress' },
   },
+  custom_stress: {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+      { duration: "2m", target: 200 },
+      { duration: "5m", target: 1000 },
+      { duration: "5m", target: 2000 },
+      { duration: "2m", target: 0 }
+    ],
+    tags: { test_type: 'custom_stress' },
+  },
 };
 
 // Selection logic: Run a specific scenario using `-e SCENARIO=name` or all by default.
@@ -42,6 +53,7 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:4000/api/v1';
+const INTERNAL_SECRET = __ENV.INTERNAL_LOAD_TEST_SECRET || 'super-secret-key';
 
 // ✅ SETUP: Register/Login a unique user for this VU
 export function setup() {
@@ -68,7 +80,10 @@ export default function () {
     domicile: 'Delhi',
     pincode: '110001'
   }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-internal-secret': INTERNAL_SECRET
+    },
   });
 
   const isRegistered = check(regRes, { 'registered successfully': (r) => r.status === 201 });
@@ -88,6 +103,7 @@ export default function () {
   const authHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${accessToken}`,
+    'x-internal-secret': INTERNAL_SECRET,
   };
 
   sleep(1);

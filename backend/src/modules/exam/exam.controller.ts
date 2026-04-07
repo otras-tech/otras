@@ -11,6 +11,7 @@ import {
   UsePipes,
   ValidationPipe,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { CacheService } from '../../common/cache/cache.service';
@@ -23,6 +24,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateExamDto } from './dto/create-exam.dto';
 
@@ -81,10 +83,15 @@ export class ExamController {
   @UseInterceptors(CacheInterceptor)
   @CacheKey('exams_all')
   @CacheTTL(300) // 5 minutes (Static data)
-  @ApiOperation({ summary: 'Get all exams' })
+  @ApiOperation({ summary: 'Get all exams (Paginated)' })
+  @ApiQuery({ name: 'cursor', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of exams' })
-  findAll() {
-    return this.examService.findAll();
+  findAll(
+    @Query('cursor', new ParseIntPipe({ optional: true })) cursor?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+  ) {
+    return this.examService.findAll(cursor, take);
   }
 
   @Get(':id')

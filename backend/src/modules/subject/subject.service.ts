@@ -1,20 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CacheService } from '../../common/cache/cache.service';
 import { SubjectRepository } from './repository/subject.repository';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
 export class SubjectService {
-  constructor(private readonly subjectRepository: SubjectRepository) { }
+  constructor(
+    private readonly subjectRepository: SubjectRepository,
+    private readonly cacheService: CacheService,
+  ) { }
 
-  create(data: CreateSubjectDto) {
+  async invalidateCache() {
+    await this.cacheService.safeInvalidate(['subjects_all'], ['subject_details_*']);
+  }
+
+  async create(data: CreateSubjectDto) {
     const { examId, ...rest } = data as CreateSubjectDto & { examId?: number };
     const createInput: any = { ...rest };
     if (examId) {
       createInput.exams = { connect: { id: examId } };
     }
-    console.log(this.subjectRepository.create(createInput))
-    return this.subjectRepository.create(createInput);
+    const result = await this.subjectRepository.create(createInput);
+    await this.invalidateCache();
+    return result;
   }
 
   findAll(cursor?: number, take?: number) {
@@ -27,16 +36,22 @@ export class SubjectService {
     return subject;
   }
 
-  update(id: number, data: UpdateSubjectDto) {
+  async update(id: number, data: UpdateSubjectDto) {
     const { examId, ...rest } = data as UpdateSubjectDto & { examId?: number };
     const updateInput: any = { ...rest };
     if (examId) {
       updateInput.exams = { connect: { id: examId } };
     }
-    return this.subjectRepository.update(id, updateInput);
+    const result = await this.subjectRepository.update(id, updateInput);
+    await this.invalidateCache();
+    await this.cacheService.del(`subject_details_${id}`);
+    return result;
   }
 
-  remove(id: number) {
-    return this.subjectRepository.softDelete(id);
+  async remove(id: number) {
+    const result = await this.subjectRepository.softDelete(id);
+    await this.invalidateCache();
+    await this.cacheService.del(`subject_details_${id}`);
+    return result;
   }
 }
