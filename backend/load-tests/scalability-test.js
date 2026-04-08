@@ -30,6 +30,16 @@ const allScenarios = {
     ],
     tags: { test_type: 'stress' },
   },
+  hundred_users: {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+      { duration: '1m', target: 100 },
+      { duration: '3m', target: 100 },
+      { duration: '1m', target: 0 },
+    ],
+    tags: { test_type: 'hundred_users' },
+  },
   custom_stress: {
     executor: 'ramping-vus',
     startVUs: 0,
@@ -80,7 +90,7 @@ export default function () {
     domicile: 'Delhi',
     pincode: '110001'
   }), {
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'x-internal-secret': INTERNAL_SECRET
     },
