@@ -31,7 +31,6 @@ services:
 
   backend:
     build: .
-    container_name: nest-backend
     restart: always
     env_file:
       - .env
@@ -41,14 +40,23 @@ services:
       REDIS_PORT: 6379
       REDIS_URL: redis://redis:6379
       DISABLE_REDIS: "false"
-      NODE_ENV: development
+      NODE_ENV: production
     ports:
-      - "4000:4000"
+      - "4000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  nginx:   # ✅ CORRECT POSITION
+    image: nginx:latest
+    ports:
+      - "4000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

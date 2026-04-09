@@ -17,6 +17,7 @@ export class ExamService {
     await this.cacheService.safeInvalidate(['exams_all'], ['exam_details_*']);
   }
 
+
   async create(data: CreateExamDto) {
     const { subjectIds, ...examData } = data;
 
@@ -49,7 +50,16 @@ export class ExamService {
   }
 
   async findAll(cursor?: number, take?: number) {
-    return this.examRepository.findAll(cursor, take);
+    const key = `exams:${cursor || 0}:${take || 10}`;
+
+    return this.cacheService.getOrSet(
+      key,
+      async () => {
+        console.log("❌ DB HIT:", key); // debug
+        return this.examRepository.findAll(cursor, take);
+      },
+      600 // 10 min TTL
+    );
   }
 
   async findOne(id: number) {

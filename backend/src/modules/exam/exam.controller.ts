@@ -34,7 +34,7 @@ export class ExamController {
   constructor(
     private readonly examService: ExamService,
     private readonly cacheService: CacheService,
-  ) {}
+  ) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -81,8 +81,8 @@ export class ExamController {
 
   @Get()
   @UseInterceptors(CacheInterceptor)
-  @CacheKey('exams_all')
-  @CacheTTL(300) // 5 minutes (Static data)
+  // @CacheKey('exams_all')
+  @CacheTTL(600) // 5 minutes (Static data)
   @ApiOperation({ summary: 'Get all exams (Paginated)' })
   @ApiQuery({ name: 'cursor', required: false, type: Number })
   @ApiQuery({ name: 'take', required: false, type: Number })

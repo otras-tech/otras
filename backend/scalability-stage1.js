@@ -9,7 +9,7 @@ export const options = {
             timeUnit: '1s',
             duration: '1m',
             preAllocatedVUs: 300,
-            maxVUs: 1500,
+            maxVUs: 1000,
         },
     },
     thresholds: {

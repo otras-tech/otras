@@ -12,13 +12,34 @@ export class CacheService {
   // DB query; the others await the same Promise.
   private readonly inflight = new Map<string, Promise<unknown>>();
 
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) { }
+
+  // ─── Private Helper ───────────────────────────────────────────────
+
+  /**
+   * Returns the underlying ioredis client from the cache-manager store,
+   * or null when running with a non-Redis store (e.g. in-memory for tests).
+   */
+  private getRedisClient(): any | null {
+    try {
+      const store = (this.cacheManager as any).store;
+      return store?.client ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   // ─── Core CRUD (unchanged signatures) ─────────────────────────────
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      return (await this.cacheManager.get(key)) as T | null;
+      const data = await this.cacheManager.get<T>(key);
+
+      if (data !== null && data !== undefined) {
+        console.log("🔥 CACHE HIT:", key); // ✅ ADD THIS LINE
+      }
+
+      return data ?? null;
     } catch (error: any) {
       this.logger.error(`Error getting key "${key}" from cache`, error.stack);
       return null;
@@ -98,35 +119,55 @@ export class CacheService {
     fetchFn: () => Promise<T>,
     ttl: number,
   ): Promise<T> {
-    // 1. Try cache first
+    // 1. Try cache
     const cached = await this.get<T>(key);
     if (cached !== null && cached !== undefined) {
+      console.log("🔥 CACHE HIT (getOrSet):", key);
       return cached;
     }
 
-    // 2. Check if another request is already fetching this key
+    // 2. In-memory dedupe (same instance)
     const existing = this.inflight.get(key);
     if (existing) {
       return existing as Promise<T>;
     }
 
-    // 3. We are the first — execute fetch, store promise in inflight map
+    // 3. 🔒 Redis distributed lock (cross-instance)
+    const redis = this.getRedisClient();
+    const lockKey = `lock:${key}`;
+
+    if (redis && typeof redis.set === 'function') {
+      const lock = await redis.set(lockKey, '1', 'NX', 'EX', 5);
+
+      if (!lock) {
+        // another instance is fetching → wait & retry
+        await new Promise((res) => setTimeout(res, 100));
+        return this.getOrSet(key, fetchFn, ttl);
+      }
+    }
+
+    console.log("❌ DB HIT:", key);
+
     const fetchPromise = (async () => {
       try {
         const result = await fetchFn();
-        // Apply TTL jitter (±10%) to prevent synchronized expiry
+
         const jitteredTtl = Math.round(ttl * (0.9 + Math.random() * 0.2));
         await this.set(key, result, jitteredTtl);
+
         return result;
       } finally {
         this.inflight.delete(key);
+        // 🔓 release lock (only if Redis is available)
+        if (redis && typeof redis.del === 'function') {
+          await redis.del(lockKey).catch(() => { });
+        }
       }
     })();
 
     this.inflight.set(key, fetchPromise);
     return fetchPromise;
   }
-
   // ─── NEW: Safe Invalidation with Fallback ─────────────────────────
 
   /**
