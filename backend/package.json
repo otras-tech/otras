@@ -25,9 +25,9 @@
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/mapped-types": "*",
-    "@nestjs/passport": "^10.0.3",
+    "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
@@ -45,7 +45,7 @@
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^10.4.22",
+    "@nestjs/testing": "^11.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
@@ -83,17 +83,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "overrides": {
-    "@nestjs/jwt": {
-      "@nestjs/common": "$@nestjs/common"
-    },
-    "@nestjs/passport": {
-      "@nestjs/common": "$@nestjs/common"
-    },
-    "@nestjs/testing": {
-      "@nestjs/common": "$@nestjs/common",
-      "@nestjs/core": "$@nestjs/core"
-    }
   }
 }

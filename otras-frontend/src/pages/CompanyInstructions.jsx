@@ -83,11 +83,10 @@ export default function CompanyInstructions() {
           <button
             disabled={!agreed}
             onClick={() => navigate("/exam-instructions", { state })}
-            className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              agreed
+            className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${agreed
                 ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 hover:scale-[1.01]"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             {t("next")} <ChevronRight size={18} />
           </button>

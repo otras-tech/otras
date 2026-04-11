@@ -6,7 +6,7 @@ exports.default = (0, config_1.registerAs)('mistral', () => ({
     endpoint: process.env.MISTRAL_ENDPOINT ||
         'https://api.mistral.ai/v1/chat/completions',
     model: process.env.MISTRAL_MODEL || 'mistral-medium',
-    maxTokens: parseInt(process.env.AI_MAX_TOKENS || '9000'),
+    maxTokens: parseInt(process.env.AI_MAX_TOKENS || '6000'),
     timeout: parseInt(process.env.AI_TIMEOUT || '90000'),
 }));
 //# sourceMappingURL=mistral.config.js.map

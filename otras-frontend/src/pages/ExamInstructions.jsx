@@ -197,11 +197,10 @@ export default function ExamInstructions() {
               <button
                 disabled={!agreed || starting}
                 onClick={handleStartTest}
-                className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-3 transition-all ${
-                  agreed
+                className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-3 transition-all ${agreed
                     ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 hover:scale-[1.01]"
                     : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 {starting ? (
                   <>

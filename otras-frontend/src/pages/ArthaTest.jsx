@@ -579,8 +579,8 @@ export default function ArthaTest({ user }) {
                     key={sub}
                     onClick={() => setCurrentSection(sub)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${currentSection === sub
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
-                        : "text-slate-600 hover:bg-slate-50"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+                      : "text-slate-600 hover:bg-slate-50"
                       }`}
                   >
                     {sub}
@@ -626,10 +626,10 @@ export default function ArthaTest({ user }) {
                               }, 100);
                             }}
                             className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold border transition-all hover:scale-110 active:scale-95 ${isAnswered
-                                ? "bg-green-500 border-green-600 text-white shadow-sm shadow-green-100"
-                                : isCurrentSection
-                                  ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm shadow-indigo-50"
-                                  : "bg-slate-50 border-slate-100 text-slate-400"
+                              ? "bg-green-500 border-green-600 text-white shadow-sm shadow-green-100"
+                              : isCurrentSection
+                                ? "bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm shadow-indigo-50"
+                                : "bg-slate-50 border-slate-100 text-slate-400"
                               }`}
                           >
                             {i + 1}
@@ -684,9 +684,9 @@ export default function ArthaTest({ user }) {
                       key={opt}
                       onClick={() => handleAnswerChange(q.id, opt)}
                       className={`p-5 rounded-2xl border-2 text-left font-semibold transition-all ${answers.find((a) => a.questionId === q.id)
-                          ?.selectedOption === opt
-                          ? "bg-indigo-600 border-indigo-700 text-white shadow-xl translate-y-[-2px]"
-                          : "border-slate-100 text-slate-600 hover:border-indigo-200 hover:bg-slate-50"
+                        ?.selectedOption === opt
+                        ? "bg-indigo-600 border-indigo-700 text-white shadow-xl translate-y-[-2px]"
+                        : "border-slate-100 text-slate-600 hover:border-indigo-200 hover:bg-slate-50"
                         }`}
                     >
                       {opt}

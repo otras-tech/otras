@@ -48,7 +48,7 @@ export default function Analytics({ user }) {
 
   const mockTests = data?.mockTests || [];
   const sortedTests = [...mockTests].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  
+
   const trendDataMap = new Map();
   sortedTests.forEach(test => {
     const date = new Date(test.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -68,7 +68,7 @@ export default function Analytics({ user }) {
   } else if (displayTrends.length === 0) {
     displayTrends = [
       { date: 'Start', score: 0 },
-      ...stats.recentTend.map((s, i) => ({ date: `Test ${i+1}`, score: s }))
+      ...stats.recentTend.map((s, i) => ({ date: `Test ${i + 1}`, score: s }))
     ];
   }
 
@@ -106,9 +106,9 @@ export default function Analytics({ user }) {
 
   subjectHeatmap = subjectHeatmap.map(item => {
     let color = 'var(--text-muted)';
-    if (item.accuracy >= 80) color = 'var(--color-primary-dark)'; 
-    else if (item.accuracy >= 50) color = 'var(--color-primary)'; 
-    else color = 'var(--color-cyan)'; 
+    if (item.accuracy >= 80) color = 'var(--color-primary-dark)';
+    else if (item.accuracy >= 50) color = 'var(--color-primary)';
+    else color = 'var(--color-cyan)';
     return { ...item, color };
   }).sort((a, b) => b.accuracy - a.accuracy);
 
@@ -196,7 +196,7 @@ export default function Analytics({ user }) {
                       <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  
+
                   {displayTrends.length > 0 ? (
                     <>
                       <path

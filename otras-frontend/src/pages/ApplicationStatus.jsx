@@ -55,7 +55,7 @@ export default function ApplicationStatus({ user }) {
                         <div
                             key={app.id}
                             className={`app-card overflow-hidden transition-all duration-300 ${expandedId === app.id ? 'ring-4' : ''}`}
-                            style={{ 
+                            style={{
                                 borderColor: expandedId === app.id ? 'var(--color-primary)' : 'var(--border-light)',
                                 '--tw-ring-color': 'var(--color-primary-light)'
                             }}
@@ -91,8 +91,8 @@ export default function ApplicationStatus({ user }) {
 
                                                 return (
                                                     <div key={idx} className="relative">
-                                                        <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white transition-colors duration-500" 
-                                                            style={{ 
+                                                        <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white transition-colors duration-500"
+                                                            style={{
                                                                 borderColor: isCompleted ? 'var(--color-primary)' : 'var(--border-muted)',
                                                                 color: isCompleted ? 'var(--color-primary)' : 'var(--text-muted)'
                                                             }}>
